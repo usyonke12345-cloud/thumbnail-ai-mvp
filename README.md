@@ -47,16 +47,24 @@ npm test
 
 ## 初回のGit共有
 
-このフォルダには独立したGitリポジトリと初期コミットを作成済みです。GitHubへの作成・公開はまだ行っていません。
-GitHubで空の非公開リポジトリを作り、そのURLを使って次を実行します。URLは実際の値に置き換えてください。
+公開リポジトリ: https://github.com/usyonke12345-cloud/thumbnail-ai-mvp
+新しいPCでは以下で取得できます。
 
 ```sh
-git remote add origin <実際のGitHubリポジトリURL>
-git push -u origin main
+git clone https://github.com/usyonke12345-cloud/thumbnail-ai-mvp.git
+cd thumbnail-ai-mvp
+npm test
+npm start
+```
+
+開発を始めるときはサーバーを止めて、担当ブランチを作ります。
+
+```sh
 git switch -c feature/generation-provider
 ```
 
 相手はcloneして `git switch -c feature/scoring-baseline`。詳細はCOLLABORATION.md。
+Day 1の実施結果と相手側チェックリストは [DAY1.md](docs/DAY1.md)。
 
 ## MVPの完成条件
 

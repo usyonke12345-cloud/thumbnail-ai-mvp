@@ -9,7 +9,8 @@
 | API・入力検証 | 完了 | npm test: 4件成功 |
 | Git初期化 | 完了 | main、初期コミット作成済み |
 | SVG保存 | 要手動確認 | 保存リンクあり。ブラウザ自動検証はダウンロード待機で時間切れ |
-| GitHub公開 | ログイン待ち | リモートURL未設定 |
+| GitHubリポジトリ作成 | 完了 | https://github.com/usyonke12345-cloud/thumbnail-ai-mvp （公開） |
+| コード送信 | 認証待ち | origin設定済み、Gitの送信認証を待機 |
 | 相手のPCで起動 | 未確認 | 下のチェックリストを相手に渡す |
 | API契約v1の合意 | 要共同確認 | docs/API.mdとshared/openapi.jsonを2人で読む |
 
