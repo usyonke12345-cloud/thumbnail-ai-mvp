@@ -1,0 +1,110 @@
+{
+  "apiVersion": "v1",
+  "mode": "demo",
+  "input": {
+    "title": "初心者のAI入門",
+    "genre": "education"
+  },
+  "candidates": [
+    {
+      "id": "d2e2e9ac-3ff3-4d9c-aa4e-564c18ad5b51",
+      "style": "bold",
+      "mimeType": "image/svg+xml",
+      "imageDataUrl": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjgwIiBoZWlnaHQ9IjcyMCIgdmlld0JveD0iMCAwIDEyODAgNzIwIj48cmVjdCB3aWR0aD0iMTI4MCIgaGVpZ2h0PSI3MjAiIGZpbGw9IiMxNzI1NTQiLz48cmVjdCB4PSI4MCIgeT0iODAiIHdpZHRoPSIxNTAiIGhlaWdodD0iMTIiIGZpbGw9IiNmYWNjMTUiLz48dGV4dCB4PSI4MCIgeT0iMjEwIiBmb250LXNpemU9Ijc2IiBmb250LXdlaWdodD0iODAwIiBmaWxsPSIjZmFjYzE1Ij7liJ3lv4PogIXjga5BSeWFpemWgDwvdGV4dD48dGV4dCB4PSI4MCIgeT0iNjYwIiBmb250LXNpemU9IjI0IiBmaWxsPSIjZmFjYzE1Ij5MQVlPVVQgREVNTyDCtyBlZHVjYXRpb24gwrcgMTwvdGV4dD48L3N2Zz4=",
+      "width": 1280,
+      "height": 720,
+      "metadata": {
+        "textLength": 8,
+        "lineCount": 1,
+        "fontSize": 76,
+        "foreground": "#facc15",
+        "background": "#172554"
+      },
+      "assessment": {
+        "overall": 100,
+        "kind": "layout_heuristic",
+        "version": "0.1.0",
+        "metrics": {
+          "contrast": 100,
+          "brevity": 100,
+          "font": 100
+        },
+        "reasons": [
+          "配色のコントラスト比: 9.6",
+          "タイトル 8文字・1行"
+        ],
+        "limitations": [
+          "画像内容・ジャンル適合は未評価。",
+          "CTR予測や効果保証ではありません。"
+        ]
+      }
+    },
+    {
+      "id": "cdfd1673-17e1-4e35-a2eb-5376286ccc16",
+      "style": "contrast",
+      "mimeType": "image/svg+xml",
+      "imageDataUrl": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjgwIiBoZWlnaHQ9IjcyMCIgdmlld0JveD0iMCAwIDEyODAgNzIwIj48cmVjdCB3aWR0aD0iMTI4MCIgaGVpZ2h0PSI3MjAiIGZpbGw9IiM0YzFkOTUiLz48cmVjdCB4PSI4MCIgeT0iODAiIHdpZHRoPSIxNTAiIGhlaWdodD0iMTIiIGZpbGw9IiNmZmZmZmYiLz48dGV4dCB4PSI4MCIgeT0iMjEwIiBmb250LXNpemU9Ijc2IiBmb250LXdlaWdodD0iODAwIiBmaWxsPSIjZmZmZmZmIj7liJ3lv4PogIXjga5BSeWFpemWgDwvdGV4dD48dGV4dCB4PSI4MCIgeT0iNjYwIiBmb250LXNpemU9IjI0IiBmaWxsPSIjZmZmZmZmIj5MQVlPVVQgREVNTyDCtyBlZHVjYXRpb24gwrcgMzwvdGV4dD48L3N2Zz4=",
+      "width": 1280,
+      "height": 720,
+      "metadata": {
+        "textLength": 8,
+        "lineCount": 1,
+        "fontSize": 76,
+        "foreground": "#ffffff",
+        "background": "#4c1d95"
+      },
+      "assessment": {
+        "overall": 100,
+        "kind": "layout_heuristic",
+        "version": "0.1.0",
+        "metrics": {
+          "contrast": 100,
+          "brevity": 100,
+          "font": 100
+        },
+        "reasons": [
+          "配色のコントラスト比: 11.0",
+          "タイトル 8文字・1行"
+        ],
+        "limitations": [
+          "画像内容・ジャンル適合は未評価。",
+          "CTR予測や効果保証ではありません。"
+        ]
+      }
+    },
+    {
+      "id": "bbebe85c-6208-4cda-9233-8a5240622611",
+      "style": "clean",
+      "mimeType": "image/svg+xml",
+      "imageDataUrl": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjgwIiBoZWlnaHQ9IjcyMCIgdmlld0JveD0iMCAwIDEyODAgNzIwIj48cmVjdCB3aWR0aD0iMTI4MCIgaGVpZ2h0PSI3MjAiIGZpbGw9IiNmOGZhZmMiLz48cmVjdCB4PSI4MCIgeT0iODAiIHdpZHRoPSIxNTAiIGhlaWdodD0iMTIiIGZpbGw9IiMwZjE3MmEiLz48dGV4dCB4PSI4MCIgeT0iMjEwIiBmb250LXNpemU9IjY0IiBmb250LXdlaWdodD0iODAwIiBmaWxsPSIjMGYxNzJhIj7liJ3lv4PogIXjga5BSeWFpemWgDwvdGV4dD48dGV4dCB4PSI4MCIgeT0iNjYwIiBmb250LXNpemU9IjI0IiBmaWxsPSIjMGYxNzJhIj5MQVlPVVQgREVNTyDCtyBlZHVjYXRpb24gwrcgMjwvdGV4dD48L3N2Zz4=",
+      "width": 1280,
+      "height": 720,
+      "metadata": {
+        "textLength": 8,
+        "lineCount": 1,
+        "fontSize": 64,
+        "foreground": "#0f172a",
+        "background": "#f8fafc"
+      },
+      "assessment": {
+        "overall": 97,
+        "kind": "layout_heuristic",
+        "version": "0.1.0",
+        "metrics": {
+          "contrast": 100,
+          "brevity": 100,
+          "font": 84
+        },
+        "reasons": [
+          "配色のコントラスト比: 17.1",
+          "タイトル 8文字・1行"
+        ],
+        "limitations": [
+          "画像内容・ジャンル適合は未評価。",
+          "CTR予測や効果保証ではありません。"
+        ]
+      }
+    }
+  ],
+  "elapsedMs": 2
+}

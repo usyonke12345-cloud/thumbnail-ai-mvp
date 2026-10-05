@@ -1,0 +1,472 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Thumbnail AI MVP",
+    "version": "0.1.0",
+    "description": "Local demo only. Heuristic layout score, not a CTR prediction."
+  },
+  "servers": [
+    {
+      "url": "http://127.0.0.1:3000"
+    }
+  ],
+  "paths": {
+    "/api/v1/health": {
+      "get": {
+        "operationId": "health",
+        "responses": {
+          "200": {
+            "description": "Healthy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Health"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/thumbnails": {
+      "post": {
+        "operationId": "generateThumbnails",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Request"
+              },
+              "example": {
+                "title": "初心者のAI入門",
+                "genre": "education"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Three candidates sorted by overall descending",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Response"
+                },
+                "example": {
+                  "apiVersion": "v1",
+                  "mode": "demo",
+                  "input": {
+                    "title": "初心者のAI入門",
+                    "genre": "education"
+                  },
+                  "candidates": [
+                    {
+                      "id": "d2e2e9ac-3ff3-4d9c-aa4e-564c18ad5b51",
+                      "style": "bold",
+                      "mimeType": "image/svg+xml",
+                      "imageDataUrl": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjgwIiBoZWlnaHQ9IjcyMCIgdmlld0JveD0iMCAwIDEyODAgNzIwIj48cmVjdCB3aWR0aD0iMTI4MCIgaGVpZ2h0PSI3MjAiIGZpbGw9IiMxNzI1NTQiLz48cmVjdCB4PSI4MCIgeT0iODAiIHdpZHRoPSIxNTAiIGhlaWdodD0iMTIiIGZpbGw9IiNmYWNjMTUiLz48dGV4dCB4PSI4MCIgeT0iMjEwIiBmb250LXNpemU9Ijc2IiBmb250LXdlaWdodD0iODAwIiBmaWxsPSIjZmFjYzE1Ij7liJ3lv4PogIXjga5BSeWFpemWgDwvdGV4dD48dGV4dCB4PSI4MCIgeT0iNjYwIiBmb250LXNpemU9IjI0IiBmaWxsPSIjZmFjYzE1Ij5MQVlPVVQgREVNTyDCtyBlZHVjYXRpb24gwrcgMTwvdGV4dD48L3N2Zz4=",
+                      "width": 1280,
+                      "height": 720,
+                      "metadata": {
+                        "textLength": 8,
+                        "lineCount": 1,
+                        "fontSize": 76,
+                        "foreground": "#facc15",
+                        "background": "#172554"
+                      },
+                      "assessment": {
+                        "overall": 100,
+                        "kind": "layout_heuristic",
+                        "version": "0.1.0",
+                        "metrics": {
+                          "contrast": 100,
+                          "brevity": 100,
+                          "font": 100
+                        },
+                        "reasons": [
+                          "配色のコントラスト比: 9.6",
+                          "タイトル 8文字・1行"
+                        ],
+                        "limitations": [
+                          "画像内容・ジャンル適合は未評価。",
+                          "CTR予測や効果保証ではありません。"
+                        ]
+                      }
+                    },
+                    {
+                      "id": "cdfd1673-17e1-4e35-a2eb-5376286ccc16",
+                      "style": "contrast",
+                      "mimeType": "image/svg+xml",
+                      "imageDataUrl": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjgwIiBoZWlnaHQ9IjcyMCIgdmlld0JveD0iMCAwIDEyODAgNzIwIj48cmVjdCB3aWR0aD0iMTI4MCIgaGVpZ2h0PSI3MjAiIGZpbGw9IiM0YzFkOTUiLz48cmVjdCB4PSI4MCIgeT0iODAiIHdpZHRoPSIxNTAiIGhlaWdodD0iMTIiIGZpbGw9IiNmZmZmZmYiLz48dGV4dCB4PSI4MCIgeT0iMjEwIiBmb250LXNpemU9Ijc2IiBmb250LXdlaWdodD0iODAwIiBmaWxsPSIjZmZmZmZmIj7liJ3lv4PogIXjga5BSeWFpemWgDwvdGV4dD48dGV4dCB4PSI4MCIgeT0iNjYwIiBmb250LXNpemU9IjI0IiBmaWxsPSIjZmZmZmZmIj5MQVlPVVQgREVNTyDCtyBlZHVjYXRpb24gwrcgMzwvdGV4dD48L3N2Zz4=",
+                      "width": 1280,
+                      "height": 720,
+                      "metadata": {
+                        "textLength": 8,
+                        "lineCount": 1,
+                        "fontSize": 76,
+                        "foreground": "#ffffff",
+                        "background": "#4c1d95"
+                      },
+                      "assessment": {
+                        "overall": 100,
+                        "kind": "layout_heuristic",
+                        "version": "0.1.0",
+                        "metrics": {
+                          "contrast": 100,
+                          "brevity": 100,
+                          "font": 100
+                        },
+                        "reasons": [
+                          "配色のコントラスト比: 11.0",
+                          "タイトル 8文字・1行"
+                        ],
+                        "limitations": [
+                          "画像内容・ジャンル適合は未評価。",
+                          "CTR予測や効果保証ではありません。"
+                        ]
+                      }
+                    },
+                    {
+                      "id": "bbebe85c-6208-4cda-9233-8a5240622611",
+                      "style": "clean",
+                      "mimeType": "image/svg+xml",
+                      "imageDataUrl": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjgwIiBoZWlnaHQ9IjcyMCIgdmlld0JveD0iMCAwIDEyODAgNzIwIj48cmVjdCB3aWR0aD0iMTI4MCIgaGVpZ2h0PSI3MjAiIGZpbGw9IiNmOGZhZmMiLz48cmVjdCB4PSI4MCIgeT0iODAiIHdpZHRoPSIxNTAiIGhlaWdodD0iMTIiIGZpbGw9IiMwZjE3MmEiLz48dGV4dCB4PSI4MCIgeT0iMjEwIiBmb250LXNpemU9IjY0IiBmb250LXdlaWdodD0iODAwIiBmaWxsPSIjMGYxNzJhIj7liJ3lv4PogIXjga5BSeWFpemWgDwvdGV4dD48dGV4dCB4PSI4MCIgeT0iNjYwIiBmb250LXNpemU9IjI0IiBmaWxsPSIjMGYxNzJhIj5MQVlPVVQgREVNTyDCtyBlZHVjYXRpb24gwrcgMjwvdGV4dD48L3N2Zz4=",
+                      "width": 1280,
+                      "height": 720,
+                      "metadata": {
+                        "textLength": 8,
+                        "lineCount": 1,
+                        "fontSize": 64,
+                        "foreground": "#0f172a",
+                        "background": "#f8fafc"
+                      },
+                      "assessment": {
+                        "overall": 97,
+                        "kind": "layout_heuristic",
+                        "version": "0.1.0",
+                        "metrics": {
+                          "contrast": 100,
+                          "brevity": 100,
+                          "font": 84
+                        },
+                        "reasons": [
+                          "配色のコントラスト比: 17.1",
+                          "タイトル 8文字・1行"
+                        ],
+                        "limitations": [
+                          "画像内容・ジャンル適合は未評価。",
+                          "CTR予測や効果保証ではありません。"
+                        ]
+                      }
+                    }
+                  ],
+                  "elapsedMs": 2
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid JSON or input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Body exceeds 16 KiB",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "JSON required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Provider unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Request": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "title"
+        ],
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 60,
+            "description": "Trimmed, 1–60 Unicode code points; no control characters.",
+            "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+          },
+          "genre": {
+            "type": "string",
+            "enum": [
+              "education",
+              "gaming",
+              "vlog",
+              "other"
+            ],
+            "default": "other"
+          }
+        }
+      },
+      "Metadata": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "textLength",
+          "lineCount",
+          "fontSize",
+          "foreground",
+          "background"
+        ],
+        "properties": {
+          "textLength": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 60
+          },
+          "lineCount": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 4
+          },
+          "fontSize": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "foreground": {
+            "type": "string",
+            "pattern": "^#[0-9a-fA-F]{6}$"
+          },
+          "background": {
+            "type": "string",
+            "pattern": "^#[0-9a-fA-F]{6}$"
+          }
+        }
+      },
+      "Assessment": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "overall",
+          "kind",
+          "version",
+          "metrics",
+          "reasons",
+          "limitations"
+        ],
+        "properties": {
+          "overall": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "kind": {
+            "const": "layout_heuristic"
+          },
+          "version": {
+            "type": "string"
+          },
+          "metrics": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "contrast",
+              "brevity",
+              "font"
+            ],
+            "properties": {
+              "contrast": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 100
+              },
+              "brevity": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 100
+              },
+              "font": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 100
+              }
+            }
+          },
+          "reasons": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "limitations": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "Candidate": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "style",
+          "mimeType",
+          "imageDataUrl",
+          "width",
+          "height",
+          "metadata",
+          "assessment"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "style": {
+            "enum": [
+              "bold",
+              "clean",
+              "contrast"
+            ]
+          },
+          "mimeType": {
+            "const": "image/svg+xml"
+          },
+          "imageDataUrl": {
+            "type": "string",
+            "pattern": "^data:image/svg\\+xml;base64,"
+          },
+          "width": {
+            "const": 1280
+          },
+          "height": {
+            "const": 720
+          },
+          "metadata": {
+            "$ref": "#/components/schemas/Metadata"
+          },
+          "assessment": {
+            "$ref": "#/components/schemas/Assessment"
+          }
+        }
+      },
+      "Response": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "apiVersion",
+          "mode",
+          "input",
+          "candidates",
+          "elapsedMs"
+        ],
+        "properties": {
+          "apiVersion": {
+            "const": "v1"
+          },
+          "mode": {
+            "const": "demo"
+          },
+          "input": {
+            "$ref": "#/components/schemas/Request"
+          },
+          "candidates": {
+            "type": "array",
+            "minItems": 3,
+            "maxItems": 3,
+            "items": {
+              "$ref": "#/components/schemas/Candidate"
+            }
+          },
+          "elapsedMs": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      },
+      "Error": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "error"
+        ],
+        "properties": {
+          "error": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "code",
+              "message"
+            ],
+            "properties": {
+              "code": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "Health": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "status",
+          "mode"
+        ],
+        "properties": {
+          "status": {
+            "const": "ok"
+          },
+          "mode": {
+            "const": "demo"
+          }
+        }
+      }
+    }
+  }
+}
