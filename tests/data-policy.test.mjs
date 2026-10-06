@@ -23,7 +23,7 @@ test('CSV template header matches the schema fields', async () => {
 });
 test('row validation and stable holdout split', async () => {
   const schema = await loadSchema();
-  const id = 's001', row = { sample_id: id, title: '人工タイトル', genre: 'other', source: 'synthetic', permission: 'own_work', candidate_id: 'c1', generation_version: 'mock-0.1', scoring_version: '0.1.0', reviewer_id: 'r01', preferred_candidate: 'c1', split: splitFor(id) };
+  const id = 's001', row = { sample_id: id, title: '人工タイトル', genre: 'other', source: 'synthetic', permission: 'own_work', candidate_id: 'c1', generation_version: 'mock-0.1', scoring_version: '0.1.0', reviewer_id: 'r01', preferred_candidate: 'bold', split: splitFor(id) };
   assert.deepEqual(validateRow(row, schema), []);
   assert.ok(validateRow({ ...row, permission: 'none' }, schema).length > 0);
   assert.ok(validateRow({ ...row, reviewer_id: '山田太郎' }, schema).length > 0);
@@ -32,4 +32,15 @@ test('row validation and stable holdout split', async () => {
   const ids = Array.from({ length: 200 }, (_, i) => `s${String(i).padStart(3, '0')}`);
   const hold = ids.filter(x => splitFor(x) === 'holdout').length;
   assert.ok(hold > 40 && hold < 80, `holdout ratio ${hold}/200`);
+});
+import { parseCsv, summarize } from '../data/validate.mjs';
+test('CSV parsing handles quoted commas and summarize reports invalid rows without titles', async () => {
+  const schema = await loadSchema();
+  const head = (await read('../data/templates/preferences.template.csv')).trim();
+  const ok = (id, extra = '') => `${id},"人工, タイトル",other,synthetic,,own_work,,run1,mock-0.1,0.2.0,r01,bold,bold>clean>contrast,,${splitFor(id)}${extra}`;
+  const rows = parseCsv(`${head}\n${ok('s001')}\n${ok('s002').replace('own_work', 'none')}\n`);
+  assert.equal(rows[0].title, '人工, タイトル');
+  const s = summarize(rows, schema);
+  assert.equal(s.rows, 2); assert.equal(s.invalid.length, 1); assert.equal(s.invalid[0].line, 3);
+  assert.ok(!JSON.stringify(s).includes('人工'));
 });

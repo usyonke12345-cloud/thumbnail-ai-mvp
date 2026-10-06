@@ -1,0 +1,68 @@
+{
+ "note": "人工SVG（実画像・実タイトルではない）。AI背景は4x4の人工PNGを使用。B3の解析結果を固定するためのもの。",
+ "cases": [
+  {
+   "name": "demo-20-chars",
+   "fontSize": 76,
+   "foreground": "#facc15",
+   "background": "#172554",
+   "textLength": 22,
+   "lineCount": 2,
+   "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1280\" height=\"720\" viewBox=\"0 0 1280 720\"><rect width=\"1280\" height=\"720\" fill=\"#172554\"/><rect x=\"80\" y=\"80\" width=\"150\" height=\"12\" fill=\"#facc15\"/><text x=\"80\" y=\"210\" font-size=\"76\" font-weight=\"800\" fill=\"#facc15\">初心者でもわかるAI入門講座こ</text><text x=\"80\" y=\"310\" font-size=\"76\" font-weight=\"800\" fill=\"#facc15\">こから始めよう</text><text x=\"80\" y=\"660\" font-size=\"24\" fill=\"#facc15\">LAYOUT DEMO · other · 1</text></svg>"
+  },
+  {
+   "name": "ai-20-chars",
+   "fontSize": 48,
+   "foreground": "#facc15",
+   "background": "#172554",
+   "textLength": 22,
+   "lineCount": 2,
+   "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1280\" height=\"720\" viewBox=\"0 0 1280 720\"><rect width=\"1280\" height=\"720\" fill=\"#172554\"/><image href=\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAIAAAAmkwkpAAAAJklEQVR4nBXGQREAMBADoZVzcpAT+Z3yonSiqdw5bq78YpTdz2YPE0MMgR5FhskAAAAASUVORK5CYII=\" width=\"1280\" height=\"720\" preserveAspectRatio=\"xMidYMid slice\"/><rect x=\"48\" y=\"120\" width=\"800\" height=\"460\" rx=\"24\" fill=\"#172554\"/><rect x=\"80\" y=\"80\" width=\"150\" height=\"12\" fill=\"#facc15\"/><text x=\"80\" y=\"210\" font-size=\"48\" font-weight=\"800\" fill=\"#facc15\">初心者でもわかるAI入門講座こ</text><text x=\"80\" y=\"310\" font-size=\"48\" font-weight=\"800\" fill=\"#facc15\">こから始めよう</text><text x=\"80\" y=\"660\" font-size=\"24\" fill=\"#facc15\">AI BACKGROUND · other · 1</text></svg>"
+  },
+  {
+   "name": "ai-60-chars",
+   "fontSize": 48,
+   "foreground": "#ffffff",
+   "background": "#4c1d95",
+   "textLength": 60,
+   "lineCount": 4,
+   "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1280\" height=\"720\" viewBox=\"0 0 1280 720\"><rect width=\"1280\" height=\"720\" fill=\"#4c1d95\"/><image href=\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAIAAAAmkwkpAAAAJklEQVR4nBXGQREAMBADoZVzcpAT+Z3yonSiqdw5bq78YpTdz2YPE0MMgR5FhskAAAAASUVORK5CYII=\" width=\"1280\" height=\"720\" preserveAspectRatio=\"xMidYMid slice\"/><rect x=\"48\" y=\"120\" width=\"800\" height=\"460\" rx=\"24\" fill=\"#4c1d95\"/><rect x=\"80\" y=\"80\" width=\"150\" height=\"12\" fill=\"#ffffff\"/><text x=\"80\" y=\"210\" font-size=\"48\" font-weight=\"800\" fill=\"#ffffff\">あいうえおかきくけこさしすせそ</text><text x=\"80\" y=\"310\" font-size=\"48\" font-weight=\"800\" fill=\"#ffffff\">あいうえおかきくけこさしすせそ</text><text x=\"80\" y=\"410\" font-size=\"48\" font-weight=\"800\" fill=\"#ffffff\">あいうえおかきくけこさしすせそ</text><text x=\"80\" y=\"510\" font-size=\"48\" font-weight=\"800\" fill=\"#ffffff\">あいうえおかきくけこさしすせそ</text><text x=\"80\" y=\"660\" font-size=\"24\" fill=\"#ffffff\">AI BACKGROUND · other · 1</text></svg>"
+  },
+  {
+   "name": "ai-overflow-76px",
+   "fontSize": 76,
+   "foreground": "#ffffff",
+   "background": "#4c1d95",
+   "textLength": 60,
+   "lineCount": 4,
+   "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1280\" height=\"720\" viewBox=\"0 0 1280 720\"><rect width=\"1280\" height=\"720\" fill=\"#4c1d95\"/><image href=\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAIAAAAmkwkpAAAAJklEQVR4nBXGQREAMBADoZVzcpAT+Z3yonSiqdw5bq78YpTdz2YPE0MMgR5FhskAAAAASUVORK5CYII=\" width=\"1280\" height=\"720\" preserveAspectRatio=\"xMidYMid slice\"/><rect x=\"48\" y=\"120\" width=\"800\" height=\"460\" rx=\"24\" fill=\"#4c1d95\"/><rect x=\"80\" y=\"80\" width=\"150\" height=\"12\" fill=\"#ffffff\"/><text x=\"80\" y=\"210\" font-size=\"76\" font-weight=\"800\" fill=\"#ffffff\">あいうえおかきくけこさしすせそあ</text><text x=\"80\" y=\"310\" font-size=\"76\" font-weight=\"800\" fill=\"#ffffff\">いうえおかきくけこさしすせそあい</text><text x=\"80\" y=\"410\" font-size=\"76\" font-weight=\"800\" fill=\"#ffffff\">うえおかきくけこさしすせそあいう</text><text x=\"80\" y=\"510\" font-size=\"76\" font-weight=\"800\" fill=\"#ffffff\">えおかきくけこさしすせそ</text><text x=\"80\" y=\"660\" font-size=\"24\" fill=\"#ffffff\">AI BACKGROUND · other · 1</text></svg>"
+  },
+  {
+   "name": "ai-low-contrast",
+   "fontSize": 48,
+   "foreground": "#64748b",
+   "background": "#475569",
+   "textLength": 22,
+   "lineCount": 2,
+   "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1280\" height=\"720\" viewBox=\"0 0 1280 720\"><rect width=\"1280\" height=\"720\" fill=\"#475569\"/><image href=\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAIAAAAmkwkpAAAAJklEQVR4nBXGQREAMBADoZVzcpAT+Z3yonSiqdw5bq78YpTdz2YPE0MMgR5FhskAAAAASUVORK5CYII=\" width=\"1280\" height=\"720\" preserveAspectRatio=\"xMidYMid slice\"/><rect x=\"48\" y=\"120\" width=\"800\" height=\"460\" rx=\"24\" fill=\"#475569\"/><rect x=\"80\" y=\"80\" width=\"150\" height=\"12\" fill=\"#64748b\"/><text x=\"80\" y=\"210\" font-size=\"48\" font-weight=\"800\" fill=\"#64748b\">初心者でもわかるAI入門講座こ</text><text x=\"80\" y=\"310\" font-size=\"48\" font-weight=\"800\" fill=\"#64748b\">こから始めよう</text><text x=\"80\" y=\"660\" font-size=\"24\" fill=\"#64748b\">AI BACKGROUND · other · 1</text></svg>"
+  },
+  {
+   "name": "unparseable-transform",
+   "fontSize": 48,
+   "foreground": "#ffffff",
+   "background": "#4c1d95",
+   "textLength": 20,
+   "lineCount": 2,
+   "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1280\" height=\"720\" viewBox=\"0 0 1280 720\"><rect width=\"1280\" height=\"720\" fill=\"#172554\"/><image href=\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAIAAAAmkwkpAAAAJklEQVR4nBXGQREAMBADoZVzcpAT+Z3yonSiqdw5bq78YpTdz2YPE0MMgR5FhskAAAAASUVORK5CYII=\" width=\"1280\" height=\"720\" preserveAspectRatio=\"xMidYMid slice\"/><rect x=\"48\" y=\"120\" width=\"800\" height=\"460\" rx=\"24\" fill=\"#172554\"/><rect x=\"80\" y=\"80\" width=\"150\" height=\"12\" fill=\"#facc15\"/><text transform=\"rotate(1)\" x=\"80\" y=\"210\" font-size=\"48\" font-weight=\"800\" fill=\"#facc15\">初心者でもわかるAI入門講座こ</text><text x=\"80\" y=\"310\" font-size=\"48\" font-weight=\"800\" fill=\"#facc15\">こから始めよう</text><text x=\"80\" y=\"660\" font-size=\"24\" fill=\"#facc15\">AI BACKGROUND · other · 1</text></svg>"
+  },
+  {
+   "name": "png-not-svg",
+   "fontSize": 48,
+   "foreground": "#ffffff",
+   "background": "#4c1d95",
+   "textLength": 20,
+   "lineCount": 2,
+   "dataUrl": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAIAAAAmkwkpAAAAJklEQVR4nBXGQREAMBADoZVzcpAT+Z3yonSiqdw5bq78YpTdz2YPE0MMgR5FhskAAAAASUVORK5CYII="
+  }
+ ]
+}

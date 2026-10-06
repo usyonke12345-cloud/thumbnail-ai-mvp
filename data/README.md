@@ -19,7 +19,7 @@
 
 - `permission`: `own_work`（自作・自分で用意）／`owner_consented`（所有者が記録に同意）／`none`。**`none` の行は評価に使いません。**
 - `reviewer_id`: `r01` のような仮名。本名は書きません。
-- `preferred_candidate`: 3案から1つ選ぶ。`ranking` は任意で `id1>id2>id3` の形式。
+- `candidate_id`: 比較した3案の組（生成の1回分）のID。`preferred_candidate`: 3案から選んだ案のstyle（`bold` / `contrast` / `clean`）。`ranking` は任意で `bold>clean>contrast` の形式。
 - `generation_version` / `scoring_version`: 採点時の版を必ず記録し、再評価できるようにする。
 - `split`: `dev` か `holdout`。`sample_id` のハッシュで自動決定（`data/validate.mjs` の `splitFor`）。
   holdout（約30%）は重みの調整に使わず、最後の順位一致率の確認だけに使います。
@@ -29,3 +29,9 @@
 2. タイトルを集める前に、所有者へ用途（社内評価のみ・公開しない）を伝えて許諾を得る。
 3. 20件程度の少数なので、順位一致率は「参考値」と書く。有意な結論として扱わない。
 4. 評価スコアは「レイアウトの仮説的な指標」と表記し、CTR予測・効果保証と書かない。
+
+## B2の進め方（許諾済みタイトル20件）
+1. `data/templates/preferences.template.csv` を `data/private/preferences.csv` にコピーする。
+2. タイトルごとに3案を生成し、評価者が好みを選んで1行ずつ記録する（`scoring_version` は画面のversionを写す）。
+3. `node data/validate.mjs data/private/preferences.csv` で検証する。出力は件数と不正行の番号だけで、タイトルは表示しない。
+4. `permission` が `none` の行や、`split` が `sample_id` と合わない行は不正行として報告される。
