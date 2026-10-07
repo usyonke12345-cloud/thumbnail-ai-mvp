@@ -2,6 +2,23 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {generate,composeCandidates} from '../backend/generation/index.mjs';
 import {makeTextLayout,aiTitleFontSize} from '../backend/generation/layout-metadata.mjs';
+import {readFile} from 'node:fs/promises';
+import {inflateSync} from 'node:zlib';
+test('C3 fixtures contain a valid synthetic PNG, image backdrop, stroke and partial unknown fit',async()=>{
+ const fixture=JSON.parse(await readFile(new URL('../docs/fixtures/generation-metadata.json',import.meta.url),'utf8'));
+ for(const caseId of ['c3','c3-emoji']){
+  const set=fixture.sets.find(s=>s.caseId===caseId);assert.equal(set.source,'synthetic');assert.equal(set.candidates.length,3);
+  for(const c of set.candidates){
+   const titles=c.metadata.textLayout.elements.filter(e=>e.role==='title');assert.equal(titles.map(e=>e.text).join(''),set.input.title);
+   assert.ok(titles.every(e=>e.textBackdrop.kind==='image'&&e.stroke.width===4));
+   if(caseId==='c3-emoji'){assert.ok(titles.some(e=>e.measurement==='unknown'&&e.width===null));assert.ok(titles.some(e=>e.measurement==='estimated'));}
+   else assert.ok(titles.every(e=>e.measurement==='estimated'));
+   const svg=Buffer.from(c.imageDataUrl.split(',')[1],'base64').toString();const png=Buffer.from(svg.match(/<image href="data:image\/png;base64,([^"]+)"/)[1],'base64');
+   assert.equal(png.subarray(0,8).toString('hex'),'89504e470d0a1a0a');assert.equal(png.readUInt32BE(16),1280);assert.equal(png.readUInt32BE(20),720);
+   const data=[];for(let offset=8;offset<png.length;){const size=png.readUInt32BE(offset);if(png.toString('ascii',offset+4,offset+8)==='IDAT')data.push(png.subarray(offset+8,offset+8+size));offset+=size+12;}assert.equal(inflateSync(Buffer.concat(data)).length,720*(1280*3+1));
+  }
+ }
+});
 test('Unicode title, role and positions match generated SVG',async()=>{
  const title='🎬動'.repeat(30);
  for(const c of await generate({title,genre:'other'})){
