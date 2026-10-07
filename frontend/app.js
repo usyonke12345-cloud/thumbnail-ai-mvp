@@ -4,15 +4,18 @@ async function saveRaster(candidate, control, format='png') {
   const jpeg=format==='jpeg',label=jpeg?'JPEG':'PNG',mime=jpeg?'image/jpeg':'image/png',extension=jpeg?'jpg':'png';
   control.disabled=true;
   try {
+    // Open while the click still carries user activation (before decode/toBlob).
+    const fileHandle=typeof window.showSaveFilePicker==='function'?await window.showSaveFilePicker({suggestedName:`thumbnail-${candidate.style}.${extension}`,types:[{description:label,accept:{[mime]:[`.${extension}`]}}]}):null;
     const image=new Image();image.src=candidate.imageDataUrl;await image.decode();
     const canvas=document.createElement('canvas');canvas.width=1280;canvas.height=720;
     const context=canvas.getContext('2d');if(!context)throw new Error('画像保存に対応していないブラウザです。');
     context.drawImage(image,0,0,1280,720);
     const blob=await new Promise((resolve,reject)=>canvas.toBlob(value=>value?resolve(value):reject(new Error(`${label}へ変換できませんでした。`)),mime,jpeg ? 0.92 : undefined));
+    if(fileHandle){const writable=await fileHandle.createWritable();try{await writable.write(blob);await writable.close();}catch(error){await writable.abort().catch(()=>{});throw error;}status.textContent=`1280×720の${label}を選択した保存先へ保存しました。`;return;}
     const link=document.createElement('a');link.href=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=()=>reject(new Error('保存リンクを作れませんでした。'));reader.readAsDataURL(blob);});link.download=`thumbnail-${candidate.style}.${extension}`;link.textContent=`作成した${label}をダウンロード`;
     control.parentElement.querySelector(`[data-raster-download="${format}"]`)?.remove();link.dataset.rasterDownload=format;control.after(link);link.click();
     status.textContent=`1280×720の${label}を作成しました。保存が始まらない場合はダウンロードリンクを押してください。`;
-  }catch(error){status.textContent=`${label}保存に失敗しました: ${error.message}`;}finally{control.disabled=false;}
+  }catch(error){status.textContent=error.name==='AbortError'?'保存をキャンセルしました。':`${label}保存に失敗しました: ${error.message}`;}finally{control.disabled=false;}
 }
 function showMode(value) {mode.textContent=value==='ai_background'?'AI背景生成モードです。背景1枚から文字と配色の3案を作ります。生成にはAPI利用料がかかります。画像内容とCTRは未評価です。':'現在は無料のSVGレイアウトデモです。AI画像生成は使用していません。スコアはCTR予測ではありません。';}
 fetch('/api/v1/health').then(r=>{if(!r.ok)throw new Error();return r.json();}).then(data=>showMode(data.mode)).catch(()=>{mode.textContent='接続を確認できません。サーバーを起動してください。';});
