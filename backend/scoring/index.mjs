@@ -1,10 +1,13 @@
 import { analyzeLayout, contrastRatio, parseSvg } from './layout.mjs';
 import { analyzeTextLayout, readTextLayout } from './metadata-layout.mjs';
-const VERSION = '0.3.1';
+import { checkImage } from './image-check.mjs';
+const VERSION = '0.3.2';
 const MIN_FONT = 48; // 仮説: 一覧で縮小表示されても読める目安。検証前の仮値で、実データで校正していない。
 
 /** 評価に使う文字の一覧を、metadata.textLayout（v1）か、無ければSVG解析から作る。 */
-function textsFor(candidate) {
+function textsFor(candidate, image) {
+  // 画像が欠損・破損・形式不一致なら、metadataやSVGがあっても画像に基づく評価はしない（推測しない）
+  if (!image.usable) return { method: 'unusable', label: '画像を使えないため文字配置は未評価（metadataの文字サイズ・文字数のみ）', texts: [] };
   const tl = readTextLayout(candidate.metadata);
   if (tl) return { method: 'metadata', label: `metadataのtextLayout（v${tl.version}）`, texts: analyzeTextLayout(tl) };
   const parsed = parseSvg(candidate.imageDataUrl);
@@ -18,11 +21,14 @@ function textsFor(candidate) {
 /** Contract: score(candidate, input) => Promise<Assessment>. No network or generation imports. */
 export async function score(candidate, input) {
   const m = candidate.metadata;
-  const { method, label, texts } = textsFor(candidate);
+  const image = checkImage(candidate);
+  const { method, label, texts } = textsFor(candidate, image);
   const title = texts.filter(t => t.role === 'title'), small = texts.filter(t => t.role === 'footer');
   const validTitle = title.filter(t => !t.invalid);
   const maxFs = validTitle.length ? Math.max(...validTitle.map(t => t.fs)) : m.fontSize;
   const reasons = [`評価方法: ${label}`], limitations = [];
+  if (!image.usable) reasons.push(`画像: ${image.issues.join(' ')}文字の配置・背面・コントラストは未評価です。`);
+  else limitations.push(...image.issues);
   const invalid = texts.filter(t => t.invalid);
   if (invalid.length) limitations.push(`textLayoutの${invalid.length}要素に異常値（${[...new Set(invalid.flatMap(t => t.invalid))].join(', ')}）があるため、その要素は未評価です。SVG解析では補っていません。`);
 
@@ -31,7 +37,8 @@ export async function score(candidate, input) {
   const contrastEvaluated = title.length > 0 && title.every(t => !t.invalid && t.state === 'solid');
   const ratio = contrastEvaluated ? Math.min(...title.map(t => contrastRatio(t.fill, t.backdropFill))) : null;
   const contrast = contrastEvaluated ? Math.min(100, Math.round(ratio / 7 * 100)) : 0;
-  const uncheckedWhy = method === 'none' ? '文字の配置と背面を確認できない'
+  const uncheckedWhy = method === 'unusable' ? '画像を使えない'
+    : method === 'none' ? '文字の配置と背面を確認できない'
     : title.length === 0 ? 'タイトルの行が見つからない'
     : title.some(t => t.invalid) ? 'タイトルの要素に異常値がある'
     : title.some(t => t.state === 'over_image') ? 'タイトル文字の背面が画像で、単色と確認できない'
@@ -45,7 +52,7 @@ export async function score(candidate, input) {
   const overflow = measured.length ? Math.max(...measured.map(t => t.overflow)) : 0;
   const fitPenalty = Math.min(100, Math.round(overflow / maxFs * 50));
   const font = Math.max(0, sizeScore - fitPenalty);
-  const fitUnevaluated = method !== 'none' && (title.length === 0 || measured.length < title.length);
+  const fitUnevaluated = method !== 'none' && method !== 'unusable' && (title.length === 0 || measured.length < title.length);
   const estimated = measured.some(t => t.measurement === 'estimated');
 
   const overall = Math.round(contrast * .5 + brevity * .3 + font * .2);

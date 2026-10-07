@@ -21,7 +21,7 @@ const all = a => [...a.reasons, ...a.limitations].join('\n');
 
 test('textLayout v1 is used and named as the evaluation method; contract keys stay the same', async () => {
   const a = await run(cand([el()]));
-  assert.equal(a.version, '0.3.1'); assert.equal(a.kind, 'layout_heuristic');
+  assert.equal(a.version, '0.3.2'); assert.equal(a.kind, 'layout_heuristic');
   assert.deepEqual(Object.keys(a.metrics).sort(), ['brevity', 'contrast', 'font']);
   assert.match(a.reasons[0], /評価方法: metadataのtextLayout（v1\.0\.0）/);
   assert.match(all(a), /タイトルは領域内に収まっています/); assert.doesNotMatch(all(a), /推定/);

@@ -14,8 +14,10 @@ test('scoring fixture cases keep provisional-score invariants', async () => {
     measurement: 'unknown', measurementVersion: null, fontSize: m.fontSize, fontFamily: 'sans-serif', fontWeight: 800, resolvedFontFamily: null,
     foreground: m.foreground, textRegion: { x: 0, y: 0, width: 1280, height: 720, padding: { top: 40, right: 40, bottom: 40, left: 40 } },
     textBackdrop: { kind: 'solid', color: m.background } }] });
+  // 0.3.2以降、画像が無い候補は文字配置を評価しないため、最小の有効なSVGを付ける
+  const imageDataUrl = `data:image/svg+xml;base64,${Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720"></svg>').toString('base64')}`;
   for (const c of cases) {
-    const a = await score({ metadata: { ...c.metadata, textLayout: solidLayout(c.metadata) } }, {});
+    const a = await score({ imageDataUrl, metadata: { ...c.metadata, textLayout: solidLayout(c.metadata) } }, {});
     assert.ok(Number.isInteger(a.overall) && a.overall >= 0 && a.overall <= 100, c.name);
     assert.equal(a.kind, 'layout_heuristic'); assert.ok(a.limitations.length > 0);
     assert.ok(!JSON.stringify(a).includes('CTR予測です'));
