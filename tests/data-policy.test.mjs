@@ -7,8 +7,15 @@ const read = p => readFile(new URL(p, import.meta.url), 'utf8');
 test('scoring fixture cases keep provisional-score invariants', async () => {
   const { cases, invariants } = JSON.parse(await read('../data/fixtures/scoring-cases.json'));
   const results = new Map();
+  // 0.3.1以降、コントラストは背面が単色と確認できた場合だけ評価する。配色の不変条件を保つため、
+  // 各ケースに「背面＝metadata.background の単色、寸法は不明」の textLayout を付けて採点する。
+  const solidLayout = m => ({ version: '1.0.0', coordinateSpace: 'canvas_px', elements: [{
+    id: 'title-0', role: 'title', lineIndex: 0, text: 'x', x: 80, baselineY: 300, width: null, height: null, topY: null,
+    measurement: 'unknown', measurementVersion: null, fontSize: m.fontSize, fontFamily: 'sans-serif', fontWeight: 800, resolvedFontFamily: null,
+    foreground: m.foreground, textRegion: { x: 0, y: 0, width: 1280, height: 720, padding: { top: 40, right: 40, bottom: 40, left: 40 } },
+    textBackdrop: { kind: 'solid', color: m.background } }] });
   for (const c of cases) {
-    const a = await score({ metadata: c.metadata }, {});
+    const a = await score({ metadata: { ...c.metadata, textLayout: solidLayout(c.metadata) } }, {});
     assert.ok(Number.isInteger(a.overall) && a.overall >= 0 && a.overall <= 100, c.name);
     assert.equal(a.kind, 'layout_heuristic'); assert.ok(a.limitations.length > 0);
     assert.ok(!JSON.stringify(a).includes('CTR予測です'));

@@ -1,6 +1,6 @@
 import { analyzeLayout, contrastRatio, parseSvg } from './layout.mjs';
 import { analyzeTextLayout, readTextLayout } from './metadata-layout.mjs';
-const VERSION = '0.3.0';
+const VERSION = '0.3.1';
 const MIN_FONT = 48; // 仮説: 一覧で縮小表示されても読める目安。検証前の仮値で、実データで校正していない。
 
 /** 評価に使う文字の一覧を、metadata.textLayout（v1）か、無ければSVG解析から作る。 */
@@ -26,11 +26,16 @@ export async function score(candidate, input) {
   const invalid = texts.filter(t => t.invalid);
   if (invalid.length) limitations.push(`textLayoutの${invalid.length}要素に異常値（${[...new Set(invalid.flatMap(t => t.invalid))].join(', ')}）があるため、その要素は未評価です。SVG解析では補っていません。`);
 
-  // contrast: タイトルの全行の背面が単色と確認できた場合のみ文字と背面の色から。できなければメタデータの配色
-  let ratio = contrastRatio(m.foreground, m.background), source = 'metadata';
-  if (title.length && title.every(t => !t.invalid && t.state === 'solid')) { ratio = Math.min(...title.map(t => contrastRatio(t.fill, t.backdropFill))); source = 'layout'; }
-  else if (method !== 'none') limitations.push('タイトル文字の背面を単色と確認できないため、配色はメタデータから評価しました。文字と背面のコントラストは未評価です。');
-  const contrast = Math.min(100, Math.round(ratio / 7 * 100));
+  // contrast: タイトルの全行の背面が単色と確認できた場合だけ評価する。
+  // 未評価のときは metadata の配色で代用せず 0 点として扱う（契約上 null にできないため）。総合点は最大50点になる。
+  const contrastEvaluated = title.length > 0 && title.every(t => !t.invalid && t.state === 'solid');
+  const ratio = contrastEvaluated ? Math.min(...title.map(t => contrastRatio(t.fill, t.backdropFill))) : null;
+  const contrast = contrastEvaluated ? Math.min(100, Math.round(ratio / 7 * 100)) : 0;
+  const uncheckedWhy = method === 'none' ? '文字の配置と背面を確認できない'
+    : title.length === 0 ? 'タイトルの行が見つからない'
+    : title.some(t => t.invalid) ? 'タイトルの要素に異常値がある'
+    : title.some(t => t.state === 'over_image') ? 'タイトル文字の背面が画像で、単色と確認できない'
+    : 'タイトル文字の背面を単色と確認できない';
 
   const brevity = Math.max(0, 100 - Math.max(0, m.textLength - 15) * 2);
 
@@ -44,7 +49,12 @@ export async function score(candidate, input) {
   const estimated = measured.some(t => t.measurement === 'estimated');
 
   const overall = Math.round(contrast * .5 + brevity * .3 + font * .2);
-  reasons.push(`配色のコントラスト比: ${ratio.toFixed(1)}（${source === 'layout' ? '画像内の文字と背面の色' : 'メタデータの配色'}）`, `タイトル ${m.textLength}文字・${m.lineCount}行`);
+  if (contrastEvaluated) reasons.push(`配色のコントラスト比: ${ratio.toFixed(1)}（画像内の文字と背面の色）`);
+  else {
+    reasons.push(`コントラスト: 未評価（${uncheckedWhy}ため）。未評価の項目は0点として扱い、総合点は最大50点です。`);
+    limitations.push('文字と背面のコントラストは未評価です。metadataの配色（foreground/background）では代用していません。');
+  }
+  reasons.push(`タイトル ${m.textLength}文字・${m.lineCount}行`);
   if (m.textLength > 30) reasons.push('文字を短くした案も比較してください。');
   if (overflow > 0) reasons.push(`${estimated ? '推定で' : ''}タイトルが領域から約${Math.round(overflow)}px はみ出します。文字数や行数を見直してください。`);
   else if (measured.length && !fitUnevaluated) reasons.push(`タイトルは${estimated ? '推定で' : ''}領域内に収まっています。`);

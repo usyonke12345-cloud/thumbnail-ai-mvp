@@ -21,7 +21,7 @@ const all = a => [...a.reasons, ...a.limitations].join('\n');
 
 test('textLayout v1 is used and named as the evaluation method; contract keys stay the same', async () => {
   const a = await run(cand([el()]));
-  assert.equal(a.version, '0.3.0'); assert.equal(a.kind, 'layout_heuristic');
+  assert.equal(a.version, '0.3.1'); assert.equal(a.kind, 'layout_heuristic');
   assert.deepEqual(Object.keys(a.metrics).sort(), ['brevity', 'contrast', 'font']);
   assert.match(a.reasons[0], /評価方法: metadataのtextLayout（v1\.0\.0）/);
   assert.match(all(a), /タイトルは領域内に収まっています/); assert.doesNotMatch(all(a), /推定/);
@@ -53,10 +53,37 @@ test('invalid elements are unevaluated and NOT backfilled from SVG', async () =>
   }
   assert.deepEqual(elementProblems(el()), []);
 });
-test('image or unknown backdrops do not produce a layout contrast', async () => {
-  for (const kind of ['image', 'unknown']) {
-    const a = await run(cand([el({ textBackdrop: { kind, color: null } })]));
-    assert.match(all(a), /コントラストは未評価/); assert.match(all(a), /メタデータの配色/);
+test('contrast is unevaluated (0, overall <= 50) unless every title line has a solid backdrop', async () => {
+  const solid = await run(cand([el()]));
+  const cases = {
+    image: cand([el({ textBackdrop: { kind: 'image', color: null } })]),
+    unknown: cand([el({ textBackdrop: { kind: 'unknown', color: null } })]),
+    invalid: cand([el({ width: -1 })]),
+    mixed: cand([el(), el({ id: 'title-1', lineIndex: 1, topY: 320, baselineY: 362, textBackdrop: { kind: 'unknown', color: null } })]),
+  };
+  for (const [name, c] of Object.entries(cases)) {
+    const a = await run(c);
+    assert.equal(a.metrics.contrast, 0, name);
+    assert.ok(a.overall <= 50, `${name}: overall ${a.overall}`);
+    assert.ok(a.overall < solid.overall, name);
+    assert.match(all(a), /コントラスト: 未評価/, name); assert.match(all(a), /代用していません/, name);
+    assert.doesNotMatch(all(a), /配色のコントラスト比/, name);
+  }
+  assert.match(all(await run(cases.image)), /背面が画像/); assert.match(all(await run(cases.invalid)), /異常値/);
+});
+test('unknown background never outranks a confirmed solid backdrop, even a mediocre one', async () => {
+  // 背面不明（metadataの配色は最高コントラスト）vs 背面が単色でコントラスト比が低め
+  const unknown = await run(cand([el({ textBackdrop: { kind: 'unknown', color: null } })]));
+  const mediocre = await run(cand([el({ foreground: '#9ca3af', textBackdrop: { kind: 'solid', color: '#374151' } })]));
+  assert.ok(mediocre.metrics.contrast > 0 && mediocre.metrics.contrast < 60);
+  assert.ok(unknown.overall < mediocre.overall, `unknown ${unknown.overall} vs solid ${mediocre.overall}`);
+});
+test('legacy paths without a confirmed solid backdrop (image under title, PNG, unparseable SVG) are unevaluated too', async () => {
+  const over = '<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720"><image href="data:image/png;base64,AAAA" width="1280" height="720"/><text x="80" y="300" font-size="48" fill="#ffffff">動画</text></svg>';
+  const meta = { textLength: 2, lineCount: 1, fontSize: 48, foreground: '#ffffff', background: '#000000' };
+  for (const url of [`data:image/svg+xml;base64,${Buffer.from(over).toString('base64')}`, 'data:image/png;base64,iVBORw0KGgo=']) {
+    const a = await run({ imageDataUrl: url, metadata: meta });
+    assert.equal(a.metrics.contrast, 0); assert.ok(a.overall <= 50);
   }
 });
 test('footer role is evaluated separately from the title', async () => {
