@@ -1,0 +1,93 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Readability trial at reduced display width (synthetic images only; not CTR)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "trial_id",
+    "image_set_id",
+    "source",
+    "generation_version",
+    "font_size",
+    "display_width",
+    "reviewer_id",
+    "read_correct",
+    "rank",
+    "os",
+    "browser",
+    "rendered_font"
+  ],
+  "properties": {
+    "trial_id": {
+      "type": "string",
+      "pattern": "^t[0-9]{3,}$"
+    },
+    "image_set_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "同じ人工タイトルを文字サイズだけ変えて作った画像の組のID"
+    },
+    "source": {
+      "enum": [
+        "synthetic"
+      ],
+      "description": "無料の人工画像のみ。実タイトル・実画像はこの表に入れない"
+    },
+    "generation_version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "font_size": {
+      "type": "string",
+      "pattern": "^[1-9][0-9]*$",
+      "description": "1280×720での文字サイズ(px)。例: 48 / 60 / 76"
+    },
+    "display_width": {
+      "type": "string",
+      "pattern": "^[1-9][0-9]*$",
+      "description": "縮小表示の幅(px)。例: 168 / 246 / 360（仮の段階）"
+    },
+    "reviewer_id": {
+      "type": "string",
+      "pattern": "^r[0-9]{2,}$"
+    },
+    "read_correct": {
+      "enum": [
+        "yes",
+        "no"
+      ]
+    },
+    "seconds": {
+      "type": "string",
+      "pattern": "^$|^[0-9]+(\\.[0-9]+)?$",
+      "description": "読み取りにかかった秒数（任意）"
+    },
+    "rank": {
+      "type": "string",
+      "pattern": "^[1-9][0-9]*$",
+      "description": "同じ評価者・画像の組・表示幅の中での読みやすさの順位（1が最も読みやすい）"
+    },
+    "reason": {
+      "type": "string",
+      "description": "読みやすさ・読みにくさの理由（任意）"
+    },
+    "os": {
+      "type": "string",
+      "minLength": 1,
+      "description": "例: Windows 11"
+    },
+    "browser": {
+      "type": "string",
+      "minLength": 1,
+      "description": "例: Chrome 141（ズーム100%で比較）"
+    },
+    "rendered_font": {
+      "type": "string",
+      "minLength": 1,
+      "description": "実際に表示されたフォント（開発者ツールの「Rendered Fonts」など）"
+    },
+    "note": {
+      "type": "string"
+    }
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "note": "人工ケース。採点の暫定仕様(0.1.0)に対する不変条件のみを固定する。正確な点数は固定しない。",
+  "cases": [
+    {"name":"short-high-contrast","metadata":{"textLength":10,"lineCount":1,"fontSize":76,"foreground":"#facc15","background":"#172554"}},
+    {"name":"low-contrast","metadata":{"textLength":10,"lineCount":1,"fontSize":76,"foreground":"#64748b","background":"#475569"}},
+    {"name":"boundary-15-chars","metadata":{"textLength":15,"lineCount":1,"fontSize":76,"foreground":"#ffffff","background":"#4c1d95"}},
+    {"name":"boundary-16-chars","metadata":{"textLength":16,"lineCount":2,"fontSize":76,"foreground":"#ffffff","background":"#4c1d95"}},
+    {"name":"long-31-chars","metadata":{"textLength":31,"lineCount":3,"fontSize":76,"foreground":"#ffffff","background":"#4c1d95"}},
+    {"name":"max-60-chars","metadata":{"textLength":60,"lineCount":4,"fontSize":48,"foreground":"#ffffff","background":"#4c1d95"}},
+    {"name":"small-font","metadata":{"textLength":10,"lineCount":1,"fontSize":24,"foreground":"#facc15","background":"#172554"}}
+  ],
+  "invariants": [
+    {"higher":"short-high-contrast","lower":"low-contrast"},
+    {"higher":"boundary-15-chars","lower":"boundary-16-chars"},
+    {"higher":"boundary-16-chars","lower":"long-31-chars"},
+    {"higher":"long-31-chars","lower":"max-60-chars"},
+    {"higher":"short-high-contrast","lower":"small-font"}
+  ]
+}
