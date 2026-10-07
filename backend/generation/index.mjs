@@ -16,9 +16,16 @@ export async function generate(input) {
 export function composeCandidates(input,backgroundImage=null) {
   const chars=[...input.title];
   const lineLength=backgroundImage?Math.ceil(chars.length/Math.ceil(chars.length/10)):15;
-  const lines=Array.from({length:Math.ceil(chars.length/lineLength)},(_,i)=>chars.slice(i*lineLength,i*lineLength+lineLength).join(''));
+  let lines=Array.from({length:Math.ceil(chars.length/lineLength)},(_,i)=>chars.slice(i*lineLength,i*lineLength+lineLength).join(''));
+  if(backgroundImage&&lines.length===2){
+    let offset=0;const boundaries=[];
+    for(const part of new Intl.Segmenter('ja',{granularity:'word'}).segment(input.title)){offset+=[...part.segment].length;if(offset<chars.length&&offset<=10&&chars.length-offset<=10)boundaries.push(offset);}
+    boundaries.sort((a,b)=>Math.abs(a-chars.length/2)-Math.abs(b-chars.length/2));
+    if(boundaries.length)lines=[chars.slice(0,boundaries[0]).join(''),chars.slice(boundaries[0]).join('')];
+  }
   return [['bold','#172554','#facc15'],['clean','#f8fafc','#0f172a'],['contrast','#4c1d95','#ffffff']].map(([style,bg,fg],i)=> {
     if(backgroundImage && style==='clean')fg='#ffffff';
+    if(backgroundImage && style==='contrast')fg='#a5f3fc';
     const fontSize=backgroundImage?Math.min(98,Math.floor(736/Math.max(...lines.map(l=>[...l].length))),Math.floor(440/lines.length)-12):(style==='clean' ? 64 : 76);
     const footer=`${backgroundImage?'AI BACKGROUND':'LAYOUT DEMO'} · ${input.genre} · ${i+1}`;
     const layout=makeTextLayout(lines,fontSize,fg,bg,Boolean(backgroundImage),footer);
