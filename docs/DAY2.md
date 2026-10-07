@@ -51,7 +51,8 @@ ChatGPTの契約とは別にAPIアカウントの利用可能な残高・権限�
 
 ## 検証状態
 
-通信は人工応答でテスト。実APIの画像品質・待ち時間・費用はAPIキー設定後に検証する。
+通信は人工応答でテスト。実APIで背景1枚から3案の生成に成功。全体9,649ms、利用履歴の表示額0.01米ドルをユーザーが確認。複数回の成功率・品質評価は未実施。
 相手側のB2（検証データ作成）は相手のブランチで進める。
 
 公式仕様: [Images API](https://developers.openai.com/api/reference/resources/images/methods/generate)、[画像生成ガイド](https://developers.openai.com/api/docs/guides/image-generation)。
+
