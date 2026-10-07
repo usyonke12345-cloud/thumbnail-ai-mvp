@@ -14,7 +14,7 @@ export function createOpenAIBackgroundProvider({env=process.env,fetchImpl=(...ar
   return async function generateBackground(input) {
     if(!env.OPENAI_API_KEY?.trim()) throw new ApiError(503,'API_KEY_MISSING','PC内の.envにOPENAI_API_KEYを設定してください。');
     if(env.OPENAI_IMAGE_ENABLED!=='true') throw new ApiError(503,'PAID_GENERATION_DISABLED','実画像生成は未有効です。設定手順を確認してください。');
-    const maxCalls=integer(env.OPENAI_MAX_CALLS,10,1,100);
+    const maxCalls=integer(env.OPENAI_MAX_CALLS,1,1,100);
     const timeoutMs=integer(env.OPENAI_TIMEOUT_MS,120000,1000,180000);
     if(busy) throw new ApiError(429,'GENERATION_BUSY','別の画像を生成中です。完了してから再試行してください。');
     if(calls>=maxCalls) throw new ApiError(429,'GENERATION_LIMIT','この起動中の生成回数上限に達しました。');

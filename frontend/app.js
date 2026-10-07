@@ -1,5 +1,6 @@
 const form=document.querySelector('#form'), button=document.querySelector('#submit'), status=document.querySelector('#status'), results=document.querySelector('#results');
 const mode=document.querySelector('#mode');
+let currentMode='demo';
 async function saveRaster(candidate, control, format='png') {
   const jpeg=format==='jpeg',label=jpeg?'JPEG':'PNG',mime=jpeg?'image/jpeg':'image/png',extension=jpeg?'jpg':'png';
   control.disabled=true;
@@ -17,14 +18,17 @@ async function saveRaster(candidate, control, format='png') {
     status.textContent=`1280×720の${label}を作成しました。保存が始まらない場合はダウンロードリンクを押してください。`;
   }catch(error){status.textContent=error.name==='AbortError'?'保存をキャンセルしました。':`${label}保存に失敗しました: ${error.message}`;}finally{control.disabled=false;}
 }
-function showMode(value) {mode.textContent=value==='ai_background'?'AI背景生成モードです。背景1枚から文字と配色の3案を作ります。生成にはAPI利用料がかかります。画像内容とCTRは未評価です。':'現在は無料のSVGレイアウトデモです。AI画像生成は使用していません。スコアはCTR予測ではありません。';}
+function showMode(value) {currentMode=value;mode.textContent=value==='ai_background'?'AI背景生成モードです。背景1枚から文字と配色の3案を作ります。生成にはAPI利用料がかかります。画像内容とCTRは未評価です。':'現在は無料のSVGレイアウトデモです。AI画像生成は使用していません。スコアはCTR予測ではありません。';}
 fetch('/api/v1/health').then(r=>{if(!r.ok)throw new Error();return r.json();}).then(data=>showMode(data.mode)).catch(()=>{mode.textContent='接続を確認できません。サーバーを起動してください。';});
 form.addEventListener('submit',async event=> {
-  event.preventDefault();button.disabled=true;status.textContent='候補を作成しています。AI背景生成には最大2〜3分かかることがあります…';results.replaceChildren();
+  event.preventDefault();if(button.disabled)return;button.disabled=true;
+  status.textContent=currentMode==='ai_background'?'背景を生成しています。最大3分ほどお待ちください。':'候補を作成しています…';
+  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),190000);
   try {
-    const response=await fetch('/api/v1/thumbnails',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title:document.querySelector('#title').value,genre:document.querySelector('#genre').value})});
+    const response=await fetch('/api/v1/thumbnails',{method:'POST',signal:controller.signal,headers:{'Content-Type':'application/json'},body:JSON.stringify({title:document.querySelector('#title').value,genre:document.querySelector('#genre').value})});
     const data=await response.json();if(!response.ok) throw new Error(data.error?.message ?? '処理に失敗しました。');
     showMode(data.mode);
+    results.replaceChildren();
     data.candidates.forEach((c,i)=> {
       const card=document.createElement('article'),img=document.createElement('img'),heading=document.createElement('h2'),details=document.createElement('p'),link=document.createElement('a');
       img.src=c.imageDataUrl;img.alt=`候補${i+1}: ${data.input.title}`;
@@ -36,5 +40,8 @@ form.addEventListener('submit',async event=> {
       const jpegButton=document.createElement('button');jpegButton.type='button';jpegButton.textContent='JPEGを保存';jpegButton.addEventListener('click',()=>saveRaster(c,jpegButton,'jpeg'));
       link.href=c.imageDataUrl;link.download=`thumbnail-${c.style}.svg`;link.textContent='SVGを保存';const actions=document.createElement('div');actions.className='save-actions';actions.append(pngButton,jpegButton,link);card.append(img,heading,details,actions);results.append(card);
     });status.textContent=`3案を表示しました（${data.elapsedMs}ms）。画像内容は未評価です。`;
-  } catch(error) {status.textContent=error.message;}finally{button.disabled=false;}
+  } catch(error) {
+    status.textContent=error.name==='AbortError'?'応答の待ち時間を超えました。自動再試行はしていません。AI生成では課金済みの可能性があるため、利用履歴を確認してから再度お試しください。':error instanceof TypeError?'サーバーに接続できません。接続と起動状態を確認してから、もう一度「3案を作る」を押してください。AI生成を開始していた場合は利用履歴も確認してください。':error.message;
+    if(results.children.length)status.textContent+=' 前回の候補は表示したままです。';
+  }finally{clearTimeout(timer);button.disabled=false;}
 });
