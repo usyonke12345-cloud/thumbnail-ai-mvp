@@ -1,4 +1,4 @@
-export const GENERATION_VERSION = '0.3.2';
+export const GENERATION_VERSION = '0.4.0';
 export function aiTitleFontSize(lines) {
   return Math.min(64, Math.floor(736 / Math.max(...lines.map(line => [...line].length))));
 }

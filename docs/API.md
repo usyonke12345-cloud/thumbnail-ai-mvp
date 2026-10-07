@@ -75,3 +75,5 @@ modeは生成設定に応じてai_background。healthはAPIキーの有効性や
 採点用metadataにgeneration_versionとtextLayoutを追加しました。旧候補では省略可能です。
 座標・推定寸法・行の役割・背面の定義はdocs/METADATA-PROPOSAL.mdを参照してください。
 人工fixtureはdocs/fixtures/generation-metadata.jsonです。採点側0.3.0への対応は別ブランチで進めます。
+
+Day 3: SVG内の文字は同梱フォントから生成したpathです。PNGは画面側で変換・保存します。採点はmetadata.textLayoutの使用が必要です。追加依存はnpm ciで導入します。

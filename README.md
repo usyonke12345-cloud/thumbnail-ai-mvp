@@ -7,10 +7,11 @@ Day 2ではOpenAI画像生成adapterを追加しました。設定するとAI背
 
 ## 起動
 
-Node.js 22以上とGitを用意します。追加パッケージ、APIキー、課金は不要です。
+Node.js 22以上とGitを用意します。初回に npm ci で依存パッケージを入れます。無料デモはAPIキー・課金不要です。
 このREADMEがあるフォルダで実行してください。
 
 ```sh
+npm ci
 npm start
 ```
 
@@ -23,7 +24,7 @@ npm test
 設定を変える場合は `.env.example` を `.env` にコピーし、`node --env-file=.env backend/server.mjs` で起動。
 通常の `npm start` は `.env` を自動読み込みしません。`GENERATION_PROVIDER` は `mock` と `openai` に対応。
 有料の実画像生成は [Day 2の設定手順](docs/DAY2.md) を参照してください。キー入力に加え、明示的な有効化が必要です。
-保存したSVGはレイアウト確認用です。実際のYouTube用PNG/JPEG書き出しは1週間のタスクに含めています。
+候補は1280×720のPNGまたはSVGで保存できます。PNG変換では追加のAPI料金はかかりません。
 
 ## 分担と構成
 
@@ -56,6 +57,7 @@ npm test
 git clone https://github.com/usyonke12345-cloud/thumbnail-ai-mvp.git
 cd thumbnail-ai-mvp
 npm test
+npm ci
 npm start
 ```
 
