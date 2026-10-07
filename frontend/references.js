@@ -10,4 +10,14 @@ function render(){list.replaceChildren();rows.forEach((row,i)=>{const card=docum
 document.querySelector('#reference-form').addEventListener('submit',event=>{event.preventDefault();const url=document.querySelector('#reference-url').value.trim(),reason=document.querySelector('#reference-reason').value.trim();if(!validUrl(url)){status.textContent='YouTubeのHTTPS URLを入力してください。';return;}if(rows.length>=100){status.textContent='記録は100件までです。';return;}rows.push({...seeds[0],id:crypto.randomUUID(),url,reason,layout:'',palette:'',decoration:'',rule:''});persist();render();event.target.reset();});
 document.querySelector('#export-references').addEventListener('click',async()=>{try{const handle=typeof window.showSaveFilePicker==='function'?await window.showSaveFilePicker({suggestedName:'thumbnail-reference-notes.json',types:[{description:'JSON',accept:{'application/json':['.json']}}]}):null;const text=JSON.stringify({version:1,source:'user-notes',imagePermissionVerified:false,references:rows},null,2);if(handle){const writer=await handle.createWritable();await writer.write(text);await writer.close();status.textContent='記録をJSONファイルへ保存しました。';}else{const link=document.createElement('a');link.href=`data:application/json;charset=utf-8,${encodeURIComponent(text)}`;link.download='thumbnail-reference-notes.json';link.textContent='記録をダウンロード';status.replaceChildren(link);link.click();}}catch(error){status.textContent=error.name==='AbortError'?'保存をキャンセルしました。':`保存できませんでした：${error.message}`;}});
 document.querySelector('#import-references').addEventListener('change',async event=>{try{const file=event.target.files[0];if(!file)return;if(file.size>1024*1024)throw new Error('1MB以内の記録を選んでください。');const data=JSON.parse(await file.text());if(data.version!==1)throw new Error('記録の版が対応していません。');const imported=validate(data.references);rows=imported;persist();render();}catch(error){status.textContent=`読み込みできませんでした：${error.message}`;}finally{event.target.value='';}});
+function buildBrief(records){
+ const lines=['参考サムネからの作風ルール — 下書き','出典：ユーザーの記録。画像の自動分析・追加学習は未実施。','画像利用の許諾：未確認。',''];
+ let ruleCount=0;
+ records.forEach((row,i)=>{lines.push(`参考例 ${i+1}: ${row.url}`);for(const [field,label]of fields){const value=row[field]?.trim();if(value){lines.push(`${label}: ${value}`);if(field==='rule')ruleCount++;}}lines.push('');});
+ lines.push(`明示された作風ルール：${ruleCount}件。`);
+ if(!ruleCount)lines.push('作風ルールはまだ未記入です。参考画像を確認して記録してください。');
+ lines.push('比較手順：同じタイトルで案を作り、文字・配色・構図・縮小時の読みやすさを人が確認する。');
+ return lines.join('\n');
+}
+document.querySelector('#build-brief').addEventListener('click',()=>{document.querySelector('#style-brief').value=buildBrief(rows);status.textContent='記録した内容から下書きを作りました。内容を確認してコピーしてください。';});
 render();

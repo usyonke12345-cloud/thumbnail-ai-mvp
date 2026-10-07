@@ -2,6 +2,7 @@
 <span class="badge">作風の基準づくり</span><h1>参考サムネを、<br>言葉で整理する。</h1><p><a href="/">サムネ生成へ戻る</a></p><aside>記録はこのブラウザ内に保存します。画像の取得・AIへの送信・追加学習は行いません。以前の3本は好みの理由だけを引き継いでいます。詳しい分析は動画のサムネを見て記入してください。</aside>
 <form id="reference-form"><label for="reference-url">YouTube動画のURL</label><input id="reference-url" type="url" required placeholder="https://youtu.be/…"><label for="reference-reason">好きな点・好みでない点</label><input id="reference-reason" required maxlength="300" placeholder="文字が大きい、人物と文字の配置がよい…"><button type="submit">参考例を追加</button></form>
 <p id="reference-status" role="status" aria-live="polite"></p><div class="save-actions"><button id="export-references" type="button">記録をJSONで保存</button><label>保存した記録を戻す <input id="import-references" type="file" accept=".json,application/json"></label></div><p>まずは良い例と好みでない例を合わせて5〜10件。実際に画像を学習へ使う場合は、利用許諾を別途確認します。</p>
+<h2>作風ルールの下書き</h2><p>記入した内容だけをまとめます。空欄から分析結果やルールを推測しません。生成側へ渡す前に、参考画像と照らして確認してください。</p><button id="build-brief" type="button">記録から下書きを作る</button><label>共有用の下書き<textarea id="style-brief" rows="12" readonly></textarea></label><p>下書きはコピーして共有できます。画像利用の許諾や学習済みのモデルを示すものではありません。</p>
 <section id="reference-list" aria-label="参考サムネの記録"></section>
 <h2>最初のデザイン基準</h2><p>C3：主役を右へ、大きな文字を左へ、横方向の暗いグラデーションと縁取り。これは採用済みの1案です。文字量・背景の透過度・余白を参考例と比べ、ほかの基準も増やします。</p>
 </main></body></html>

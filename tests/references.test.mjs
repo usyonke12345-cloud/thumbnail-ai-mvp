@@ -24,3 +24,10 @@ test('reference pages are whitelisted local assets and do not expose the reposit
  const server=makeServer();await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
  try{const base=`http://127.0.0.1:${server.address().port}`;const page=await fetch(`${base}/references`);assert.equal(page.status,200);assert.match(await page.text(),/参考サムネ/);const script=await fetch(`${base}/references.js`);assert.equal(script.status,200);assert.match(script.headers.get('content-type'),/javascript/);assert.equal((await fetch(`${base}/.env`)).status,404);}finally{await new Promise(resolve=>server.close(resolve));}
 });
+test('style brief preserves source notes without inventing rules or permission',()=>{
+ const {scope}=context(null),brief=vm.runInContext('buildBrief',scope);
+ const empty=brief([{url:'https://youtu.be/i72HxjCLlYY',reason:'',rule:''}]);
+ assert.match(empty,/まだ未記入/);assert.match(empty,/許諾：未確認/);assert.match(empty,/i72HxjCLlYY/);
+ const recorded=brief([{url:'https://youtu.be/example',reason:'文字が好き',rule:'文字を左に配置',palette:''}]);
+ assert.match(recorded,/文字を左に配置/);assert.match(recorded,/ルール：1件/);assert.doesNotMatch(recorded,/配色・明暗:/);
+});
