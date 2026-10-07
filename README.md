@@ -24,7 +24,7 @@ npm test
 設定を変える場合は `.env.example` を `.env` にコピーし、`node --env-file=.env backend/server.mjs` で起動。
 通常の `npm start` は `.env` を自動読み込みしません。`GENERATION_PROVIDER` は `mock` と `openai` に対応。
 有料の実画像生成は [Day 2の設定手順](docs/DAY2.md) を参照してください。キー入力に加え、明示的な有効化が必要です。
-候補は1280×720のPNGまたはSVGで保存できます。PNG変換では追加のAPI料金はかかりません。
+候補は1280×720のPNG・JPEG・SVGで保存できます。PNG変換では追加のAPI料金はかかりません。
 
 ## 分担と構成
 

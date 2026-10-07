@@ -1,17 +1,18 @@
 const form=document.querySelector('#form'), button=document.querySelector('#submit'), status=document.querySelector('#status'), results=document.querySelector('#results');
 const mode=document.querySelector('#mode');
-async function savePng(candidate, control) {
+async function saveRaster(candidate, control, format='png') {
+  const jpeg=format==='jpeg',label=jpeg?'JPEG':'PNG',mime=jpeg?'image/jpeg':'image/png',extension=jpeg?'jpg':'png';
   control.disabled=true;
   try {
     const image=new Image();image.src=candidate.imageDataUrl;await image.decode();
     const canvas=document.createElement('canvas');canvas.width=1280;canvas.height=720;
     const context=canvas.getContext('2d');if(!context)throw new Error('画像保存に対応していないブラウザです。');
     context.drawImage(image,0,0,1280,720);
-    const blob=await new Promise((resolve,reject)=>canvas.toBlob(value=>value?resolve(value):reject(new Error('PNGへ変換できませんでした。')),'image/png'));
-    const link=document.createElement('a');link.href=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=()=>reject(new Error('保存リンクを作れませんでした。'));reader.readAsDataURL(blob);});link.download=`thumbnail-${candidate.style}.png`;link.textContent='作成したPNGをダウンロード';
-    control.parentElement.querySelector('[data-png-download]')?.remove();link.dataset.pngDownload='';control.after(link);link.click();
-    status.textContent='1280×720のPNGを作成しました。保存が始まらない場合はダウンロードリンクを押してください。';
-  }catch(error){status.textContent=`PNG保存に失敗しました: ${error.message}`;}finally{control.disabled=false;}
+    const blob=await new Promise((resolve,reject)=>canvas.toBlob(value=>value?resolve(value):reject(new Error(`${label}へ変換できませんでした。`)),mime,jpeg ? 0.92 : undefined));
+    const link=document.createElement('a');link.href=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=()=>reject(new Error('保存リンクを作れませんでした。'));reader.readAsDataURL(blob);});link.download=`thumbnail-${candidate.style}.${extension}`;link.textContent=`作成した${label}をダウンロード`;
+    control.parentElement.querySelector(`[data-raster-download="${format}"]`)?.remove();link.dataset.rasterDownload=format;control.after(link);link.click();
+    status.textContent=`1280×720の${label}を作成しました。保存が始まらない場合はダウンロードリンクを押してください。`;
+  }catch(error){status.textContent=`${label}保存に失敗しました: ${error.message}`;}finally{control.disabled=false;}
 }
 function showMode(value) {mode.textContent=value==='ai_background'?'AI背景生成モードです。背景1枚から文字と配色の3案を作ります。生成にはAPI利用料がかかります。画像内容とCTRは未評価です。':'現在は無料のSVGレイアウトデモです。AI画像生成は使用していません。スコアはCTR予測ではありません。';}
 fetch('/api/v1/health').then(r=>{if(!r.ok)throw new Error();return r.json();}).then(data=>showMode(data.mode)).catch(()=>{mode.textContent='接続を確認できません。サーバーを起動してください。';});
@@ -28,8 +29,9 @@ form.addEventListener('submit',async event=> {
       heading.textContent=`${i+1}. ${c.style} — ${pending?'採点の接続確認中':`レイアウト ${c.assessment.overall}/100`}`;
       details.textContent=pending?'画像上の文字のコントラストは未評価です。採点側の更新と合流して確認します。':c.assessment.reasons.join(' / ');
       if(c.metadata.textLayout?.elements.some(e=>e.resolvedFontFamily===null))details.textContent+=' / 一部の文字は同梱フォント非対応です。絵文字などの見た目は環境によって変わり、収まりは未評価です。';
-      const pngButton=document.createElement('button');pngButton.type='button';pngButton.textContent='PNGを保存';pngButton.addEventListener('click',()=>savePng(c,pngButton));
-      link.href=c.imageDataUrl;link.download=`thumbnail-${c.style}.svg`;link.textContent='SVGを保存';card.append(img,heading,details,pngButton,link);results.append(card);
+      const pngButton=document.createElement('button');pngButton.type='button';pngButton.textContent='PNGを保存';pngButton.addEventListener('click',()=>saveRaster(c,pngButton));
+      const jpegButton=document.createElement('button');jpegButton.type='button';jpegButton.textContent='JPEGを保存';jpegButton.addEventListener('click',()=>saveRaster(c,jpegButton,'jpeg'));
+      link.href=c.imageDataUrl;link.download=`thumbnail-${c.style}.svg`;link.textContent='SVGを保存';const actions=document.createElement('div');actions.className='save-actions';actions.append(pngButton,jpegButton,link);card.append(img,heading,details,actions);results.append(card);
     });status.textContent=`3案を表示しました（${data.elapsedMs}ms）。画像内容は未評価です。`;
   } catch(error) {status.textContent=error.message;}finally{button.disabled=false;}
 });
