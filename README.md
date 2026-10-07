@@ -83,3 +83,5 @@ Day 1の実施結果と相手側チェックリストは [DAY1.md](docs/DAY1.md)
 詳細: [metadataの定義](docs/METADATA-PROPOSAL.md)。寸法は推定で、実フォント測定ではありません。
 
 Day4の復旧・制限設定と参考サムネ分析の準備: [Day4手順](docs/DAY4.md)。
+
+参考サムネの記録はローカル起動後 /references で開けます。記録はブラウザ内保存、JSONでバックアップ可能。

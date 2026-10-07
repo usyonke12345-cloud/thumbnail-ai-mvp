@@ -1,0 +1,26 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import vm from 'node:vm';
+import {readFile} from 'node:fs/promises';
+import {makeServer} from '../backend/server.mjs';
+const source=await readFile(new URL('../frontend/references.js',import.meta.url),'utf8');
+function context(stored){
+ function node(){return {children:[],textContent:'',append(...values){this.children.push(...values);},replaceChildren(...values){this.children=values;},addEventListener(){}};}
+ const nodes=new Map();let sequence=0;
+ const scope={document:{querySelector:s=>{if(!nodes.has(s))nodes.set(s,node());return nodes.get(s);},createElement:node},localStorage:{getItem:()=>stored,setItem(){}},URL,crypto:{randomUUID:()=>`id-${++sequence}`}};
+ vm.createContext(scope);vm.runInContext(source,scope);return {scope,nodes};
+}
+test('reference imports reject unsafe destinations and never accept imported permission claims',()=>{
+ const {scope}=context(null),validate=vm.runInContext('validate',scope);
+ for(const url of ['javascript:alert(1)','https://youtube.com.evil.example/','http://youtu.be/example','https://example.com/'])assert.throws(()=>validate([{url}]));
+ const rows=validate([{url:'https://youtu.be/0dz-e5UtO5o',reason:'好き',permission:'approved',privateKey:'not-kept'}]);assert.equal(rows[0].permission,'unknown');assert.equal(rows[0].privateKey,undefined);
+ assert.throws(()=>validate(Array(101).fill({url:'https://youtu.be/example'})));
+});
+test('valid stored notes survive initialization; damaged notes fall back without inventing analysis',()=>{
+ const good=context(JSON.stringify([{url:'https://youtu.be/0dz-e5UtO5o',reason:'文字',rule:'文字を大きく'}]));assert.equal(good.nodes.get('#reference-list').children.length,1);
+ const bad=context('{broken');assert.equal(bad.nodes.get('#reference-list').children.length,3);assert.match(bad.nodes.get('#reference-status').textContent,/読み込めません/);
+});
+test('reference pages are whitelisted local assets and do not expose the repository',async()=>{
+ const server=makeServer();await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
+ try{const base=`http://127.0.0.1:${server.address().port}`;const page=await fetch(`${base}/references`);assert.equal(page.status,200);assert.match(await page.text(),/参考サムネ/);const script=await fetch(`${base}/references.js`);assert.equal(script.status,200);assert.match(script.headers.get('content-type'),/javascript/);assert.equal((await fetch(`${base}/.env`)).status,404);}finally{await new Promise(resolve=>server.close(resolve));}
+});

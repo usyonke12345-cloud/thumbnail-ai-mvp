@@ -5,7 +5,7 @@ import { resolve } from 'node:path';
 import { runPipeline } from './pipeline.mjs';
 import { ApiError } from '../shared/contracts.mjs';
 import { generationMode } from './generation/index.mjs';
-const assets=new Map([['/', ['index.html','text/html; charset=utf-8']],['/app.js',['app.js','text/javascript; charset=utf-8']],['/style.css',['style.css','text/css; charset=utf-8']]]);
+const assets=new Map([['/', ['index.html','text/html; charset=utf-8']],['/app.js',['app.js','text/javascript; charset=utf-8']],['/style.css',['style.css','text/css; charset=utf-8']],['/references',['references.html','text/html; charset=utf-8']],['/references.js',['references.js','text/javascript; charset=utf-8']]]);
 export function makeServer() {
   const server=createServer(async(req,res)=> {
     const send=(status,value)=>{res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'});res.end(JSON.stringify(value));};
