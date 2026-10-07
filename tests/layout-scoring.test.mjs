@@ -10,10 +10,10 @@ const run = async name => {
   return score({ imageDataUrl, metadata: { textLength: c.textLength, lineCount: c.lineCount, fontSize: c.fontSize, foreground: c.foreground, background: c.background } }, {});
 };
 const has = (a, s) => [...a.reasons, ...a.limitations].some(x => x.includes(s));
-test('version 0.2.1 stays within the v1 Assessment contract', async () => {
+test('version 0.3.0 stays within the v1 Assessment contract', async () => {
   for (const c of cases) {
     const a = await run(c.name);
-    assert.equal(a.version, '0.2.1'); assert.equal(a.kind, 'layout_heuristic');
+    assert.equal(a.version, '0.3.0'); assert.equal(a.kind, 'layout_heuristic');
     assert.deepEqual(Object.keys(a.metrics).sort(), ['brevity', 'contrast', 'font']);
     assert.ok(a.limitations.some(x => x.includes('CTR予測や効果保証ではありません')));
   }

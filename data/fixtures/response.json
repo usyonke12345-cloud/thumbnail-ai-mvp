@@ -23,13 +23,14 @@
       "assessment": {
         "overall": 100,
         "kind": "layout_heuristic",
-        "version": "0.2.1",
+        "version": "0.3.0",
         "metrics": {
           "contrast": 100,
           "brevity": 100,
           "font": 100
         },
         "reasons": [
+          "評価方法: SVGの構造解析（textLayoutなし）",
           "配色のコントラスト比: 9.6（画像内の文字と背面の色）",
           "タイトル 8文字・1行",
           "タイトルは推定で領域内に収まっています。"
@@ -59,13 +60,14 @@
       "assessment": {
         "overall": 100,
         "kind": "layout_heuristic",
-        "version": "0.2.1",
+        "version": "0.3.0",
         "metrics": {
           "contrast": 100,
           "brevity": 100,
           "font": 100
         },
         "reasons": [
+          "評価方法: SVGの構造解析（textLayoutなし）",
           "配色のコントラスト比: 11.0（画像内の文字と背面の色）",
           "タイトル 8文字・1行",
           "タイトルは推定で領域内に収まっています。"
@@ -95,13 +97,14 @@
       "assessment": {
         "overall": 100,
         "kind": "layout_heuristic",
-        "version": "0.2.1",
+        "version": "0.3.0",
         "metrics": {
           "contrast": 100,
           "brevity": 100,
           "font": 100
         },
         "reasons": [
+          "評価方法: SVGの構造解析（textLayoutなし）",
           "配色のコントラスト比: 17.1（画像内の文字と背面の色）",
           "タイトル 8文字・1行",
           "タイトルは推定で領域内に収まっています。"
