@@ -1,0 +1,38 @@
+{
+  "setId": "synthetic-01",
+  "source": "synthetic",
+  "title": "初心者のための動画制作",
+  "generationVersion": "readability-fixture-0.1.0",
+  "canvas": {
+    "width": 1280,
+    "height": 720
+  },
+  "variable": "fontSize",
+  "fontFamily": "sans-serif",
+  "fontWeight": 800,
+  "provisionalDisplayWidths": [
+    168,
+    246,
+    360
+  ],
+  "variants": [
+    {
+      "file": "synthetic-01-48.svg",
+      "fontSize": 48
+    },
+    {
+      "file": "synthetic-01-60.svg",
+      "fontSize": 60
+    },
+    {
+      "file": "synthetic-01-76.svg",
+      "fontSize": 76
+    }
+  ],
+  "limitations": [
+    "人工データ。許諾済み20タイトルには数えない。",
+    "表示幅とフォント基準は未検証。",
+    "sans-serifはOSにより異なる。比較は同じPC・ブラウザ・ズーム100%で行い、実際のフォントを記録する。",
+    "本番の文字パネルとは異なる検証用配置。"
+  ]
+}

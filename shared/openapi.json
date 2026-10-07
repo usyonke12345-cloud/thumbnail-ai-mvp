@@ -2,8 +2,8 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Thumbnail AI MVP",
-    "version": "0.1.0",
-    "description": "Local demo only. Heuristic layout score, not a CTR prediction."
+    "version": "0.2.0",
+    "description": "Local mock or opt-in AI background with three SVG layouts. Score is a text-panel heuristic, not image-content analysis or CTR prediction."
   },
   "servers": [
     {
@@ -196,6 +196,16 @@
               }
             }
           },
+          "429": {
+            "description": "Concurrent, per-process or provider rate limit",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
           "500": {
             "description": "Internal failure",
             "content": {
@@ -206,8 +216,28 @@
               }
             }
           },
+          "502": {
+            "description": "Provider network, response or generation failure",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
           "503": {
-            "description": "Provider unavailable",
+            "description": "Provider configuration, API key, opt-in or authorization problem",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "504": {
+            "description": "Provider deadline exceeded; billing may have occurred",
             "content": {
               "application/json": {
                 "schema": {
@@ -280,6 +310,12 @@
           "background": {
             "type": "string",
             "pattern": "^#[0-9a-fA-F]{6}$"
+          },
+          "generation_version": {
+            "type": "string"
+          },
+          "textLayout": {
+            "$ref": "#/components/schemas/TextLayout"
           }
         }
       },
@@ -407,7 +443,11 @@
             "const": "v1"
           },
           "mode": {
-            "const": "demo"
+            "type": "string",
+            "enum": [
+              "demo",
+              "ai_background"
+            ]
           },
           "input": {
             "$ref": "#/components/schemas/Request"
@@ -463,7 +503,264 @@
             "const": "ok"
           },
           "mode": {
-            "const": "demo"
+            "type": "string",
+            "enum": [
+              "demo",
+              "ai_background"
+            ]
+          }
+        }
+      },
+      "TextRegion": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "x",
+          "y",
+          "width",
+          "height",
+          "padding"
+        ],
+        "properties": {
+          "x": {
+            "type": "number"
+          },
+          "y": {
+            "type": "number"
+          },
+          "width": {
+            "type": "number",
+            "minimum": 0
+          },
+          "height": {
+            "type": "number",
+            "minimum": 0
+          },
+          "padding": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "top",
+              "right",
+              "bottom",
+              "left"
+            ],
+            "properties": {
+              "top": {
+                "type": "number",
+                "minimum": 0
+              },
+              "right": {
+                "type": "number",
+                "minimum": 0
+              },
+              "bottom": {
+                "type": "number",
+                "minimum": 0
+              },
+              "left": {
+                "type": "number",
+                "minimum": 0
+              }
+            }
+          }
+        }
+      },
+      "TextElement": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "role",
+          "lineIndex",
+          "text",
+          "x",
+          "baselineY",
+          "topY",
+          "width",
+          "height",
+          "measurement",
+          "measurementVersion",
+          "fontSize",
+          "fontFamily",
+          "fontWeight",
+          "resolvedFontFamily",
+          "foreground",
+          "textRegion",
+          "textBackdrop"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "role": {
+            "enum": [
+              "title",
+              "footer"
+            ]
+          },
+          "lineIndex": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "text": {
+            "type": "string"
+          },
+          "x": {
+            "type": "number"
+          },
+          "baselineY": {
+            "type": "number"
+          },
+          "topY": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "width": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "minimum": 0
+          },
+          "height": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "minimum": 0
+          },
+          "measurement": {
+            "enum": [
+              "estimated",
+              "rendered",
+              "unknown"
+            ]
+          },
+          "measurementVersion": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "fontSize": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "fontFamily": {
+            "type": "string"
+          },
+          "fontWeight": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000
+          },
+          "resolvedFontFamily": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "foreground": {
+            "type": "string",
+            "pattern": "^#[0-9a-fA-F]{6}$"
+          },
+          "textRegion": {
+            "$ref": "#/components/schemas/TextRegion"
+          },
+          "textBackdrop": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "kind",
+              "color"
+            ],
+            "properties": {
+              "kind": {
+                "enum": [
+                  "solid",
+                  "image",
+                  "unknown"
+                ]
+              },
+              "color": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "pattern": "^#[0-9a-fA-F]{6}$"
+              }
+            }
+          },
+          "stroke": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "color",
+              "width"
+            ],
+            "properties": {
+              "color": {
+                "type": "string",
+                "pattern": "^#[0-9a-fA-F]{6}$"
+              },
+              "width": {
+                "type": "number",
+                "minimum": 0
+              }
+            }
+          },
+          "shadow": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "color",
+              "blur",
+              "offsetX",
+              "offsetY"
+            ],
+            "properties": {
+              "color": {
+                "type": "string",
+                "pattern": "^#[0-9a-fA-F]{6}$"
+              },
+              "blur": {
+                "type": "number",
+                "minimum": 0
+              },
+              "offsetX": {
+                "type": "number"
+              },
+              "offsetY": {
+                "type": "number"
+              }
+            }
+          }
+        }
+      },
+      "TextLayout": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "version",
+          "coordinateSpace",
+          "elements"
+        ],
+        "properties": {
+          "version": {
+            "const": "1.0.0"
+          },
+          "coordinateSpace": {
+            "const": "canvas_px"
+          },
+          "elements": {
+            "type": "array",
+            "minItems": 2,
+            "items": {
+              "$ref": "#/components/schemas/TextElement"
+            }
           }
         }
       }

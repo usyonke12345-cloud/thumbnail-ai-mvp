@@ -1,8 +1,9 @@
 # サムネ工房 — 2人開発スターター
 
 YouTube向けサムネイル生成・評価AIのMVPを、2人が並行して実装するためのリポジトリです。
-現時点で動くのは、タイトル入力 → SVGレイアウト3案 → 仮の採点 → 保存のローカルデモです。
-AI画像生成、画像認識、CTR予測、YouTubeへの投稿は未実装です。ジャンルは入力・表示されますが、生成や採点の最適化にはまだ使いません。
+標準起動は、タイトル入力 → SVGレイアウト3案 → 仮の採点 → 保存の無料ローカルデモです。
+Day 2ではOpenAI画像生成adapterを追加しました。設定するとAI背景1枚から3案を作れます。実APIの検証はキー設定後に行います。
+画像認識、CTR予測、YouTubeへの投稿は未実装です。ジャンルはAI生成プロンプトに含めますが、採点には使いません。
 
 ## 起動
 
@@ -20,7 +21,8 @@ npm test
 ```
 
 設定を変える場合は `.env.example` を `.env` にコピーし、`node --env-file=.env backend/server.mjs` で起動。
-通常の `npm start` は `.env` を自動読み込みしません。現時点の `GENERATION_PROVIDER` は `mock` のみ。
+通常の `npm start` は `.env` を自動読み込みしません。`GENERATION_PROVIDER` は `mock` と `openai` に対応。
+有料の実画像生成は [Day 2の設定手順](docs/DAY2.md) を参照してください。キー入力に加え、明示的な有効化が必要です。
 保存したSVGはレイアウト確認用です。実際のYouTube用PNG/JPEG書き出しは1週間のタスクに含めています。
 
 ## 分担と構成
@@ -74,3 +76,6 @@ Day 1の実施結果と相手側チェックリストは [DAY1.md](docs/DAY1.md)
 サーバーはローカル開発用で127.0.0.1に限定しています。公開前に認証、利用量制限、画像保管、タイムアウト、秘密情報管理を設計してください。
 
 技術参照: [Node.js HTTP](https://nodejs.org/api/http.html)、[Node.js test runner](https://nodejs.org/api/test.html)。
+
+採点用レイアウト情報の生成側実装と人工fixtureを追加しました。
+詳細: [metadataの定義](docs/METADATA-PROPOSAL.md)。寸法は推定で、実フォント測定ではありません。

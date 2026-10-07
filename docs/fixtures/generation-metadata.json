@@ -1,0 +1,1146 @@
+{
+  "source": "synthetic",
+  "generation_version": "0.3.2",
+  "sets": [
+    {
+      "input": {
+        "title": "初心者のための動画制作",
+        "genre": "education"
+      },
+      "candidates": [
+        {
+          "id": "28a3b68b-5f46-42b3-ac7b-c10ba478b3c8",
+          "style": "bold",
+          "mimeType": "image/svg+xml",
+          "imageDataUrl": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjgwIiBoZWlnaHQ9IjcyMCIgdmlld0JveD0iMCAwIDEyODAgNzIwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiI+PHJlY3Qgd2lkdGg9IjEyODAiIGhlaWdodD0iNzIwIiBmaWxsPSIjMTcyNTU0Ii8+PHJlY3QgeD0iODAiIHk9IjgwIiB3aWR0aD0iMTUwIiBoZWlnaHQ9IjEyIiBmaWxsPSIjZmFjYzE1Ii8+PHRleHQgeD0iODAiIHk9IjIxMCIgZm9udC1zaXplPSI3NiIgZm9udC13ZWlnaHQ9IjgwMCIgZmlsbD0iI2ZhY2MxNSI+5Yid5b+D6ICF44Gu44Gf44KB44Gu5YuV55S75Yi25L2cPC90ZXh0Pjx0ZXh0IHg9IjgwIiB5PSI2NjAiIGZvbnQtc2l6ZT0iMjQiIGZpbGw9IiNmYWNjMTUiPkxBWU9VVCBERU1PIMK3IGVkdWNhdGlvbiDCtyAxPC90ZXh0Pjwvc3ZnPg==",
+          "width": 1280,
+          "height": 720,
+          "metadata": {
+            "textLength": 11,
+            "lineCount": 1,
+            "fontSize": 76,
+            "foreground": "#facc15",
+            "background": "#172554",
+            "generation_version": "0.3.2",
+            "textLayout": {
+              "version": "1.0.0",
+              "coordinateSpace": "canvas_px",
+              "elements": [
+                {
+                  "id": "title-0",
+                  "role": "title",
+                  "lineIndex": 0,
+                  "text": "初心者のための動画制作",
+                  "x": 80,
+                  "topY": 143.12,
+                  "width": 836,
+                  "height": 82.08000000000001,
+                  "baselineY": 210,
+                  "fontSize": 76,
+                  "fontFamily": "sans-serif",
+                  "fontWeight": 800,
+                  "resolvedFontFamily": null,
+                  "foreground": "#facc15",
+                  "measurement": "estimated",
+                  "measurementVersion": "ink-estimate-1.0.0",
+                  "textRegion": {
+                    "x": 0,
+                    "y": 0,
+                    "width": 1280,
+                    "height": 720,
+                    "padding": {
+                      "top": 40,
+                      "right": 40,
+                      "bottom": 40,
+                      "left": 40
+                    }
+                  },
+                  "textBackdrop": {
+                    "kind": "solid",
+                    "color": "#172554"
+                  }
+                },
+                {
+                  "id": "footer-0",
+                  "role": "footer",
+                  "lineIndex": 0,
+                  "text": "LAYOUT DEMO · education · 1",
+                  "x": 80,
+                  "topY": 638.88,
+                  "width": 419.99999999999983,
+                  "height": 25.92,
+                  "baselineY": 660,
+                  "fontSize": 24,
+                  "fontFamily": "sans-serif",
+                  "fontWeight": 400,
+                  "resolvedFontFamily": null,
+                  "foreground": "#facc15",
+                  "measurement": "estimated",
+                  "measurementVersion": "ink-estimate-1.0.0",
+                  "textRegion": {
+                    "x": 0,
+                    "y": 600,
+                    "width": 1280,
+                    "height": 120,
+                    "padding": {
+                      "top": 32,
+                      "right": 40,
+                      "bottom": 40,
+                      "left": 40
+                    }
+                  },
+                  "textBackdrop": {
+                    "kind": "solid",
+                    "color": "#172554"
+                  }
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "c86c31e9-15a5-477a-91f1-301943586bda",
+          "style": "clean",
+          "mimeType": "image/svg+xml",
+          "imageDataUrl": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjgwIiBoZWlnaHQ9IjcyMCIgdmlld0JveD0iMCAwIDEyODAgNzIwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiI+PHJlY3Qgd2lkdGg9IjEyODAiIGhlaWdodD0iNzIwIiBmaWxsPSIjZjhmYWZjIi8+PHJlY3QgeD0iODAiIHk9IjgwIiB3aWR0aD0iMTUwIiBoZWlnaHQ9IjEyIiBmaWxsPSIjMGYxNzJhIi8+PHRleHQgeD0iODAiIHk9IjIxMCIgZm9udC1zaXplPSI2NCIgZm9udC13ZWlnaHQ9IjgwMCIgZmlsbD0iIzBmMTcyYSI+5Yid5b+D6ICF44Gu44Gf44KB44Gu5YuV55S75Yi25L2cPC90ZXh0Pjx0ZXh0IHg9IjgwIiB5PSI2NjAiIGZvbnQtc2l6ZT0iMjQiIGZpbGw9IiMwZjE3MmEiPkxBWU9VVCBERU1PIMK3IGVkdWNhdGlvbiDCtyAyPC90ZXh0Pjwvc3ZnPg==",
+          "width": 1280,
+          "height": 720,
+          "metadata": {
+            "textLength": 11,
+            "lineCount": 1,
+            "fontSize": 64,
+            "foreground": "#0f172a",
+            "background": "#f8fafc",
+            "generation_version": "0.3.2",
+            "textLayout": {
+              "version": "1.0.0",
+              "coordinateSpace": "canvas_px",
+              "elements": [
+                {
+                  "id": "title-0",
+                  "role": "title",
+                  "lineIndex": 0,
+                  "text": "初心者のための動画制作",
+                  "x": 80,
+                  "topY": 153.68,
+                  "width": 704,
+                  "height": 69.12,
+                  "baselineY": 210,
+                  "fontSize": 64,
+                  "fontFamily": "sans-serif",
+                  "fontWeight": 800,
+                  "resolvedFontFamily": null,
+                  "foreground": "#0f172a",
+                  "measurement": "estimated",
+                  "measurementVersion": "ink-estimate-1.0.0",
+                  "textRegion": {
+                    "x": 0,
+                    "y": 0,
+                    "width": 1280,
+                    "height": 720,
+                    "padding": {
+                      "top": 40,
+                      "right": 40,
+                      "bottom": 40,
+                      "left": 40
+                    }
+                  },
+                  "textBackdrop": {
+                    "kind": "solid",
+                    "color": "#f8fafc"
+                  }
+                },
+                {
+                  "id": "footer-0",
+                  "role": "footer",
+                  "lineIndex": 0,
+                  "text": "LAYOUT DEMO · education · 2",
+                  "x": 80,
+                  "topY": 638.88,
+                  "width": 419.99999999999983,
+                  "height": 25.92,
+                  "baselineY": 660,
+                  "fontSize": 24,
+                  "fontFamily": "sans-serif",
+                  "fontWeight": 400,
+                  "resolvedFontFamily": null,
+                  "foreground": "#0f172a",
+                  "measurement": "estimated",
+                  "measurementVersion": "ink-estimate-1.0.0",
+                  "textRegion": {
+                    "x": 0,
+                    "y": 600,
+                    "width": 1280,
+                    "height": 120,
+                    "padding": {
+                      "top": 32,
+                      "right": 40,
+                      "bottom": 40,
+                      "left": 40
+                    }
+                  },
+                  "textBackdrop": {
+                    "kind": "solid",
+                    "color": "#f8fafc"
+                  }
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "66756c73-4018-407f-8704-878218f86c1c",
+          "style": "contrast",
+          "mimeType": "image/svg+xml",
+          "imageDataUrl": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjgwIiBoZWlnaHQ9IjcyMCIgdmlld0JveD0iMCAwIDEyODAgNzIwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiI+PHJlY3Qgd2lkdGg9IjEyODAiIGhlaWdodD0iNzIwIiBmaWxsPSIjNGMxZDk1Ii8+PHJlY3QgeD0iODAiIHk9IjgwIiB3aWR0aD0iMTUwIiBoZWlnaHQ9IjEyIiBmaWxsPSIjZmZmZmZmIi8+PHRleHQgeD0iODAiIHk9IjIxMCIgZm9udC1zaXplPSI3NiIgZm9udC13ZWlnaHQ9IjgwMCIgZmlsbD0iI2ZmZmZmZiI+5Yid5b+D6ICF44Gu44Gf44KB44Gu5YuV55S75Yi25L2cPC90ZXh0Pjx0ZXh0IHg9IjgwIiB5PSI2NjAiIGZvbnQtc2l6ZT0iMjQiIGZpbGw9IiNmZmZmZmYiPkxBWU9VVCBERU1PIMK3IGVkdWNhdGlvbiDCtyAzPC90ZXh0Pjwvc3ZnPg==",
+          "width": 1280,
+          "height": 720,
+          "metadata": {
+            "textLength": 11,
+            "lineCount": 1,
+            "fontSize": 76,
+            "foreground": "#ffffff",
+            "background": "#4c1d95",
+            "generation_version": "0.3.2",
+            "textLayout": {
+              "version": "1.0.0",
+              "coordinateSpace": "canvas_px",
+              "elements": [
+                {
+                  "id": "title-0",
+                  "role": "title",
+                  "lineIndex": 0,
+                  "text": "初心者のための動画制作",
+                  "x": 80,
+                  "topY": 143.12,
+                  "width": 836,
+                  "height": 82.08000000000001,
+                  "baselineY": 210,
+                  "fontSize": 76,
+                  "fontFamily": "sans-serif",
+                  "fontWeight": 800,
+                  "resolvedFontFamily": null,
+                  "foreground": "#ffffff",
+                  "measurement": "estimated",
+                  "measurementVersion": "ink-estimate-1.0.0",
+                  "textRegion": {
+                    "x": 0,
+                    "y": 0,
+                    "width": 1280,
+                    "height": 720,
+                    "padding": {
+                      "top": 40,
+                      "right": 40,
+                      "bottom": 40,
+                      "left": 40
+                    }
+                  },
+                  "textBackdrop": {
+                    "kind": "solid",
+                    "color": "#4c1d95"
+                  }
+                },
+                {
+                  "id": "footer-0",
+                  "role": "footer",
+                  "lineIndex": 0,
+                  "text": "LAYOUT DEMO · education · 3",
+                  "x": 80,
+                  "topY": 638.88,
+                  "width": 419.99999999999983,
+                  "height": 25.92,
+                  "baselineY": 660,
+                  "fontSize": 24,
+                  "fontFamily": "sans-serif",
+                  "fontWeight": 400,
+                  "resolvedFontFamily": null,
+                  "foreground": "#ffffff",
+                  "measurement": "estimated",
+                  "measurementVersion": "ink-estimate-1.0.0",
+                  "textRegion": {
+                    "x": 0,
+                    "y": 600,
+                    "width": 1280,
+                    "height": 120,
+                    "padding": {
+                      "top": 32,
+                      "right": 40,
+                      "bottom": 40,
+                      "left": 40
+                    }
+                  },
+                  "textBackdrop": {
+                    "kind": "solid",
+                    "color": "#4c1d95"
+                  }
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "input": {
+        "title": "動画動画動画動画動画動画動画動画動画動画動画動画動画動画動画動画動画動画動画動画動画動画動画動画動画動画動画動画動画動画",
+        "genre": "other"
+      },
+      "candidates": [
+        {
+          "id": "3f47f172-024c-469a-936c-a6f4c26a7b0a",
+          "style": "bold",
+          "mimeType": "image/svg+xml",
+          "imageDataUrl": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjgwIiBoZWlnaHQ9IjcyMCIgdmlld0JveD0iMCAwIDEyODAgNzIwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiI+PHJlY3Qgd2lkdGg9IjEyODAiIGhlaWdodD0iNzIwIiBmaWxsPSIjMTcyNTU0Ii8+PHJlY3QgeD0iODAiIHk9IjgwIiB3aWR0aD0iMTUwIiBoZWlnaHQ9IjEyIiBmaWxsPSIjZmFjYzE1Ii8+PHRleHQgeD0iODAiIHk9IjIxMCIgZm9udC1zaXplPSI3NiIgZm9udC13ZWlnaHQ9IjgwMCIgZmlsbD0iI2ZhY2MxNSI+5YuV55S75YuV55S75YuV55S75YuV55S75YuV55S75YuV55S75YuV55S75YuVPC90ZXh0Pjx0ZXh0IHg9IjgwIiB5PSIzMTAiIGZvbnQtc2l6ZT0iNzYiIGZvbnQtd2VpZ2h0PSI4MDAiIGZpbGw9IiNmYWNjMTUiPueUu+WLleeUu+WLleeUu+WLleeUu+WLleeUu+WLleeUu+WLleeUu+WLleeUuzwvdGV4dD48dGV4dCB4PSI4MCIgeT0iNDEwIiBmb250LXNpemU9Ijc2IiBmb250LXdlaWdodD0iODAwIiBmaWxsPSIjZmFjYzE1Ij7li5XnlLvli5XnlLvli5XnlLvli5XnlLvli5XnlLvli5XnlLvli5XnlLvli5U8L3RleHQ+PHRleHQgeD0iODAiIHk9IjUxMCIgZm9udC1zaXplPSI3NiIgZm9udC13ZWlnaHQ9IjgwMCIgZmlsbD0iI2ZhY2MxNSI+55S75YuV55S75YuV55S75YuV55S75YuV55S75YuV55S75YuV55S75YuV55S7PC90ZXh0Pjx0ZXh0IHg9IjgwIiB5PSI2NjAiIGZvbnQtc2l6ZT0iMjQiIGZpbGw9IiNmYWNjMTUiPkxBWU9VVCBERU1PIMK3IG90aGVyIMK3IDE8L3RleHQ+PC9zdmc+",
+          "width": 1280,
+          "height": 720,
+          "metadata": {
+            "textLength": 60,
+            "lineCount": 4,
+            "fontSize": 76,
+            "foreground": "#facc15",
+            "background": "#172554",
+            "generation_version": "0.3.2",
+            "textLayout": {
+              "version": "1.0.0",
+              "coordinateSpace": "canvas_px",
+              "elements": [
+                {
+                  "id": "title-0",
+                  "role": "title",
+                  "lineIndex": 0,
+                  "text": "動画動画動画動画動画動画動画動",
+                  "x": 80,
+                  "topY": 143.12,
+                  "width": 1140,
+                  "height": 82.08000000000001,
+                  "baselineY": 210,
+                  "fontSize": 76,
+                  "fontFamily": "sans-serif",
+                  "fontWeight": 800,
+                  "resolvedFontFamily": null,
+                  "foreground": "#facc15",
+                  "measurement": "estimated",
+                  "measurementVersion": "ink-estimate-1.0.0",
+                  "textRegion": {
+                    "x": 0,
+                    "y": 0,
+                    "width": 1280,
+                    "height": 720,
+                    "padding": {
+                      "top": 40,
+                      "right": 40,
+                      "bottom": 40,
+                      "left": 40
+                    }
+                  },
+                  "textBackdrop": {
+                    "kind": "solid",
+                    "color": "#172554"
+                  }
+                },
+                {
+                  "id": "title-1",
+                  "role": "title",
+                  "lineIndex": 1,
+                  "text": "画動画動画動画動画動画動画動画",
+                  "x": 80,
+                  "topY": 243.12,
+                  "width": 1140,
+                  "height": 82.08000000000001,
+                  "baselineY": 310,
+                  "fontSize": 76,
+                  "fontFamily": "sans-serif",
+                  "fontWeight": 800,
+                  "resolvedFontFamily": null,
+                  "foreground": "#facc15",
+                  "measurement": "estimated",
+                  "measurementVersion": "ink-estimate-1.0.0",
+                  "textRegion": {
+                    "x": 0,
+                    "y": 0,
+                    "width": 1280,
+                    "height": 720,
+                    "padding": {
+                      "top": 40,
+                      "right": 40,
+                      "bottom": 40,
+                      "left": 40
+                    }
+                  },
+                  "textBackdrop": {
+                    "kind": "solid",
+                    "color": "#172554"
+                  }
+                },
+                {
+                  "id": "title-2",
+                  "role": "title",
+                  "lineIndex": 2,
+                  "text": "動画動画動画動画動画動画動画動",
+                  "x": 80,
+                  "topY": 343.12,
+                  "width": 1140,
+                  "height": 82.08000000000001,
+                  "baselineY": 410,
+                  "fontSize": 76,
+                  "fontFamily": "sans-serif",
+                  "fontWeight": 800,
+                  "resolvedFontFamily": null,
+                  "foreground": "#facc15",
+                  "measurement": "estimated",
+                  "measurementVersion": "ink-estimate-1.0.0",
+                  "textRegion": {
+                    "x": 0,
+                    "y": 0,
+                    "width": 1280,
+                    "height": 720,
+                    "padding": {
+                      "top": 40,
+                      "right": 40,
+                      "bottom": 40,
+                      "left": 40
+                    }
+                  },
+                  "textBackdrop": {
+                    "kind": "solid",
+                    "color": "#172554"
+                  }
+                },
+                {
+                  "id": "title-3",
+                  "role": "title",
+                  "lineIndex": 3,
+                  "text": "画動画動画動画動画動画動画動画",
+                  "x": 80,
+                  "topY": 443.12,
+                  "width": 1140,
+                  "height": 82.08000000000001,
+                  "baselineY": 510,
+                  "fontSize": 76,
+                  "fontFamily": "sans-serif",
+                  "fontWeight": 800,
+                  "resolvedFontFamily": null,
+                  "foreground": "#facc15",
+                  "measurement": "estimated",
+                  "measurementVersion": "ink-estimate-1.0.0",
+                  "textRegion": {
+                    "x": 0,
+                    "y": 0,
+                    "width": 1280,
+                    "height": 720,
+                    "padding": {
+                      "top": 40,
+                      "right": 40,
+                      "bottom": 40,
+                      "left": 40
+                    }
+                  },
+                  "textBackdrop": {
+                    "kind": "solid",
+                    "color": "#172554"
+                  }
+                },
+                {
+                  "id": "footer-0",
+                  "role": "footer",
+                  "lineIndex": 0,
+                  "text": "LAYOUT DEMO · other · 1",
+                  "x": 80,
+                  "topY": 638.88,
+                  "width": 360.47999999999985,
+                  "height": 25.92,
+                  "baselineY": 660,
+                  "fontSize": 24,
+                  "fontFamily": "sans-serif",
+                  "fontWeight": 400,
+                  "resolvedFontFamily": null,
+                  "foreground": "#facc15",
+                  "measurement": "estimated",
+                  "measurementVersion": "ink-estimate-1.0.0",
+                  "textRegion": {
+                    "x": 0,
+                    "y": 600,
+                    "width": 1280,
+                    "height": 120,
+                    "padding": {
+                      "top": 32,
+                      "right": 40,
+                      "bottom": 40,
+                      "left": 40
+                    }
+                  },
+                  "textBackdrop": {
+                    "kind": "solid",
+                    "color": "#172554"
+                  }
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "923afa5a-dcfa-4aca-8012-277d85c90287",
+          "style": "clean",
+          "mimeType": "image/svg+xml",
+          "imageDataUrl": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjgwIiBoZWlnaHQ9IjcyMCIgdmlld0JveD0iMCAwIDEyODAgNzIwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiI+PHJlY3Qgd2lkdGg9IjEyODAiIGhlaWdodD0iNzIwIiBmaWxsPSIjZjhmYWZjIi8+PHJlY3QgeD0iODAiIHk9IjgwIiB3aWR0aD0iMTUwIiBoZWlnaHQ9IjEyIiBmaWxsPSIjMGYxNzJhIi8+PHRleHQgeD0iODAiIHk9IjIxMCIgZm9udC1zaXplPSI2NCIgZm9udC13ZWlnaHQ9IjgwMCIgZmlsbD0iIzBmMTcyYSI+5YuV55S75YuV55S75YuV55S75YuV55S75YuV55S75YuV55S75YuV55S75YuVPC90ZXh0Pjx0ZXh0IHg9IjgwIiB5PSIzMTAiIGZvbnQtc2l6ZT0iNjQiIGZvbnQtd2VpZ2h0PSI4MDAiIGZpbGw9IiMwZjE3MmEiPueUu+WLleeUu+WLleeUu+WLleeUu+WLleeUu+WLleeUu+WLleeUu+WLleeUuzwvdGV4dD48dGV4dCB4PSI4MCIgeT0iNDEwIiBmb250LXNpemU9IjY0IiBmb250LXdlaWdodD0iODAwIiBmaWxsPSIjMGYxNzJhIj7li5XnlLvli5XnlLvli5XnlLvli5XnlLvli5XnlLvli5XnlLvli5XnlLvli5U8L3RleHQ+PHRleHQgeD0iODAiIHk9IjUxMCIgZm9udC1zaXplPSI2NCIgZm9udC13ZWlnaHQ9IjgwMCIgZmlsbD0iIzBmMTcyYSI+55S75YuV55S75YuV55S75YuV55S75YuV55S75YuV55S75YuV55S75YuV55S7PC90ZXh0Pjx0ZXh0IHg9IjgwIiB5PSI2NjAiIGZvbnQtc2l6ZT0iMjQiIGZpbGw9IiMwZjE3MmEiPkxBWU9VVCBERU1PIMK3IG90aGVyIMK3IDI8L3RleHQ+PC9zdmc+",
+          "width": 1280,
+          "height": 720,
+          "metadata": {
+            "textLength": 60,
+            "lineCount": 4,
+            "fontSize": 64,
+            "foreground": "#0f172a",
+            "background": "#f8fafc",
+            "generation_version": "0.3.2",
+            "textLayout": {
+              "version": "1.0.0",
+              "coordinateSpace": "canvas_px",
+              "elements": [
+                {
+                  "id": "title-0",
+                  "role": "title",
+                  "lineIndex": 0,
+                  "text": "動画動画動画動画動画動画動画動",
+                  "x": 80,
+                  "topY": 153.68,
+                  "width": 960,
+                  "height": 69.12,
+                  "baselineY": 210,
+                  "fontSize": 64,
+                  "fontFamily": "sans-serif",
+                  "fontWeight": 800,
+                  "resolvedFontFamily": null,
+                  "foreground": "#0f172a",
+                  "measurement": "estimated",
+                  "measurementVersion": "ink-estimate-1.0.0",
+                  "textRegion": {
+                    "x": 0,
+                    "y": 0,
+                    "width": 1280,
+                    "height": 720,
+                    "padding": {
+                      "top": 40,
+                      "right": 40,
+                      "bottom": 40,
+                      "left": 40
+                    }
+                  },
+                  "textBackdrop": {
+                    "kind": "solid",
+                    "color": "#f8fafc"
+                  }
+                },
+                {
+                  "id": "title-1",
+                  "role": "title",
+                  "lineIndex": 1,
+                  "text": "画動画動画動画動画動画動画動画",
+                  "x": 80,
+                  "topY": 253.68,
+                  "width": 960,
+                  "height": 69.12,
+                  "baselineY": 310,
+                  "fontSize": 64,
+                  "fontFamily": "sans-serif",
+                  "fontWeight": 800,
+                  "resolvedFontFamily": null,
+                  "foreground": "#0f172a",
+                  "measurement": "estimated",
+                  "measurementVersion": "ink-estimate-1.0.0",
+                  "textRegion": {
+                    "x": 0,
+                    "y": 0,
+                    "width": 1280,
+                    "height": 720,
+                    "padding": {
+                      "top": 40,
+                      "right": 40,
+                      "bottom": 40,
+                      "left": 40
+                    }
+                  },
+                  "textBackdrop": {
+                    "kind": "solid",
+                    "color": "#f8fafc"
+                  }
+                },
+                {
+                  "id": "title-2",
+                  "role": "title",
+                  "lineIndex": 2,
+                  "text": "動画動画動画動画動画動画動画動",
+                  "x": 80,
+                  "topY": 353.68,
+                  "width": 960,
+                  "height": 69.12,
+                  "baselineY": 410,
+                  "fontSize": 64,
+                  "fontFamily": "sans-serif",
+                  "fontWeight": 800,
+                  "resolvedFontFamily": null,
+                  "foreground": "#0f172a",
+                  "measurement": "estimated",
+                  "measurementVersion": "ink-estimate-1.0.0",
+                  "textRegion": {
+                    "x": 0,
+                    "y": 0,
+                    "width": 1280,
+                    "height": 720,
+                    "padding": {
+                      "top": 40,
+                      "right": 40,
+                      "bottom": 40,
+                      "left": 40
+                    }
+                  },
+                  "textBackdrop": {
+                    "kind": "solid",
+                    "color": "#f8fafc"
+                  }
+                },
+                {
+                  "id": "title-3",
+                  "role": "title",
+                  "lineIndex": 3,
+                  "text": "画動画動画動画動画動画動画動画",
+                  "x": 80,
+                  "topY": 453.68,
+                  "width": 960,
+                  "height": 69.12,
+                  "baselineY": 510,
+                  "fontSize": 64,
+                  "fontFamily": "sans-serif",
+                  "fontWeight": 800,
+                  "resolvedFontFamily": null,
+                  "foreground": "#0f172a",
+                  "measurement": "estimated",
+                  "measurementVersion": "ink-estimate-1.0.0",
+                  "textRegion": {
+                    "x": 0,
+                    "y": 0,
+                    "width": 1280,
+                    "height": 720,
+                    "padding": {
+                      "top": 40,
+                      "right": 40,
+                      "bottom": 40,
+                      "left": 40
+                    }
+                  },
+                  "textBackdrop": {
+                    "kind": "solid",
+                    "color": "#f8fafc"
+                  }
+                },
+                {
+                  "id": "footer-0",
+                  "role": "footer",
+                  "lineIndex": 0,
+                  "text": "LAYOUT DEMO · other · 2",
+                  "x": 80,
+                  "topY": 638.88,
+                  "width": 360.47999999999985,
+                  "height": 25.92,
+                  "baselineY": 660,
+                  "fontSize": 24,
+                  "fontFamily": "sans-serif",
+                  "fontWeight": 400,
+                  "resolvedFontFamily": null,
+                  "foreground": "#0f172a",
+                  "measurement": "estimated",
+                  "measurementVersion": "ink-estimate-1.0.0",
+                  "textRegion": {
+                    "x": 0,
+                    "y": 600,
+                    "width": 1280,
+                    "height": 120,
+                    "padding": {
+                      "top": 32,
+                      "right": 40,
+                      "bottom": 40,
+                      "left": 40
+                    }
+                  },
+                  "textBackdrop": {
+                    "kind": "solid",
+                    "color": "#f8fafc"
+                  }
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "0db9b841-48c6-410a-a45c-f7a4e3b9e2a7",
+          "style": "contrast",
+          "mimeType": "image/svg+xml",
+          "imageDataUrl": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjgwIiBoZWlnaHQ9IjcyMCIgdmlld0JveD0iMCAwIDEyODAgNzIwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiI+PHJlY3Qgd2lkdGg9IjEyODAiIGhlaWdodD0iNzIwIiBmaWxsPSIjNGMxZDk1Ii8+PHJlY3QgeD0iODAiIHk9IjgwIiB3aWR0aD0iMTUwIiBoZWlnaHQ9IjEyIiBmaWxsPSIjZmZmZmZmIi8+PHRleHQgeD0iODAiIHk9IjIxMCIgZm9udC1zaXplPSI3NiIgZm9udC13ZWlnaHQ9IjgwMCIgZmlsbD0iI2ZmZmZmZiI+5YuV55S75YuV55S75YuV55S75YuV55S75YuV55S75YuV55S75YuV55S75YuVPC90ZXh0Pjx0ZXh0IHg9IjgwIiB5PSIzMTAiIGZvbnQtc2l6ZT0iNzYiIGZvbnQtd2VpZ2h0PSI4MDAiIGZpbGw9IiNmZmZmZmYiPueUu+WLleeUu+WLleeUu+WLleeUu+WLleeUu+WLleeUu+WLleeUu+WLleeUuzwvdGV4dD48dGV4dCB4PSI4MCIgeT0iNDEwIiBmb250LXNpemU9Ijc2IiBmb250LXdlaWdodD0iODAwIiBmaWxsPSIjZmZmZmZmIj7li5XnlLvli5XnlLvli5XnlLvli5XnlLvli5XnlLvli5XnlLvli5XnlLvli5U8L3RleHQ+PHRleHQgeD0iODAiIHk9IjUxMCIgZm9udC1zaXplPSI3NiIgZm9udC13ZWlnaHQ9IjgwMCIgZmlsbD0iI2ZmZmZmZiI+55S75YuV55S75YuV55S75YuV55S75YuV55S75YuV55S75YuV55S75YuV55S7PC90ZXh0Pjx0ZXh0IHg9IjgwIiB5PSI2NjAiIGZvbnQtc2l6ZT0iMjQiIGZpbGw9IiNmZmZmZmYiPkxBWU9VVCBERU1PIMK3IG90aGVyIMK3IDM8L3RleHQ+PC9zdmc+",
+          "width": 1280,
+          "height": 720,
+          "metadata": {
+            "textLength": 60,
+            "lineCount": 4,
+            "fontSize": 76,
+            "foreground": "#ffffff",
+            "background": "#4c1d95",
+            "generation_version": "0.3.2",
+            "textLayout": {
+              "version": "1.0.0",
+              "coordinateSpace": "canvas_px",
+              "elements": [
+                {
+                  "id": "title-0",
+                  "role": "title",
+                  "lineIndex": 0,
+                  "text": "動画動画動画動画動画動画動画動",
+                  "x": 80,
+                  "topY": 143.12,
+                  "width": 1140,
+                  "height": 82.08000000000001,
+                  "baselineY": 210,
+                  "fontSize": 76,
+                  "fontFamily": "sans-serif",
+                  "fontWeight": 800,
+                  "resolvedFontFamily": null,
+                  "foreground": "#ffffff",
+                  "measurement": "estimated",
+                  "measurementVersion": "ink-estimate-1.0.0",
+                  "textRegion": {
+                    "x": 0,
+                    "y": 0,
+                    "width": 1280,
+                    "height": 720,
+                    "padding": {
+                      "top": 40,
+                      "right": 40,
+                      "bottom": 40,
+                      "left": 40
+                    }
+                  },
+                  "textBackdrop": {
+                    "kind": "solid",
+                    "color": "#4c1d95"
+                  }
+                },
+                {
+                  "id": "title-1",
+                  "role": "title",
+                  "lineIndex": 1,
+                  "text": "画動画動画動画動画動画動画動画",
+                  "x": 80,
+                  "topY": 243.12,
+                  "width": 1140,
+                  "height": 82.08000000000001,
+                  "baselineY": 310,
+                  "fontSize": 76,
+                  "fontFamily": "sans-serif",
+                  "fontWeight": 800,
+                  "resolvedFontFamily": null,
+                  "foreground": "#ffffff",
+                  "measurement": "estimated",
+                  "measurementVersion": "ink-estimate-1.0.0",
+                  "textRegion": {
+                    "x": 0,
+                    "y": 0,
+                    "width": 1280,
+                    "height": 720,
+                    "padding": {
+                      "top": 40,
+                      "right": 40,
+                      "bottom": 40,
+                      "left": 40
+                    }
+                  },
+                  "textBackdrop": {
+                    "kind": "solid",
+                    "color": "#4c1d95"
+                  }
+                },
+                {
+                  "id": "title-2",
+                  "role": "title",
+                  "lineIndex": 2,
+                  "text": "動画動画動画動画動画動画動画動",
+                  "x": 80,
+                  "topY": 343.12,
+                  "width": 1140,
+                  "height": 82.08000000000001,
+                  "baselineY": 410,
+                  "fontSize": 76,
+                  "fontFamily": "sans-serif",
+                  "fontWeight": 800,
+                  "resolvedFontFamily": null,
+                  "foreground": "#ffffff",
+                  "measurement": "estimated",
+                  "measurementVersion": "ink-estimate-1.0.0",
+                  "textRegion": {
+                    "x": 0,
+                    "y": 0,
+                    "width": 1280,
+                    "height": 720,
+                    "padding": {
+                      "top": 40,
+                      "right": 40,
+                      "bottom": 40,
+                      "left": 40
+                    }
+                  },
+                  "textBackdrop": {
+                    "kind": "solid",
+                    "color": "#4c1d95"
+                  }
+                },
+                {
+                  "id": "title-3",
+                  "role": "title",
+                  "lineIndex": 3,
+                  "text": "画動画動画動画動画動画動画動画",
+                  "x": 80,
+                  "topY": 443.12,
+                  "width": 1140,
+                  "height": 82.08000000000001,
+                  "baselineY": 510,
+                  "fontSize": 76,
+                  "fontFamily": "sans-serif",
+                  "fontWeight": 800,
+                  "resolvedFontFamily": null,
+                  "foreground": "#ffffff",
+                  "measurement": "estimated",
+                  "measurementVersion": "ink-estimate-1.0.0",
+                  "textRegion": {
+                    "x": 0,
+                    "y": 0,
+                    "width": 1280,
+                    "height": 720,
+                    "padding": {
+                      "top": 40,
+                      "right": 40,
+                      "bottom": 40,
+                      "left": 40
+                    }
+                  },
+                  "textBackdrop": {
+                    "kind": "solid",
+                    "color": "#4c1d95"
+                  }
+                },
+                {
+                  "id": "footer-0",
+                  "role": "footer",
+                  "lineIndex": 0,
+                  "text": "LAYOUT DEMO · other · 3",
+                  "x": 80,
+                  "topY": 638.88,
+                  "width": 360.47999999999985,
+                  "height": 25.92,
+                  "baselineY": 660,
+                  "fontSize": 24,
+                  "fontFamily": "sans-serif",
+                  "fontWeight": 400,
+                  "resolvedFontFamily": null,
+                  "foreground": "#ffffff",
+                  "measurement": "estimated",
+                  "measurementVersion": "ink-estimate-1.0.0",
+                  "textRegion": {
+                    "x": 0,
+                    "y": 600,
+                    "width": 1280,
+                    "height": 120,
+                    "padding": {
+                      "top": 32,
+                      "right": 40,
+                      "bottom": 40,
+                      "left": 40
+                    }
+                  },
+                  "textBackdrop": {
+                    "kind": "solid",
+                    "color": "#4c1d95"
+                  }
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "input": {
+        "title": "AIと動画🎬の入門",
+        "genre": "other"
+      },
+      "candidates": [
+        {
+          "id": "acac51e8-9d90-43d8-a093-f1d1741bfc08",
+          "style": "bold",
+          "mimeType": "image/svg+xml",
+          "imageDataUrl": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjgwIiBoZWlnaHQ9IjcyMCIgdmlld0JveD0iMCAwIDEyODAgNzIwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiI+PHJlY3Qgd2lkdGg9IjEyODAiIGhlaWdodD0iNzIwIiBmaWxsPSIjMTcyNTU0Ii8+PHJlY3QgeD0iODAiIHk9IjgwIiB3aWR0aD0iMTUwIiBoZWlnaHQ9IjEyIiBmaWxsPSIjZmFjYzE1Ii8+PHRleHQgeD0iODAiIHk9IjIxMCIgZm9udC1zaXplPSI3NiIgZm9udC13ZWlnaHQ9IjgwMCIgZmlsbD0iI2ZhY2MxNSI+QUnjgajli5XnlLvwn46s44Gu5YWl6ZaAPC90ZXh0Pjx0ZXh0IHg9IjgwIiB5PSI2NjAiIGZvbnQtc2l6ZT0iMjQiIGZpbGw9IiNmYWNjMTUiPkxBWU9VVCBERU1PIMK3IG90aGVyIMK3IDE8L3RleHQ+PC9zdmc+",
+          "width": 1280,
+          "height": 720,
+          "metadata": {
+            "textLength": 9,
+            "lineCount": 1,
+            "fontSize": 76,
+            "foreground": "#facc15",
+            "background": "#172554",
+            "generation_version": "0.3.2",
+            "textLayout": {
+              "version": "1.0.0",
+              "coordinateSpace": "canvas_px",
+              "elements": [
+                {
+                  "id": "title-0",
+                  "role": "title",
+                  "lineIndex": 0,
+                  "text": "AIと動画🎬の入門",
+                  "x": 80,
+                  "topY": 143.12,
+                  "width": 626.24,
+                  "height": 82.08000000000001,
+                  "baselineY": 210,
+                  "fontSize": 76,
+                  "fontFamily": "sans-serif",
+                  "fontWeight": 800,
+                  "resolvedFontFamily": null,
+                  "foreground": "#facc15",
+                  "measurement": "estimated",
+                  "measurementVersion": "ink-estimate-1.0.0",
+                  "textRegion": {
+                    "x": 0,
+                    "y": 0,
+                    "width": 1280,
+                    "height": 720,
+                    "padding": {
+                      "top": 40,
+                      "right": 40,
+                      "bottom": 40,
+                      "left": 40
+                    }
+                  },
+                  "textBackdrop": {
+                    "kind": "solid",
+                    "color": "#172554"
+                  }
+                },
+                {
+                  "id": "footer-0",
+                  "role": "footer",
+                  "lineIndex": 0,
+                  "text": "LAYOUT DEMO · other · 1",
+                  "x": 80,
+                  "topY": 638.88,
+                  "width": 360.47999999999985,
+                  "height": 25.92,
+                  "baselineY": 660,
+                  "fontSize": 24,
+                  "fontFamily": "sans-serif",
+                  "fontWeight": 400,
+                  "resolvedFontFamily": null,
+                  "foreground": "#facc15",
+                  "measurement": "estimated",
+                  "measurementVersion": "ink-estimate-1.0.0",
+                  "textRegion": {
+                    "x": 0,
+                    "y": 600,
+                    "width": 1280,
+                    "height": 120,
+                    "padding": {
+                      "top": 32,
+                      "right": 40,
+                      "bottom": 40,
+                      "left": 40
+                    }
+                  },
+                  "textBackdrop": {
+                    "kind": "solid",
+                    "color": "#172554"
+                  }
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "c37dbc0c-336c-43db-99ef-0d3065b105a4",
+          "style": "clean",
+          "mimeType": "image/svg+xml",
+          "imageDataUrl": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjgwIiBoZWlnaHQ9IjcyMCIgdmlld0JveD0iMCAwIDEyODAgNzIwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiI+PHJlY3Qgd2lkdGg9IjEyODAiIGhlaWdodD0iNzIwIiBmaWxsPSIjZjhmYWZjIi8+PHJlY3QgeD0iODAiIHk9IjgwIiB3aWR0aD0iMTUwIiBoZWlnaHQ9IjEyIiBmaWxsPSIjMGYxNzJhIi8+PHRleHQgeD0iODAiIHk9IjIxMCIgZm9udC1zaXplPSI2NCIgZm9udC13ZWlnaHQ9IjgwMCIgZmlsbD0iIzBmMTcyYSI+QUnjgajli5XnlLvwn46s44Gu5YWl6ZaAPC90ZXh0Pjx0ZXh0IHg9IjgwIiB5PSI2NjAiIGZvbnQtc2l6ZT0iMjQiIGZpbGw9IiMwZjE3MmEiPkxBWU9VVCBERU1PIMK3IG90aGVyIMK3IDI8L3RleHQ+PC9zdmc+",
+          "width": 1280,
+          "height": 720,
+          "metadata": {
+            "textLength": 9,
+            "lineCount": 1,
+            "fontSize": 64,
+            "foreground": "#0f172a",
+            "background": "#f8fafc",
+            "generation_version": "0.3.2",
+            "textLayout": {
+              "version": "1.0.0",
+              "coordinateSpace": "canvas_px",
+              "elements": [
+                {
+                  "id": "title-0",
+                  "role": "title",
+                  "lineIndex": 0,
+                  "text": "AIと動画🎬の入門",
+                  "x": 80,
+                  "topY": 153.68,
+                  "width": 527.36,
+                  "height": 69.12,
+                  "baselineY": 210,
+                  "fontSize": 64,
+                  "fontFamily": "sans-serif",
+                  "fontWeight": 800,
+                  "resolvedFontFamily": null,
+                  "foreground": "#0f172a",
+                  "measurement": "estimated",
+                  "measurementVersion": "ink-estimate-1.0.0",
+                  "textRegion": {
+                    "x": 0,
+                    "y": 0,
+                    "width": 1280,
+                    "height": 720,
+                    "padding": {
+                      "top": 40,
+                      "right": 40,
+                      "bottom": 40,
+                      "left": 40
+                    }
+                  },
+                  "textBackdrop": {
+                    "kind": "solid",
+                    "color": "#f8fafc"
+                  }
+                },
+                {
+                  "id": "footer-0",
+                  "role": "footer",
+                  "lineIndex": 0,
+                  "text": "LAYOUT DEMO · other · 2",
+                  "x": 80,
+                  "topY": 638.88,
+                  "width": 360.47999999999985,
+                  "height": 25.92,
+                  "baselineY": 660,
+                  "fontSize": 24,
+                  "fontFamily": "sans-serif",
+                  "fontWeight": 400,
+                  "resolvedFontFamily": null,
+                  "foreground": "#0f172a",
+                  "measurement": "estimated",
+                  "measurementVersion": "ink-estimate-1.0.0",
+                  "textRegion": {
+                    "x": 0,
+                    "y": 600,
+                    "width": 1280,
+                    "height": 120,
+                    "padding": {
+                      "top": 32,
+                      "right": 40,
+                      "bottom": 40,
+                      "left": 40
+                    }
+                  },
+                  "textBackdrop": {
+                    "kind": "solid",
+                    "color": "#f8fafc"
+                  }
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "01bd7c9e-0d45-4e22-9d0d-5dc67de4f63e",
+          "style": "contrast",
+          "mimeType": "image/svg+xml",
+          "imageDataUrl": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjgwIiBoZWlnaHQ9IjcyMCIgdmlld0JveD0iMCAwIDEyODAgNzIwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiI+PHJlY3Qgd2lkdGg9IjEyODAiIGhlaWdodD0iNzIwIiBmaWxsPSIjNGMxZDk1Ii8+PHJlY3QgeD0iODAiIHk9IjgwIiB3aWR0aD0iMTUwIiBoZWlnaHQ9IjEyIiBmaWxsPSIjZmZmZmZmIi8+PHRleHQgeD0iODAiIHk9IjIxMCIgZm9udC1zaXplPSI3NiIgZm9udC13ZWlnaHQ9IjgwMCIgZmlsbD0iI2ZmZmZmZiI+QUnjgajli5XnlLvwn46s44Gu5YWl6ZaAPC90ZXh0Pjx0ZXh0IHg9IjgwIiB5PSI2NjAiIGZvbnQtc2l6ZT0iMjQiIGZpbGw9IiNmZmZmZmYiPkxBWU9VVCBERU1PIMK3IG90aGVyIMK3IDM8L3RleHQ+PC9zdmc+",
+          "width": 1280,
+          "height": 720,
+          "metadata": {
+            "textLength": 9,
+            "lineCount": 1,
+            "fontSize": 76,
+            "foreground": "#ffffff",
+            "background": "#4c1d95",
+            "generation_version": "0.3.2",
+            "textLayout": {
+              "version": "1.0.0",
+              "coordinateSpace": "canvas_px",
+              "elements": [
+                {
+                  "id": "title-0",
+                  "role": "title",
+                  "lineIndex": 0,
+                  "text": "AIと動画🎬の入門",
+                  "x": 80,
+                  "topY": 143.12,
+                  "width": 626.24,
+                  "height": 82.08000000000001,
+                  "baselineY": 210,
+                  "fontSize": 76,
+                  "fontFamily": "sans-serif",
+                  "fontWeight": 800,
+                  "resolvedFontFamily": null,
+                  "foreground": "#ffffff",
+                  "measurement": "estimated",
+                  "measurementVersion": "ink-estimate-1.0.0",
+                  "textRegion": {
+                    "x": 0,
+                    "y": 0,
+                    "width": 1280,
+                    "height": 720,
+                    "padding": {
+                      "top": 40,
+                      "right": 40,
+                      "bottom": 40,
+                      "left": 40
+                    }
+                  },
+                  "textBackdrop": {
+                    "kind": "solid",
+                    "color": "#4c1d95"
+                  }
+                },
+                {
+                  "id": "footer-0",
+                  "role": "footer",
+                  "lineIndex": 0,
+                  "text": "LAYOUT DEMO · other · 3",
+                  "x": 80,
+                  "topY": 638.88,
+                  "width": 360.47999999999985,
+                  "height": 25.92,
+                  "baselineY": 660,
+                  "fontSize": 24,
+                  "fontFamily": "sans-serif",
+                  "fontWeight": 400,
+                  "resolvedFontFamily": null,
+                  "foreground": "#ffffff",
+                  "measurement": "estimated",
+                  "measurementVersion": "ink-estimate-1.0.0",
+                  "textRegion": {
+                    "x": 0,
+                    "y": 600,
+                    "width": 1280,
+                    "height": 120,
+                    "padding": {
+                      "top": 32,
+                      "right": 40,
+                      "bottom": 40,
+                      "left": 40
+                    }
+                  },
+                  "textBackdrop": {
+                    "kind": "solid",
+                    "color": "#4c1d95"
+                  }
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
