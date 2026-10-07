@@ -35,3 +35,20 @@
 2. タイトルごとに3案を生成し、評価者が好みを選んで1行ずつ記録する（`scoring_version` は画面のversionを写す）。
 3. `node data/validate.mjs data/private/preferences.csv` で検証する。出力は件数と不正行の番号だけで、タイトルは表示しない。
 4. `permission` が `none` の行や、`split` が `sample_id` と合わない行は不正行として報告される。
+5. 出力の `progress` は、不正行のない実サンプル数と目標20件を示す。`source` が `synthetic` の行は数えない。20件未満なら `status: 未完`。
+
+Excelで保存したCSV（先頭にBOMが付く）もそのまま検証できる。
+
+### 許諾確認チェックリスト（1タイトルごと、記録前に人が確認）
+- [ ] 出典（`source`）を特定した。公開URLがあれば `source_url` に書いた。
+- [ ] 所有者本人、または所有者から同意を得た人が、用途（チーム内の選好評価のみ・公開しない・CTR推定に使わない）を理解して許諾した。
+- [ ] 許諾の日付を `permission_date` に書いた。許諾のやり取り（相手の連絡先など）は `data/private/` 以外に残していない。
+- [ ] `permission` は `own_work` か `owner_consented`。確認できないものは `none` にして評価に使わない。
+- [ ] 評価者は `r01` などの仮名で記録した。
+
+### 収集状況
+| 日付 | 許諾済みの実サンプル | 状態 |
+|---|---|---|
+| 2026-10-07 | 0 / 20 | **未完**（まだ収集していない。人工データで埋めない） |
+
+件数は `node data/validate.mjs data/private/preferences.csv` の `progress.usable` を転記する。タイトルはここに書かない。

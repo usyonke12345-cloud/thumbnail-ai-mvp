@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
+import { pathToFileURL } from 'node:url';
 const schemaUrl = new URL('./schema/sample.schema.json', import.meta.url);
 export const loadSchema = async () => JSON.parse(await readFile(schemaUrl, 'utf8'));
 /** Stable dev/holdout split: about 30% holdout, decided only by sample_id. */
@@ -24,6 +25,7 @@ export function validateRow(row, schema) {
 }
 /** 引用符つきCSVの最小パーサ（タイトルにカンマを含められる）。 */
 export function parseCsv(text) {
+  text = text.replace(/^\uFEFF/, ''); // Excelで保存したCSVの先頭BOM
   const rows = []; let row = [], cell = '', q = false;
   for (let i = 0; i < text.length; i++) {
     const c = text[i];
@@ -38,12 +40,18 @@ export function parseCsv(text) {
   return body.map(r => Object.fromEntries(header.map((h, i) => [h, r[i] ?? ''])));
 }
 /** 記録表の検証と集計。タイトルや個人情報は出力しない。 */
+export const TARGET_SAMPLES = 20;
 export function summarize(rows, schema) {
   const bad = []; const count = (k) => rows.reduce((m, r) => (m[r[k] || '(空)'] = (m[r[k] || '(空)'] ?? 0) + 1, m), {});
   rows.forEach((r, i) => { const e = validateRow(r, schema); if (e.length) bad.push({ line: i + 2, errors: e }); });
-  return { rows: rows.length, invalid: bad, samples: new Set(rows.map(r => r.sample_id)).size, byGenre: count('genre'), bySplit: count('split'), byPreferred: count('preferred_candidate'), byPermission: count('permission') };
+  // 不正行が1つでもあるsample_idと人工データ（source=synthetic）は数えない。足りなければ「未完」と出す。
+  const badIds = new Set(bad.map(b => rows[b.line - 2].sample_id));
+  const usable = new Set(rows.filter(r => r.source !== 'synthetic').map(r => r.sample_id).filter(id => id && !badIds.has(id))).size;
+  const progress = { usable, target: TARGET_SAMPLES, status: usable >= TARGET_SAMPLES ? '達成' : '未完' };
+  return { rows: rows.length, invalid: bad, samples: new Set(rows.map(r => r.sample_id)).size, progress, byGenre: count('genre'), bySplit: count('split'), byPreferred: count('preferred_candidate'), byPermission: count('permission') };
 }
-if (process.argv[1] === new URL(import.meta.url).pathname && process.argv[2]) {
+// Windowsでは argv[1] が C:\... 形式のため、URL同士で比較する
+if (process.argv[2] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const s = summarize(parseCsv(await readFile(process.argv[2], 'utf8')), await loadSchema());
   console.log(JSON.stringify(s, null, 2)); process.exitCode = s.invalid.length ? 1 : 0;
 }

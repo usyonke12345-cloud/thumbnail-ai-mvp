@@ -43,4 +43,24 @@ test('CSV parsing handles quoted commas and summarize reports invalid rows witho
   const s = summarize(rows, schema);
   assert.equal(s.rows, 2); assert.equal(s.invalid.length, 1); assert.equal(s.invalid[0].line, 3);
   assert.ok(!JSON.stringify(s).includes('人工'));
+  assert.deepEqual(s.progress, { usable: 0, target: 20, status: '未完' }); // syntheticは件数に入らない
+  const real = summarize(parseCsv(`﻿${head}\n${ok('s001').replace('synthetic', 'owner')}\n`), schema);
+  assert.equal(real.invalid.length, 0, 'BOM付きCSVも読める'); assert.equal(real.progress.usable, 1);
+});
+import { spawnSync } from 'node:child_process';
+import { mkdtemp, writeFile, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+test('validate CLI runs from a filesystem path (incl. Windows) and prints no titles', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'prefs-'));
+  try {
+    const head = (await read('../data/templates/preferences.template.csv')).trim();
+    const csv = join(dir, 'p.csv');
+    await writeFile(csv, `${head}\ns001,"人工タイトル",other,synthetic,,own_work,,run1,mock-0.1,0.2.0,r01,bold,,,${splitFor('s001')}\n`);
+    const r = spawnSync(process.execPath, [fileURLToPath(new URL('../data/validate.mjs', import.meta.url)), csv], { encoding: 'utf8' });
+    assert.equal(r.status, 0, r.stderr);
+    assert.equal(JSON.parse(r.stdout).rows, 1);
+    assert.ok(!r.stdout.includes('人工'));
+  } finally { await rm(dir, { recursive: true, force: true }); }
 });
