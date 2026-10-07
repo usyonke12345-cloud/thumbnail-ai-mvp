@@ -55,3 +55,9 @@ stroke(color,width)、shadow(color,blur,offsetX,offsetY)は任意、省略時は
 textLengthはタイトル全体のUnicodeコードポイント数。title要素をlineIndex順に連結した文字列と一致します。
 生成側fixture: docs/fixtures/generation-metadata.json（人工・無料mock、採点結果なし）。
 採点0.3.0は相手側で実装。既知形式の異常値は未評価、情報なし・未知版のみSVGへフォールバック。
+
+### フッターの余白修正（生成0.3.2）
+
+footerの配置領域はy=600、高さ120。paddingはtop=32、right/bottom/left=40。
+描画位置baselineY=660と推定topY=638.88は維持し、上側の余白だけ実配置に合わせました。
+fixtureを更新し、四辺の収まりをテストしています。

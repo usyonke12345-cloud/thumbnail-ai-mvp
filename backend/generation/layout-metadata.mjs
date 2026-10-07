@@ -1,4 +1,4 @@
-export const GENERATION_VERSION = '0.3.1';
+export const GENERATION_VERSION = '0.3.2';
 export function aiTitleFontSize(lines) {
   return Math.min(64, Math.floor(736 / Math.max(...lines.map(line => [...line].length))));
 }
@@ -15,7 +15,7 @@ export function makeTextLayout(lines, fontSize, foreground, background, ai, foot
     const inside = box.x >= panel.x+24 && box.topY >= panel.y+24 && box.x+box.width <= panel.x+panel.width-24 && box.topY+box.height <= panel.y+panel.height-24;
     return {id:`${role}-${lineIndex}`,role,lineIndex,text,...box,baselineY,fontSize:size,fontFamily,fontWeight:role==='title'?800:400,resolvedFontFamily:null,foreground,
       measurement:'estimated',measurementVersion:'ink-estimate-1.0.0',
-      textRegion:role==='title'?{...panel,padding:padding(ai?16:40)}:{x:0,y:600,width:1280,height:120,padding:padding(40)},
+      textRegion:role==='title'?{...panel,padding:padding(ai?16:40)}:{x:0,y:600,width:1280,height:120,padding:{top:32,right:40,bottom:40,left:40}},
       textBackdrop:{kind:!ai||role==='title'&&inside?'solid':'unknown',color:!ai||role==='title'&&inside?background:null}};
   };
   return {version:'1.0.0',coordinateSpace:'canvas_px',elements:[...lines.map((line,i)=>element(line,fontSize,210+i*100,'title',i)),element(footer,24,660,'footer',0)]};

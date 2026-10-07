@@ -1,6 +1,6 @@
 {
   "source": "synthetic",
-  "generation_version": "0.3.0",
+  "generation_version": "0.3.2",
   "sets": [
     {
       "input": {
@@ -9,7 +9,7 @@
       },
       "candidates": [
         {
-          "id": "c12e15bd-66cb-4159-84b9-bb8138d33f29",
+          "id": "28a3b68b-5f46-42b3-ac7b-c10ba478b3c8",
           "style": "bold",
           "mimeType": "image/svg+xml",
           "imageDataUrl": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjgwIiBoZWlnaHQ9IjcyMCIgdmlld0JveD0iMCAwIDEyODAgNzIwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiI+PHJlY3Qgd2lkdGg9IjEyODAiIGhlaWdodD0iNzIwIiBmaWxsPSIjMTcyNTU0Ii8+PHJlY3QgeD0iODAiIHk9IjgwIiB3aWR0aD0iMTUwIiBoZWlnaHQ9IjEyIiBmaWxsPSIjZmFjYzE1Ii8+PHRleHQgeD0iODAiIHk9IjIxMCIgZm9udC1zaXplPSI3NiIgZm9udC13ZWlnaHQ9IjgwMCIgZmlsbD0iI2ZhY2MxNSI+5Yid5b+D6ICF44Gu44Gf44KB44Gu5YuV55S75Yi25L2cPC90ZXh0Pjx0ZXh0IHg9IjgwIiB5PSI2NjAiIGZvbnQtc2l6ZT0iMjQiIGZpbGw9IiNmYWNjMTUiPkxBWU9VVCBERU1PIMK3IGVkdWNhdGlvbiDCtyAxPC90ZXh0Pjwvc3ZnPg==",
@@ -21,7 +21,7 @@
             "fontSize": 76,
             "foreground": "#facc15",
             "background": "#172554",
-            "generation_version": "0.3.1",
+            "generation_version": "0.3.2",
             "textLayout": {
               "version": "1.0.0",
               "coordinateSpace": "canvas_px",
@@ -83,7 +83,7 @@
                     "width": 1280,
                     "height": 120,
                     "padding": {
-                      "top": 40,
+                      "top": 32,
                       "right": 40,
                       "bottom": 40,
                       "left": 40
@@ -99,7 +99,7 @@
           }
         },
         {
-          "id": "3d9a69fe-f1f7-4197-88c5-06ec66581fde",
+          "id": "c86c31e9-15a5-477a-91f1-301943586bda",
           "style": "clean",
           "mimeType": "image/svg+xml",
           "imageDataUrl": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjgwIiBoZWlnaHQ9IjcyMCIgdmlld0JveD0iMCAwIDEyODAgNzIwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiI+PHJlY3Qgd2lkdGg9IjEyODAiIGhlaWdodD0iNzIwIiBmaWxsPSIjZjhmYWZjIi8+PHJlY3QgeD0iODAiIHk9IjgwIiB3aWR0aD0iMTUwIiBoZWlnaHQ9IjEyIiBmaWxsPSIjMGYxNzJhIi8+PHRleHQgeD0iODAiIHk9IjIxMCIgZm9udC1zaXplPSI2NCIgZm9udC13ZWlnaHQ9IjgwMCIgZmlsbD0iIzBmMTcyYSI+5Yid5b+D6ICF44Gu44Gf44KB44Gu5YuV55S75Yi25L2cPC90ZXh0Pjx0ZXh0IHg9IjgwIiB5PSI2NjAiIGZvbnQtc2l6ZT0iMjQiIGZpbGw9IiMwZjE3MmEiPkxBWU9VVCBERU1PIMK3IGVkdWNhdGlvbiDCtyAyPC90ZXh0Pjwvc3ZnPg==",
@@ -111,7 +111,7 @@
             "fontSize": 64,
             "foreground": "#0f172a",
             "background": "#f8fafc",
-            "generation_version": "0.3.1",
+            "generation_version": "0.3.2",
             "textLayout": {
               "version": "1.0.0",
               "coordinateSpace": "canvas_px",
@@ -173,7 +173,7 @@
                     "width": 1280,
                     "height": 120,
                     "padding": {
-                      "top": 40,
+                      "top": 32,
                       "right": 40,
                       "bottom": 40,
                       "left": 40
@@ -189,7 +189,7 @@
           }
         },
         {
-          "id": "037ebc4b-9f05-48fd-993d-923a5b2a4354",
+          "id": "66756c73-4018-407f-8704-878218f86c1c",
           "style": "contrast",
           "mimeType": "image/svg+xml",
           "imageDataUrl": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjgwIiBoZWlnaHQ9IjcyMCIgdmlld0JveD0iMCAwIDEyODAgNzIwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiI+PHJlY3Qgd2lkdGg9IjEyODAiIGhlaWdodD0iNzIwIiBmaWxsPSIjNGMxZDk1Ii8+PHJlY3QgeD0iODAiIHk9IjgwIiB3aWR0aD0iMTUwIiBoZWlnaHQ9IjEyIiBmaWxsPSIjZmZmZmZmIi8+PHRleHQgeD0iODAiIHk9IjIxMCIgZm9udC1zaXplPSI3NiIgZm9udC13ZWlnaHQ9IjgwMCIgZmlsbD0iI2ZmZmZmZiI+5Yid5b+D6ICF44Gu44Gf44KB44Gu5YuV55S75Yi25L2cPC90ZXh0Pjx0ZXh0IHg9IjgwIiB5PSI2NjAiIGZvbnQtc2l6ZT0iMjQiIGZpbGw9IiNmZmZmZmYiPkxBWU9VVCBERU1PIMK3IGVkdWNhdGlvbiDCtyAzPC90ZXh0Pjwvc3ZnPg==",
@@ -201,7 +201,7 @@
             "fontSize": 76,
             "foreground": "#ffffff",
             "background": "#4c1d95",
-            "generation_version": "0.3.1",
+            "generation_version": "0.3.2",
             "textLayout": {
               "version": "1.0.0",
               "coordinateSpace": "canvas_px",
@@ -263,7 +263,7 @@
                     "width": 1280,
                     "height": 120,
                     "padding": {
-                      "top": 40,
+                      "top": 32,
                       "right": 40,
                       "bottom": 40,
                       "left": 40
@@ -287,7 +287,7 @@
       },
       "candidates": [
         {
-          "id": "ef4f3937-185a-428d-87aa-4f22a875b20a",
+          "id": "3f47f172-024c-469a-936c-a6f4c26a7b0a",
           "style": "bold",
           "mimeType": "image/svg+xml",
           "imageDataUrl": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjgwIiBoZWlnaHQ9IjcyMCIgdmlld0JveD0iMCAwIDEyODAgNzIwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiI+PHJlY3Qgd2lkdGg9IjEyODAiIGhlaWdodD0iNzIwIiBmaWxsPSIjMTcyNTU0Ii8+PHJlY3QgeD0iODAiIHk9IjgwIiB3aWR0aD0iMTUwIiBoZWlnaHQ9IjEyIiBmaWxsPSIjZmFjYzE1Ii8+PHRleHQgeD0iODAiIHk9IjIxMCIgZm9udC1zaXplPSI3NiIgZm9udC13ZWlnaHQ9IjgwMCIgZmlsbD0iI2ZhY2MxNSI+5YuV55S75YuV55S75YuV55S75YuV55S75YuV55S75YuV55S75YuV55S75YuVPC90ZXh0Pjx0ZXh0IHg9IjgwIiB5PSIzMTAiIGZvbnQtc2l6ZT0iNzYiIGZvbnQtd2VpZ2h0PSI4MDAiIGZpbGw9IiNmYWNjMTUiPueUu+WLleeUu+WLleeUu+WLleeUu+WLleeUu+WLleeUu+WLleeUu+WLleeUuzwvdGV4dD48dGV4dCB4PSI4MCIgeT0iNDEwIiBmb250LXNpemU9Ijc2IiBmb250LXdlaWdodD0iODAwIiBmaWxsPSIjZmFjYzE1Ij7li5XnlLvli5XnlLvli5XnlLvli5XnlLvli5XnlLvli5XnlLvli5XnlLvli5U8L3RleHQ+PHRleHQgeD0iODAiIHk9IjUxMCIgZm9udC1zaXplPSI3NiIgZm9udC13ZWlnaHQ9IjgwMCIgZmlsbD0iI2ZhY2MxNSI+55S75YuV55S75YuV55S75YuV55S75YuV55S75YuV55S75YuV55S75YuV55S7PC90ZXh0Pjx0ZXh0IHg9IjgwIiB5PSI2NjAiIGZvbnQtc2l6ZT0iMjQiIGZpbGw9IiNmYWNjMTUiPkxBWU9VVCBERU1PIMK3IG90aGVyIMK3IDE8L3RleHQ+PC9zdmc+",
@@ -299,7 +299,7 @@
             "fontSize": 76,
             "foreground": "#facc15",
             "background": "#172554",
-            "generation_version": "0.3.1",
+            "generation_version": "0.3.2",
             "textLayout": {
               "version": "1.0.0",
               "coordinateSpace": "canvas_px",
@@ -463,7 +463,7 @@
                     "width": 1280,
                     "height": 120,
                     "padding": {
-                      "top": 40,
+                      "top": 32,
                       "right": 40,
                       "bottom": 40,
                       "left": 40
@@ -479,7 +479,7 @@
           }
         },
         {
-          "id": "f71c12a7-639f-4170-a0ee-87481e75c625",
+          "id": "923afa5a-dcfa-4aca-8012-277d85c90287",
           "style": "clean",
           "mimeType": "image/svg+xml",
           "imageDataUrl": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjgwIiBoZWlnaHQ9IjcyMCIgdmlld0JveD0iMCAwIDEyODAgNzIwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiI+PHJlY3Qgd2lkdGg9IjEyODAiIGhlaWdodD0iNzIwIiBmaWxsPSIjZjhmYWZjIi8+PHJlY3QgeD0iODAiIHk9IjgwIiB3aWR0aD0iMTUwIiBoZWlnaHQ9IjEyIiBmaWxsPSIjMGYxNzJhIi8+PHRleHQgeD0iODAiIHk9IjIxMCIgZm9udC1zaXplPSI2NCIgZm9udC13ZWlnaHQ9IjgwMCIgZmlsbD0iIzBmMTcyYSI+5YuV55S75YuV55S75YuV55S75YuV55S75YuV55S75YuV55S75YuV55S75YuVPC90ZXh0Pjx0ZXh0IHg9IjgwIiB5PSIzMTAiIGZvbnQtc2l6ZT0iNjQiIGZvbnQtd2VpZ2h0PSI4MDAiIGZpbGw9IiMwZjE3MmEiPueUu+WLleeUu+WLleeUu+WLleeUu+WLleeUu+WLleeUu+WLleeUu+WLleeUuzwvdGV4dD48dGV4dCB4PSI4MCIgeT0iNDEwIiBmb250LXNpemU9IjY0IiBmb250LXdlaWdodD0iODAwIiBmaWxsPSIjMGYxNzJhIj7li5XnlLvli5XnlLvli5XnlLvli5XnlLvli5XnlLvli5XnlLvli5XnlLvli5U8L3RleHQ+PHRleHQgeD0iODAiIHk9IjUxMCIgZm9udC1zaXplPSI2NCIgZm9udC13ZWlnaHQ9IjgwMCIgZmlsbD0iIzBmMTcyYSI+55S75YuV55S75YuV55S75YuV55S75YuV55S75YuV55S75YuV55S75YuV55S7PC90ZXh0Pjx0ZXh0IHg9IjgwIiB5PSI2NjAiIGZvbnQtc2l6ZT0iMjQiIGZpbGw9IiMwZjE3MmEiPkxBWU9VVCBERU1PIMK3IG90aGVyIMK3IDI8L3RleHQ+PC9zdmc+",
@@ -491,7 +491,7 @@
             "fontSize": 64,
             "foreground": "#0f172a",
             "background": "#f8fafc",
-            "generation_version": "0.3.1",
+            "generation_version": "0.3.2",
             "textLayout": {
               "version": "1.0.0",
               "coordinateSpace": "canvas_px",
@@ -655,7 +655,7 @@
                     "width": 1280,
                     "height": 120,
                     "padding": {
-                      "top": 40,
+                      "top": 32,
                       "right": 40,
                       "bottom": 40,
                       "left": 40
@@ -671,7 +671,7 @@
           }
         },
         {
-          "id": "67833e5f-1505-4a35-93f8-d01b750a1201",
+          "id": "0db9b841-48c6-410a-a45c-f7a4e3b9e2a7",
           "style": "contrast",
           "mimeType": "image/svg+xml",
           "imageDataUrl": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjgwIiBoZWlnaHQ9IjcyMCIgdmlld0JveD0iMCAwIDEyODAgNzIwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiI+PHJlY3Qgd2lkdGg9IjEyODAiIGhlaWdodD0iNzIwIiBmaWxsPSIjNGMxZDk1Ii8+PHJlY3QgeD0iODAiIHk9IjgwIiB3aWR0aD0iMTUwIiBoZWlnaHQ9IjEyIiBmaWxsPSIjZmZmZmZmIi8+PHRleHQgeD0iODAiIHk9IjIxMCIgZm9udC1zaXplPSI3NiIgZm9udC13ZWlnaHQ9IjgwMCIgZmlsbD0iI2ZmZmZmZiI+5YuV55S75YuV55S75YuV55S75YuV55S75YuV55S75YuV55S75YuV55S75YuVPC90ZXh0Pjx0ZXh0IHg9IjgwIiB5PSIzMTAiIGZvbnQtc2l6ZT0iNzYiIGZvbnQtd2VpZ2h0PSI4MDAiIGZpbGw9IiNmZmZmZmYiPueUu+WLleeUu+WLleeUu+WLleeUu+WLleeUu+WLleeUu+WLleeUu+WLleeUuzwvdGV4dD48dGV4dCB4PSI4MCIgeT0iNDEwIiBmb250LXNpemU9Ijc2IiBmb250LXdlaWdodD0iODAwIiBmaWxsPSIjZmZmZmZmIj7li5XnlLvli5XnlLvli5XnlLvli5XnlLvli5XnlLvli5XnlLvli5XnlLvli5U8L3RleHQ+PHRleHQgeD0iODAiIHk9IjUxMCIgZm9udC1zaXplPSI3NiIgZm9udC13ZWlnaHQ9IjgwMCIgZmlsbD0iI2ZmZmZmZiI+55S75YuV55S75YuV55S75YuV55S75YuV55S75YuV55S75YuV55S75YuV55S7PC90ZXh0Pjx0ZXh0IHg9IjgwIiB5PSI2NjAiIGZvbnQtc2l6ZT0iMjQiIGZpbGw9IiNmZmZmZmYiPkxBWU9VVCBERU1PIMK3IG90aGVyIMK3IDM8L3RleHQ+PC9zdmc+",
@@ -683,7 +683,7 @@
             "fontSize": 76,
             "foreground": "#ffffff",
             "background": "#4c1d95",
-            "generation_version": "0.3.1",
+            "generation_version": "0.3.2",
             "textLayout": {
               "version": "1.0.0",
               "coordinateSpace": "canvas_px",
@@ -847,7 +847,7 @@
                     "width": 1280,
                     "height": 120,
                     "padding": {
-                      "top": 40,
+                      "top": 32,
                       "right": 40,
                       "bottom": 40,
                       "left": 40
@@ -871,7 +871,7 @@
       },
       "candidates": [
         {
-          "id": "565cee04-de8f-4812-9f96-1f1e04961fcd",
+          "id": "acac51e8-9d90-43d8-a093-f1d1741bfc08",
           "style": "bold",
           "mimeType": "image/svg+xml",
           "imageDataUrl": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjgwIiBoZWlnaHQ9IjcyMCIgdmlld0JveD0iMCAwIDEyODAgNzIwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiI+PHJlY3Qgd2lkdGg9IjEyODAiIGhlaWdodD0iNzIwIiBmaWxsPSIjMTcyNTU0Ii8+PHJlY3QgeD0iODAiIHk9IjgwIiB3aWR0aD0iMTUwIiBoZWlnaHQ9IjEyIiBmaWxsPSIjZmFjYzE1Ii8+PHRleHQgeD0iODAiIHk9IjIxMCIgZm9udC1zaXplPSI3NiIgZm9udC13ZWlnaHQ9IjgwMCIgZmlsbD0iI2ZhY2MxNSI+QUnjgajli5XnlLvwn46s44Gu5YWl6ZaAPC90ZXh0Pjx0ZXh0IHg9IjgwIiB5PSI2NjAiIGZvbnQtc2l6ZT0iMjQiIGZpbGw9IiNmYWNjMTUiPkxBWU9VVCBERU1PIMK3IG90aGVyIMK3IDE8L3RleHQ+PC9zdmc+",
@@ -883,7 +883,7 @@
             "fontSize": 76,
             "foreground": "#facc15",
             "background": "#172554",
-            "generation_version": "0.3.1",
+            "generation_version": "0.3.2",
             "textLayout": {
               "version": "1.0.0",
               "coordinateSpace": "canvas_px",
@@ -945,7 +945,7 @@
                     "width": 1280,
                     "height": 120,
                     "padding": {
-                      "top": 40,
+                      "top": 32,
                       "right": 40,
                       "bottom": 40,
                       "left": 40
@@ -961,7 +961,7 @@
           }
         },
         {
-          "id": "2a623826-78dd-4228-a55e-f5f505588b18",
+          "id": "c37dbc0c-336c-43db-99ef-0d3065b105a4",
           "style": "clean",
           "mimeType": "image/svg+xml",
           "imageDataUrl": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjgwIiBoZWlnaHQ9IjcyMCIgdmlld0JveD0iMCAwIDEyODAgNzIwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiI+PHJlY3Qgd2lkdGg9IjEyODAiIGhlaWdodD0iNzIwIiBmaWxsPSIjZjhmYWZjIi8+PHJlY3QgeD0iODAiIHk9IjgwIiB3aWR0aD0iMTUwIiBoZWlnaHQ9IjEyIiBmaWxsPSIjMGYxNzJhIi8+PHRleHQgeD0iODAiIHk9IjIxMCIgZm9udC1zaXplPSI2NCIgZm9udC13ZWlnaHQ9IjgwMCIgZmlsbD0iIzBmMTcyYSI+QUnjgajli5XnlLvwn46s44Gu5YWl6ZaAPC90ZXh0Pjx0ZXh0IHg9IjgwIiB5PSI2NjAiIGZvbnQtc2l6ZT0iMjQiIGZpbGw9IiMwZjE3MmEiPkxBWU9VVCBERU1PIMK3IG90aGVyIMK3IDI8L3RleHQ+PC9zdmc+",
@@ -973,7 +973,7 @@
             "fontSize": 64,
             "foreground": "#0f172a",
             "background": "#f8fafc",
-            "generation_version": "0.3.1",
+            "generation_version": "0.3.2",
             "textLayout": {
               "version": "1.0.0",
               "coordinateSpace": "canvas_px",
@@ -1035,7 +1035,7 @@
                     "width": 1280,
                     "height": 120,
                     "padding": {
-                      "top": 40,
+                      "top": 32,
                       "right": 40,
                       "bottom": 40,
                       "left": 40
@@ -1051,7 +1051,7 @@
           }
         },
         {
-          "id": "9b4e0181-fb6d-43e4-9bb9-dc3cded5669e",
+          "id": "01bd7c9e-0d45-4e22-9d0d-5dc67de4f63e",
           "style": "contrast",
           "mimeType": "image/svg+xml",
           "imageDataUrl": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjgwIiBoZWlnaHQ9IjcyMCIgdmlld0JveD0iMCAwIDEyODAgNzIwIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiI+PHJlY3Qgd2lkdGg9IjEyODAiIGhlaWdodD0iNzIwIiBmaWxsPSIjNGMxZDk1Ii8+PHJlY3QgeD0iODAiIHk9IjgwIiB3aWR0aD0iMTUwIiBoZWlnaHQ9IjEyIiBmaWxsPSIjZmZmZmZmIi8+PHRleHQgeD0iODAiIHk9IjIxMCIgZm9udC1zaXplPSI3NiIgZm9udC13ZWlnaHQ9IjgwMCIgZmlsbD0iI2ZmZmZmZiI+QUnjgajli5XnlLvwn46s44Gu5YWl6ZaAPC90ZXh0Pjx0ZXh0IHg9IjgwIiB5PSI2NjAiIGZvbnQtc2l6ZT0iMjQiIGZpbGw9IiNmZmZmZmYiPkxBWU9VVCBERU1PIMK3IG90aGVyIMK3IDM8L3RleHQ+PC9zdmc+",
@@ -1063,7 +1063,7 @@
             "fontSize": 76,
             "foreground": "#ffffff",
             "background": "#4c1d95",
-            "generation_version": "0.3.1",
+            "generation_version": "0.3.2",
             "textLayout": {
               "version": "1.0.0",
               "coordinateSpace": "canvas_px",
@@ -1125,7 +1125,7 @@
                     "width": 1280,
                     "height": 120,
                     "padding": {
-                      "top": 40,
+                      "top": 32,
                       "right": 40,
                       "bottom": 40,
                       "left": 40
