@@ -53,6 +53,20 @@ Excelで保存したCSV（先頭にBOMが付く）もそのまま検証できる
 
 件数は `node data/validate.mjs data/private/preferences.csv` の `progress.usable` を転記する。タイトルはここに書かない。
 
+## B5：人の選好と採点順位の一致（参考値）
+1. 3案を生成したら、APIレスポンス（成功時のJSON）を `data/private/` に保存する（画像とタイトルを含むのでGitに入れない）。
+2. `data/templates/scores.template.csv` を `data/private/scores.csv` にコピーし、組ごとに今の採点versionで採点し直した行を追記する：
+   `node data/rescore.mjs <candidate_id> data/private/<保存したレスポンス>.json >> data/private/scores.csv`
+   （`candidate_id` は `preferences.csv` と同じID。採点versionを上げたら同じ手順で行を足せば、版ごとに比較できる）
+3. `node data/agreement.mjs data/private/preferences.csv data/private/scores.csv` で集計する。
+   - 採点versionごと、`dev` / `holdout` ごとに、1位の一致（`top1_hit`）・同点（`top1_tie`）・不一致（`top1_miss`）と一致率を出す。**同点は一致に含めない**。
+   - `ranking` を記録した行があれば、3組の対の一致（`pairwise`）も出す。
+   - 外れた例を分類する：`score_tie`（採点が同点）、`close_miss`（点差5未満・仮の目安）、`clear_miss`（点差5以上）。出力に `candidate_id` と点数は出るが、タイトルは出さない。
+   - `source=synthetic` の行は既定で使わない（`--include-synthetic` で動作確認用に含められる）。
+4. holdoutの結果は重みや閾値の調整に使わない。20件程度なので一致率は参考値とし、CTRとは扱わない。
+
+注意：今の採点（0.3.1）は3案とも配色のコントラストが高く、総合点が同点（例：デモの3案はすべて100点）になりやすい。同点の組は1位の一致を判定できないため、`top1_tie` の件数も必ず報告する。
+
 ## 縮小表示テスト（48 / 60 / 76px）
 `font` の基準（現在の「48px以上で満点」は**検証前の仮値**）を見直すための、読みやすさの確認です。20件の選好評価とは別に扱います。
 - 使う画像は**無料の人工画像だけ**（`source` は `synthetic` のみ受け付ける）。実タイトル・実画像は入れない。
