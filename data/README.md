@@ -57,7 +57,9 @@ Excelで保存したCSV（先頭にBOMが付く）もそのまま検証できる
 `font` の基準（現在の「48px以上で満点」は**検証前の仮値**）を見直すための、読みやすさの確認です。20件の選好評価とは別に扱います。
 - 使う画像は**無料の人工画像だけ**（`source` は `synthetic` のみ受け付ける）。実タイトル・実画像は入れない。
 - 同じ人工タイトルを文字サイズだけ変えた画像の組（`image_set_id`）を作り、表示幅（仮に 168 / 246 / 360px）に縮小して評価者に見せる。
-- 1行＝1人が1枚を見た結果。`read_correct`（yes/no）、`seconds`（任意）、`rank`（同じ評価者・組・表示幅の中の読みやすさの順位、1が最良）を記録する。
+- 1行＝1人が1枚を見た結果。`read_correct`（yes/no）、`seconds`（任意）、`rank`（同じ評価者・組・表示幅の中の読みやすさの順位、1が最良）、`reason`（任意）を記録する。
+- 同じPC・ブラウザ・ズーム100%で見比べ、`os`、`browser`、`rendered_font`（実際に表示されたフォント。Chromeなら開発者ツールの Computed →「Rendered Fonts」）を必ず書く。同じ評価者・組・表示幅の中で環境が違う行は不正行になる。
+- 最初の組は生成側の `synthetic-01`（`feature/generation-provider` の `docs/readability/`、`generation_version` は manifest の `readability-fixture-0.1.0`）。検証用の配置で、本番の文字パネルとは異なる。
 
 1. `data/templates/readability.template.csv` を `data/private/readability.csv` にコピーして記録する。
 2. `node data/readability.mjs data/private/readability.csv` で検証・集計する。文字サイズ×表示幅ごとに、件数・正答率・秒数の中央値・平均順位・縮小後の文字の高さ（`scaled_px` ＝ 文字サイズ × 表示幅 ÷ 1280）を出す。

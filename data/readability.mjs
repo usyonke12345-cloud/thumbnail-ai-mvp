@@ -14,11 +14,14 @@ export function summarizeReadability(rows, schema) {
   rows.forEach((r, i) => validateRow(r, schema).forEach(e => flag(i, e)));
   const groups = new Map();
   rows.forEach((r, i) => { const k = `${r.reviewer_id}|${r.image_set_id}|${r.display_width}`; groups.set(k, [...(groups.get(k) ?? []), i]); });
+  const env = r => `${r.os} / ${r.browser} / ${r.rendered_font}`;
   for (const idx of groups.values()) {
     for (const key of ['rank', 'font_size']) {
       const seen = new Set();
       for (const i of idx) { if (seen.has(rows[i][key])) flag(i, `duplicate ${key} in the same reviewer/set/width`); seen.add(rows[i][key]); }
     }
+    // 同じPC・ブラウザ・フォントで見比べた組だけを比較に使う
+    for (const i of idx.slice(1)) if (env(rows[i]) !== env(rows[idx[0]])) flag(i, 'os/browser/rendered_font differ within the same reviewer/set/width');
   }
   const ok = rows.filter((_, i) => !bad.has(i));
   const cells = new Map();
@@ -37,6 +40,7 @@ export function summarizeReadability(rows, schema) {
     rows: rows.length,
     invalid: [...bad].sort((a, b) => a[0] - b[0]).map(([i, errors]) => ({ line: i + 2, errors })),
     reviewers: new Set(ok.map(r => r.reviewer_id)).size,
+    environments: [...new Set(ok.map(env))],
     byCell,
     note: '少人数の参考値。重みや閾値の決定に単独では使わない。CTRではない。',
   };

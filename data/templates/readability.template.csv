@@ -1,1 +1,1 @@
-trial_id,image_set_id,source,generation_version,font_size,display_width,reviewer_id,read_correct,seconds,rank,note
+trial_id,image_set_id,source,generation_version,font_size,display_width,reviewer_id,read_correct,seconds,rank,reason,os,browser,rendered_font,note
