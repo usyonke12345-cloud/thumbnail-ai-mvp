@@ -1,5 +1,5 @@
 import { analyzeLayout, contrastRatio, parseSvg } from './layout.mjs';
-const VERSION = '0.2.0';
+const VERSION = '0.2.1';
 const MIN_FONT = 48; // 仮説: 一覧で縮小表示されても読める目安。実データで校正していない。
 /** Contract: score(candidate, input) => Promise<Assessment>. No network or generation imports. */
 export async function score(candidate, input) {
@@ -20,7 +20,7 @@ export async function score(candidate, input) {
 
   const brevity = Math.max(0, 100 - Math.max(0, m.textLength - 15) * 2);
 
-  // font: 文字サイズ(48px以上で満点)に、領域からのはみ出し分を減点
+  // font: 文字サイズ(48px以上で満点＝検証前の仮値)に、領域からの4方向のはみ出し分を減点
   const sizeScore = Math.min(100, Math.round(maxFs / MIN_FONT * 100));
   const overflow = title.length ? Math.max(...title.map(t => t.overflow)) : 0;
   const fitPenalty = Math.min(100, Math.round(overflow / maxFs * 50));

@@ -61,17 +61,19 @@ export function analyzeLayout(parsed) {
     if (it.type !== 'text') return;
     const w = estimateWidth(it.text, it.fs);
     const box = { x: it.x, y: it.baseline - it.fs * .88, w, h: it.fs * 1.08 };
-    let backdrop = null, state = 'unevaluated';
+    let backdrop = null, panel = null, state = 'unevaluated';
     for (let i = idx - 1; i >= 0; i--) {
       const p = items[i];
       if (p.type === 'text' || !overlaps(box, p)) continue;
       if (p.type === 'image') { state = 'over_image'; break; }
       if (p.opaque && within(box, p)) { backdrop = p; state = 'solid'; }
       else state = 'partial';
+      panel = p; // 一部だけ重なるパネルも、収まりの判定ではその領域として扱う
       break;
     }
-    const region = backdrop && (backdrop.w < width || backdrop.h < height) ? { x: backdrop.x, y: backdrop.y, w: backdrop.w, h: backdrop.h, pad: 16 } : { x: 0, y: 0, w: width, h: height, pad: 40 };
-    const overflow = Math.max(0, box.x + box.w - (region.x + region.w - region.pad), box.y + box.h - (region.y + region.h - region.pad), region.x + region.pad - box.x);
+    const region = panel && (panel.w < width || panel.h < height) ? { x: panel.x, y: panel.y, w: panel.w, h: panel.h, pad: 16 } : { x: 0, y: 0, w: width, h: height, pad: 40 };
+    // 右・下・左・上の4方向のはみ出し（余白を含む）のうち最大
+    const overflow = Math.max(0, box.x + box.w - (region.x + region.w - region.pad), box.y + box.h - (region.y + region.h - region.pad), region.x + region.pad - box.x, region.y + region.pad - box.y);
     texts.push({ ...it, box, state, backdropFill: backdrop?.fill, overflow, region });
   });
   return { width, height, texts };

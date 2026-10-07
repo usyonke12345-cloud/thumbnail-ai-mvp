@@ -63,6 +63,33 @@
    "textLength": 20,
    "lineCount": 2,
    "dataUrl": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAIAAAAmkwkpAAAAJklEQVR4nBXGQREAMBADoZVzcpAT+Z3yonSiqdw5bq78YpTdz2YPE0MMgR5FhskAAAAASUVORK5CYII="
+  },
+  {
+   "name": "top-overflow-canvas",
+   "fontSize": 76,
+   "foreground": "#ffffff",
+   "background": "#172554",
+   "lineCount": 1,
+   "textLength": 6,
+   "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1280\" height=\"720\" viewBox=\"0 0 1280 720\"><rect width=\"1280\" height=\"720\" fill=\"#cbd5e1\"/><text x=\"80\" y=\"60\" font-size=\"76\" fill=\"#172554\">動画制作入門</text></svg>"
+  },
+  {
+   "name": "top-overflow-panel",
+   "fontSize": 76,
+   "foreground": "#ffffff",
+   "background": "#172554",
+   "lineCount": 1,
+   "textLength": 6,
+   "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1280\" height=\"720\" viewBox=\"0 0 1280 720\"><rect width=\"1280\" height=\"720\" fill=\"#cbd5e1\"/><rect x=\"48\" y=\"120\" width=\"1120\" height=\"460\" fill=\"#172554\"/><text x=\"80\" y=\"192\" font-size=\"76\" fill=\"#ffffff\">動画制作入門</text></svg>"
+  },
+  {
+   "name": "partial-panel-overflow",
+   "fontSize": 76,
+   "foreground": "#ffffff",
+   "background": "#172554",
+   "lineCount": 1,
+   "textLength": 12,
+   "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"1280\" height=\"720\" viewBox=\"0 0 1280 720\"><rect width=\"1280\" height=\"720\" fill=\"#cbd5e1\"/><rect x=\"48\" y=\"120\" width=\"600\" height=\"460\" fill=\"#172554\"/><text x=\"80\" y=\"350\" font-size=\"76\" fill=\"#ffffff\">初心者のための動画制作入門</text></svg>"
   }
  ]
 }

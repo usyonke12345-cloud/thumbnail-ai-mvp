@@ -23,7 +23,7 @@
       "assessment": {
         "overall": 100,
         "kind": "layout_heuristic",
-        "version": "0.2.0",
+        "version": "0.2.1",
         "metrics": {
           "contrast": 100,
           "brevity": 100,
@@ -59,7 +59,7 @@
       "assessment": {
         "overall": 100,
         "kind": "layout_heuristic",
-        "version": "0.2.0",
+        "version": "0.2.1",
         "metrics": {
           "contrast": 100,
           "brevity": 100,
@@ -95,7 +95,7 @@
       "assessment": {
         "overall": 100,
         "kind": "layout_heuristic",
-        "version": "0.2.0",
+        "version": "0.2.1",
         "metrics": {
           "contrast": 100,
           "brevity": 100,

@@ -10,10 +10,10 @@ const run = async name => {
   return score({ imageDataUrl, metadata: { textLength: c.textLength, lineCount: c.lineCount, fontSize: c.fontSize, foreground: c.foreground, background: c.background } }, {});
 };
 const has = (a, s) => [...a.reasons, ...a.limitations].some(x => x.includes(s));
-test('version 0.2.0 stays within the v1 Assessment contract', async () => {
+test('version 0.2.1 stays within the v1 Assessment contract', async () => {
   for (const c of cases) {
     const a = await run(c.name);
-    assert.equal(a.version, '0.2.0'); assert.equal(a.kind, 'layout_heuristic');
+    assert.equal(a.version, '0.2.1'); assert.equal(a.kind, 'layout_heuristic');
     assert.deepEqual(Object.keys(a.metrics).sort(), ['brevity', 'contrast', 'font']);
     assert.ok(a.limitations.some(x => x.includes('CTR予測や効果保証ではありません')));
   }
@@ -45,4 +45,16 @@ test('unparseable or non-SVG images fall back to metadata with a stated limitati
 test('width estimate distinguishes full-width and ASCII characters', () => {
   assert.equal(estimateWidth('あいう', 50), 150);
   assert.ok(estimateWidth('abc', 50) < estimateWidth('あいう', 50));
+});
+test('overflow above the top edge is flagged (canvas and panel)', async () => {
+  for (const name of ['top-overflow-canvas', 'top-overflow-panel']) {
+    const a = await run(name);
+    assert.ok(has(a, 'はみ出します'), name); assert.ok(a.metrics.font < 100, name);
+  }
+});
+test('text partly outside its panel is measured against the panel, not the canvas', async () => {
+  const a = await run('partial-panel-overflow');
+  assert.ok(has(a, 'はみ出します'));
+  assert.ok(has(a, '背面を単色と確認できない'), 'パネルからはみ出した文字のコントラストは推定しない');
+  assert.ok(a.metrics.font < 50);
 });
