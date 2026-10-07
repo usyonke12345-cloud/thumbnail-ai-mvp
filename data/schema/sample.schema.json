@@ -1,0 +1,92 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Preference sample (private data; not CTR)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "sample_id",
+    "title",
+    "genre",
+    "source",
+    "permission",
+    "candidate_id",
+    "generation_version",
+    "scoring_version",
+    "reviewer_id",
+    "preferred_candidate",
+    "split"
+  ],
+  "properties": {
+    "sample_id": {
+      "type": "string",
+      "pattern": "^s[0-9]{3,}$"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 60
+    },
+    "genre": {
+      "enum": [
+        "education",
+        "gaming",
+        "vlog",
+        "other"
+      ]
+    },
+    "source": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source_url": {
+      "type": "string"
+    },
+    "permission": {
+      "enum": [
+        "own_work",
+        "owner_consented",
+        "none"
+      ]
+    },
+    "permission_date": {
+      "type": "string",
+      "pattern": "^$|^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+    },
+    "candidate_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "比較した3案の組（生成の1回分）を表すID"
+    },
+    "generation_version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "scoring_version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "reviewer_id": {
+      "type": "string",
+      "pattern": "^r[0-9]{2,}$"
+    },
+    "preferred_candidate": {
+      "enum": [
+        "bold",
+        "contrast",
+        "clean"
+      ]
+    },
+    "ranking": {
+      "type": "string"
+    },
+    "reason": {
+      "type": "string"
+    },
+    "split": {
+      "enum": [
+        "dev",
+        "holdout"
+      ]
+    }
+  }
+}

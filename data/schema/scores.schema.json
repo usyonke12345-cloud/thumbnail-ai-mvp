@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Score of one candidate style in a 3-candidate set (for B5 agreement; not CTR)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "candidate_id",
+    "style",
+    "overall",
+    "scoring_version"
+  ],
+  "properties": {
+    "candidate_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "preferences.csv の candidate_id と同じ、3案の組のID"
+    },
+    "style": {
+      "enum": [
+        "bold",
+        "contrast",
+        "clean"
+      ]
+    },
+    "overall": {
+      "type": "string",
+      "pattern": "^(100|[1-9]?[0-9])$"
+    },
+    "scoring_version": {
+      "type": "string",
+      "minLength": 1
+    }
+  }
+}
