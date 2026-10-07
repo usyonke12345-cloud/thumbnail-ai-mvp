@@ -103,13 +103,24 @@ test('missing textLayout, unknown version or coordinate space fall back to SVG a
 import { readFile } from 'node:fs/promises';
 import { elementProblems as problemsOf } from '../backend/scoring/metadata-layout.mjs';
 const genFixture = await readFile(new URL('../docs/fixtures/generation-metadata.json', import.meta.url), 'utf8').then(JSON.parse, () => null);
-test('generation-side fixture is scored via textLayout and agrees with SVG analysis', { skip: !genFixture && 'generation fixture not on this branch' }, async () => {
+// 生成0.3.x（SVG text）と0.4.0（文字をpath化）の両方で通るように、点数ではなく評価の状態を確認する。
+test('generation-side fixture is scored via textLayout; fit/contrast states follow measurement and backdrop', { skip: !genFixture && 'generation fixture not on this branch' }, async () => {
   for (const s of genFixture.sets) for (const c of s.candidates) {
-    for (const e of c.metadata.textLayout.elements) assert.deepEqual(problemsOf(e), [], `${c.style} ${e.id}`);
-    const a = await score(c, s.input);
-    assert.match(a.reasons[0], /metadataのtextLayout/); assert.match(all(a), /推定/);
+    const id = `${s.input.title} ${c.style}`;
+    for (const e of c.metadata.textLayout.elements) assert.deepEqual(problemsOf(e), [], `${id} ${e.id}`);
+    const a = await score(c, s.input), text = all(a);
+    assert.match(a.reasons[0], /metadataのtextLayout/, id);
+    const title = c.metadata.textLayout.elements.filter(e => e.role === 'title');
+    const unmeasured = title.some(e => e.measurement === 'unknown' || [e.width, e.height, e.topY].includes(null));
+    if (unmeasured) { assert.match(text, /収まりは未評価/, id); assert.doesNotMatch(text, /収まっています/, id); }
+    if (title.some(e => e.measurement === 'estimated')) assert.match(text, /推定/, id);
+    if (title.every(e => e.textBackdrop.kind === 'solid')) { assert.ok(a.metrics.contrast > 0, id); assert.match(text, /配色のコントラスト比/, id); }
+    else { assert.equal(a.metrics.contrast, 0, id); assert.match(text, /コントラスト: 未評価/, id); assert.ok(a.overall <= 50, id); }
+    // textLayoutを外した旧経路：SVGにtext要素があれば従来の解析と同じ指標、文字がpathだけなら未解析・コントラスト未評価
     const { textLayout, ...legacy } = c.metadata;
     const b = await score({ ...c, metadata: legacy }, s.input);
-    assert.deepEqual(a.metrics, b.metrics, `${s.input.title} ${c.style}`);
+    const svg = Buffer.from(c.imageDataUrl.split(',')[1], 'base64').toString();
+    if (!svg.includes('<path') && title.every(e => e.textBackdrop.kind === 'solid') && !unmeasured) assert.deepEqual(a.metrics, b.metrics, id);
+    if (!/<text\b/.test(svg)) { assert.equal(b.metrics.contrast, 0, id); assert.match(b.reasons[0], /文字配置は未解析/, id); }
   }
 });

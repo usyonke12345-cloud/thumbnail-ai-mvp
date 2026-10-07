@@ -12,7 +12,8 @@ function textsFor(candidate, image) {
   if (tl) return { method: 'metadata', label: `metadataのtextLayout（v${tl.version}）`, texts: analyzeTextLayout(tl) };
   const parsed = parseSvg(candidate.imageDataUrl);
   const layout = parsed && analyzeLayout(parsed);
-  if (!layout) return { method: 'none', label: 'metadataの配色のみ（文字配置は未解析）', texts: [] };
+  // 解析できないSVG、text要素が無いSVG（文字をpathにした画像など）、SVG以外の画像は、文字配置を未解析とする
+  if (!layout || !layout.texts.length) return { method: 'none', label: '文字配置は未解析（textLayoutなし、画像から文字を読み取れない）', texts: [] };
   // SVGには役割の情報が無いため、最大の文字サイズをタイトル、それ以外をフッターなどの小さな文字とみなす
   const maxFs = Math.max(...layout.texts.map(t => t.fs));
   return { method: 'svg', label: 'SVGの構造解析（textLayoutなし）', texts: layout.texts.map(t => ({ ...t, role: t.fs === maxFs ? 'title' : 'footer', invalid: null, measurement: 'estimated' })) };
@@ -69,7 +70,7 @@ export async function score(candidate, input) {
   const lowSmall = small.filter(t => !t.invalid && t.state === 'solid' && contrastRatio(t.fill, t.backdropFill) < 4.5);
   if (lowSmall.length) reasons.push('小さな文字のコントラスト比が4.5未満です。');
   if (small.some(t => !t.invalid && t.state !== 'solid')) limitations.push('背景画像の上にある小さな文字（フッターなど）のコントラストは未評価です。');
-  if (method === 'none') limitations.push(candidate.imageDataUrl?.startsWith('data:image/svg+xml') ? 'SVGの構造を解析できないため、文字の収まりと背面は未評価です。' : 'SVG以外の画像は文字領域を分析していません。メタデータのみで評価しました。');
+  if (method === 'none') limitations.push(candidate.imageDataUrl?.startsWith('data:image/svg+xml') ? 'SVGの構造を解析できないか、文字がtext要素ではない（pathなど）ため、文字の収まりと背面は未評価です。' : 'SVG以外の画像は文字領域を分析していません。文字の収まりと背面は未評価です。');
   if (estimated) limitations.push(method === 'svg' ? '文字幅は文字種からの推定値で、実際の描画とは異なる場合があります。' : '文字範囲は生成側の推定値（measurement=estimated）で、実際の描画とは異なる場合があります。');
   limitations.push('画像内容・ジャンル適合は未評価。', '重みと閾値は仮説で、実データで校正していません。', 'CTR予測や効果保証ではありません。');
   return { overall, kind: 'layout_heuristic', version: VERSION, metrics: { contrast, brevity, font }, reasons, limitations };
