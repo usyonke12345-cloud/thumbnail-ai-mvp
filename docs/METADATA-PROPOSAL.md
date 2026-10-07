@@ -1,7 +1,7 @@
-# 採点用metadata拡張案（共同レビュー前・未実装）
+# 採点用metadata拡張案（合意した定義・生成側実装済み）
 
 既存のmetadata、Candidate、Assessmentの項目を保持し、以下を追加する案です。
-合意後にOpenAPI・生成実装・fixture・契約テストを同じPRで更新します。
+OpenAPI・生成実装・fixture・契約テストを更新しました。相互レビュー後にmainへ取り込みます。
 採点側は旧候補では従来のSVG解析へフォールバック。metricsの変更は別途合意します。
 
 ## 項目
@@ -27,7 +27,7 @@
 | textRegion | 意図した配置領域のx/y/width/heightとpadding（top/right/bottom/left）。文字が完全に外でも変えない |
 | textBackdrop | `kind`: solid/image/unknown。solidならcolor、その他はcolor=null |
 
-`textBackdrop`は領域全体を保証できる場合だけsolidにします。パネルをはみ出す文字はimageまたはunknownとして、metadataだけからコントラストを確定しません。
+`textBackdrop`はその行の文字範囲の背面を保証できる場合だけsolidにします。パネルをはみ出す文字はimageまたはunknownとして、metadataだけからコントラストを確定しません。
 フッターも独立した配置領域を持たせます。文字サイズの大小からタイトルかどうかを推測する必要をなくします。
 角丸や半透明、混合背景の保証が難しい場合はunknownとします。
 
@@ -43,4 +43,15 @@
 
 行ごとのtextBoxesを独立配列にする代わりに、elementsへ範囲・配置領域・背面をまとめる案です。
 この形式で評価に必要な情報が足りるか、旧候補へのフォールバックと未評価の扱いを確認してください。
-本案は仕様合意用です。現在のAPIレスポンスにはまだ追加されていません。
+生成側レスポンスへの追加は実装済みです。採点側の利用は0.3.0で対応します。
+
+## 合意後の確定事項と提供物
+
+生成側0.3.0で実装済み。API v1への追加項目で、旧候補では省略可能です。
+textBackdropはその行の文字範囲の背面。foregroundは不透明。
+topY/heightは装飾を除くインク範囲。初版はink-estimate-1.0.0による推定（ASCII 0.62em、その他1em、上端baseline-0.88em、高さ1.08em）。実フォントのインク測定ではありません。
+xは左端、左揃え・変形なし。非対応配置はunknownとします。
+stroke(color,width)、shadow(color,blur,offsetX,offsetY)は任意、省略時は装飾なし。初版の評価範囲は装飾を除きます。
+textLengthはタイトル全体のUnicodeコードポイント数。title要素をlineIndex順に連結した文字列と一致します。
+生成側fixture: docs/fixtures/generation-metadata.json（人工・無料mock、採点結果なし）。
+採点0.3.0は相手側で実装。既知形式の異常値は未評価、情報なし・未知版のみSVGへフォールバック。

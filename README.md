@@ -76,3 +76,6 @@ Day 1の実施結果と相手側チェックリストは [DAY1.md](docs/DAY1.md)
 サーバーはローカル開発用で127.0.0.1に限定しています。公開前に認証、利用量制限、画像保管、タイムアウト、秘密情報管理を設計してください。
 
 技術参照: [Node.js HTTP](https://nodejs.org/api/http.html)、[Node.js test runner](https://nodejs.org/api/test.html)。
+
+採点用レイアウト情報の生成側実装と人工fixtureを追加しました。
+詳細: [metadataの定義](docs/METADATA-PROPOSAL.md)。寸法は推定で、実フォント測定ではありません。

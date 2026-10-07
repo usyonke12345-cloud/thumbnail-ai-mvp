@@ -71,3 +71,7 @@ modeは生成設定に応じてai_background。healthはAPIキーの有効性や
 2. 背景生成→文字を確定配置→1280×720のPNG/JPEGへ合成。mimeTypeとdata URLを一致させる。
 3. scoreに実画像分析を追加し、サンプル20件で人の選好と比較。CTRと選好を混同しない。
 4. data URLは初期用。画像が大きくなる前に保存先URL契約と非同期ジョブAPIを共同設計。
+
+採点用metadataにgeneration_versionとtextLayoutを追加しました。旧候補では省略可能です。
+座標・推定寸法・行の役割・背面の定義はdocs/METADATA-PROPOSAL.mdを参照してください。
+人工fixtureはdocs/fixtures/generation-metadata.jsonです。採点側0.3.0への対応は別ブランチで進めます。
