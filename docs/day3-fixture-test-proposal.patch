@@ -1,0 +1,31 @@
+diff --git a/tests/metadata-layout.test.mjs b/tests/metadata-layout.test.mjs
+index 33bed10..7930084 100644
+--- a/tests/metadata-layout.test.mjs
++++ b/tests/metadata-layout.test.mjs
+@@ -103,13 +103,23 @@ test('missing textLayout, unknown version or coordinate space fall back to SVG a
+ import { readFile } from 'node:fs/promises';
+ import { elementProblems as problemsOf } from '../backend/scoring/metadata-layout.mjs';
+ const genFixture = await readFile(new URL('../docs/fixtures/generation-metadata.json', import.meta.url), 'utf8').then(JSON.parse, () => null);
+-test('generation-side fixture is scored via textLayout and agrees with SVG analysis', { skip: !genFixture && 'generation fixture not on this branch' }, async () => {
++test('generation-side fixture uses textLayout; legacy text and outline paths have distinct expectations', { skip: !genFixture && 'generation fixture not on this branch' }, async () => {
+   for (const s of genFixture.sets) for (const c of s.candidates) {
+     for (const e of c.metadata.textLayout.elements) assert.deepEqual(problemsOf(e), [], `${c.style} ${e.id}`);
+     const a = await score(c, s.input);
+-    assert.match(a.reasons[0], /metadataのtextLayout/); assert.match(all(a), /推定/);
++    assert.match(a.reasons[0], /metadataのtextLayout/);
++    const title=c.metadata.textLayout.elements.filter(e=>e.role==='title');
++    if(title.every(e=>e.measurement==='unknown')) assert.match(all(a), /収まりは未評価/);
++    else assert.match(all(a), /推定/);
++    assert.equal(a.version, '0.3.1');
++    assert.equal(a.metrics.contrast, title.every(e=>e.textBackdrop.kind==='solid') ? 100 : 0);
+     const { textLayout, ...legacy } = c.metadata;
+     const b = await score({ ...c, metadata: legacy }, s.input);
+-    assert.deepEqual(a.metrics, b.metrics, `${s.input.title} ${c.style}`);
++    const svg=Buffer.from(c.imageDataUrl.split(',')[1], 'base64').toString();
++    if(svg.includes('<path')) {
++      assert.equal(b.metrics.contrast, 0);
++      assert.match(all(b), /未評価/);
++    } else assert.deepEqual(a.metrics, b.metrics, `${s.input.title} ${c.style}`);
+   }
+ });
++

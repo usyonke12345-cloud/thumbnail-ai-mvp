@@ -61,3 +61,6 @@ textLengthはタイトル全体のUnicodeコードポイント数。title要素�
 footerの配置領域はy=600、高さ120。paddingはtop=32、right/bottom/left=40。
 描画位置baselineY=660と推定topY=638.88は維持し、上側の余白だけ実配置に合わせました。
 fixtureを更新し、四辺の収まりをテストしています。
+
+## Day 3の生成側更新（相互レビュー待ち）
+generation_version 0.4.0では同梱フォントの輪郭から範囲を推定します。measurementVersion=glyph-outline-1.0.0、measurement=estimated。非対応文字はunknown・寸法null。SVG文字はpathへ変わり、採点はtextLayoutを使ってください。AI背景はC3グラデーション＋縁取り、textBackdrop=image。詳細はdocs/DAY3.md参照。
