@@ -17,8 +17,13 @@ test('reference imports reject unsafe destinations and never accept imported per
  assert.throws(()=>validate(Array(101).fill({url:'https://youtu.be/example'})));
 });
 test('valid stored notes survive initialization; damaged notes fall back without inventing analysis',()=>{
- const good=context(JSON.stringify([{url:'https://youtu.be/0dz-e5UtO5o',reason:'文字',rule:'文字を大きく'}]));assert.equal(good.nodes.get('#reference-list').children.length,1);
- const bad=context('{broken');assert.equal(bad.nodes.get('#reference-list').children.length,3);assert.match(bad.nodes.get('#reference-status').textContent,/読み込めません/);
+ const good=context(JSON.stringify([{url:'https://youtu.be/0dz-e5UtO5o',reason:'文字',rule:'文字を大きく'}]));assert.equal(good.nodes.get('#reference-list').children.length,3);assert.equal(vm.runInContext('rows[0].rule',good.scope),'文字を大きく');
+ const bad=context('{broken');assert.equal(bad.nodes.get('#reference-list').children.length,5);assert.match(bad.nodes.get('#reference-status').textContent,/読み込めません/);
+});
+test('new references do not duplicate watch URLs or overwrite existing preferences',()=>{
+ const {scope}=context(JSON.stringify([{url:'https://www.youtube.com/watch?v=HBluLfX2F_k',reason:'自分のメモ',rule:'配置ルール'}]));
+ assert.equal(vm.runInContext('rows.length',scope),2);assert.equal(vm.runInContext('rows[0].reason',scope),'自分のメモ');
+ assert.equal(vm.runInContext('rows[1].reason',scope),'');
 });
 test('reference pages are whitelisted local assets and do not expose the repository',async()=>{
  const server=makeServer();await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
