@@ -71,3 +71,18 @@ test('missing textLayout, unknown version or coordinate space fall back to SVG a
     assert.match(a.reasons[0], /SVGの構造解析/); assert.match(all(a), /はみ出します/);
   }
 });
+// 生成側の人工fixture（feature/generation-provider の docs/fixtures/generation-metadata.json）。
+// 両ブランチを合わせたときに実行される。単独のブランチではファイルが無いためskipする。
+import { readFile } from 'node:fs/promises';
+import { elementProblems as problemsOf } from '../backend/scoring/metadata-layout.mjs';
+const genFixture = await readFile(new URL('../docs/fixtures/generation-metadata.json', import.meta.url), 'utf8').then(JSON.parse, () => null);
+test('generation-side fixture is scored via textLayout and agrees with SVG analysis', { skip: !genFixture && 'generation fixture not on this branch' }, async () => {
+  for (const s of genFixture.sets) for (const c of s.candidates) {
+    for (const e of c.metadata.textLayout.elements) assert.deepEqual(problemsOf(e), [], `${c.style} ${e.id}`);
+    const a = await score(c, s.input);
+    assert.match(a.reasons[0], /metadataのtextLayout/); assert.match(all(a), /推定/);
+    const { textLayout, ...legacy } = c.metadata;
+    const b = await score({ ...c, metadata: legacy }, s.input);
+    assert.deepEqual(a.metrics, b.metrics, `${s.input.title} ${c.style}`);
+  }
+});
