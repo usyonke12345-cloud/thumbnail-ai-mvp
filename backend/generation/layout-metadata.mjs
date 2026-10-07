@@ -1,4 +1,7 @@
-export const GENERATION_VERSION = '0.3.0';
+export const GENERATION_VERSION = '0.3.1';
+export function aiTitleFontSize(lines) {
+  return Math.min(64, Math.floor(736 / Math.max(...lines.map(line => [...line].length))));
+}
 const fontFamily = 'sans-serif';
 // Ink bounds are estimates, not font metrics or a measured line box.
 function widthOf(text, size) {
