@@ -1,0 +1,12 @@
+import {readFile,mkdir,writeFile} from 'node:fs/promises';
+import {resolve} from 'node:path';
+import {composePortraitPrototype} from '../backend/generation/portrait-prototype.mjs';
+if(!process.argv[2])throw new Error('背景PNGのパスを指定してください。');
+const png=await readFile(process.argv[2]);
+if(!png.subarray(0,8).equals(Buffer.from('89504e470d0a1a0a','hex')))throw new Error('PNGファイルを指定してください。');
+const lines=process.argv[4]?process.argv[4].split('|'):undefined;
+const result=composePortraitPrototype(`data:image/png;base64,${png.toString('base64')}`,lines);
+const output=resolve(process.argv[3]??'../../style-studies/portrait');await mkdir(output,{recursive:true});
+await writeFile(resolve(output,'thumbnail.svg'),result.svg);
+await writeFile(resolve(output,'metadata.json'),JSON.stringify({metadata:result.metadata,limitations:result.limitations},null,2));
+console.log(output);
