@@ -85,3 +85,5 @@ Day 3: SVG内の文字は同梱フォントから生成したpathです。PNGは
 モデルgpt-image-2.5-flare、images/edits、medium品質、n=1。画像生成と編集は同じプロセス内の回数・同時実行制限を共有。失敗も1回、自動再試行なし。金額のハード上限ではない。参考: https://developers.openai.com/api/reference/resources/images/methods/edit
 
 serverとOpenAPIの新規経路は相互レビュー対象。採点側ではai_completeを既存候補のように評価しない。
+
+health に completeGeneration（enabled、keyConfigured、busy、calls、maxCalls）を追加。秘密値は返さず、エディターで生成可能な設定と回数上限を表示する。

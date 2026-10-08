@@ -11,7 +11,7 @@ function integer(value,fallback,min,max) {
 // One instance per process: no retry, one image per request, one concurrent call.
 export function createOpenAIBackgroundProvider({env=process.env,fetchImpl=(...args)=>globalThis.fetch(...args)}={}) {
   let busy=false, calls=0;
-  return async function generateBackground(input) {
+  const generate=async function generateBackground(input) {
     if(!env.OPENAI_API_KEY?.trim()) throw new ApiError(503,'API_KEY_MISSING','PC内の.envにOPENAI_API_KEYを設定してください。');
     if(env.OPENAI_IMAGE_ENABLED!=='true') throw new ApiError(503,'PAID_GENERATION_DISABLED','実画像生成は未有効です。設定手順を確認してください。');
     const maxCalls=integer(env.OPENAI_MAX_CALLS,1,1,100);
@@ -56,5 +56,7 @@ export function createOpenAIBackgroundProvider({env=process.env,fetchImpl=(...ar
       throw new ApiError(502,'PROVIDER_NETWORK','画像APIに接続できませんでした。');
     } finally {clearTimeout(timer);busy=false;}
   };
+  generate.getStatus=()=>({enabled:env.OPENAI_IMAGE_ENABLED==='true',keyConfigured:!!env.OPENAI_API_KEY?.trim(),busy,calls,maxCalls:integer(env.OPENAI_MAX_CALLS,1,1,100)});
+  return generate;
 }
 export const generateBackground=createOpenAIBackgroundProvider();
