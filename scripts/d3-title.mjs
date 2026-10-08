@@ -1,0 +1,10 @@
+import {mkdir,writeFile} from 'node:fs/promises';
+import {resolve} from 'node:path';
+import {composeD3Prototype} from '../backend/generation/d3-prototype.mjs';
+const result=composeD3Prototype(process.argv[2]??'努力だけでは差がつかない');
+const output=resolve(process.argv[3]??'../../style-studies/d3-title');
+await mkdir(output,{recursive:true});
+await writeFile(resolve(output,'thumbnail.svg'),result.svg);
+await writeFile(resolve(output,'metadata.json'),JSON.stringify({metadata:result.metadata,limitations:result.limitations},null,2));
+await writeFile(resolve(output,'index.html'),'<!doctype html><meta charset="utf-8"><title>D3-Aタイトル試作</title><style>body{background:#202733;color:white;font:18px sans-serif;margin:24px}img{max-width:100%;height:auto}</style><h1>D3-A：無料の人工イラスト試作</h1><p>文字量に合わせた配置。未対応文字の収まりは未評価。タイトルに合うイラストの生成は未実装。</p><img src="thumbnail.svg" alt="D3-Aタイトル試作">');
+console.log(output);
