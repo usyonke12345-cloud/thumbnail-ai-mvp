@@ -29,12 +29,18 @@ form.addEventListener('submit',async event=> {
     const data=await response.json();if(!response.ok) throw new Error(data.error?.message ?? '処理に失敗しました。');
     showMode(data.mode);
     results.replaceChildren();
+    const metricLabels={contrast:'コントラスト',brevity:'短さ',font:'文字サイズ',fit:'収まり'};
+    let previousGroup=null;
     data.candidates.forEach((c,i)=> {
+      const missing=[...new Set(c.assessment.unevaluated??[])].sort(),group=missing.join('|');
+      if(Array.isArray(c.assessment.unevaluated)&&group!==previousGroup){const groupHeading=document.createElement('h2'),explanation=document.createElement('p');groupHeading.textContent=missing.length?`未評価：${missing.map(k=>metricLabels[k]??k).join('・')}`:'すべてのレイアウト項目を評価';explanation.textContent='同じ評価項目の案をまとめています。グループ間の表示順は品質の順位ではありません。';results.append(groupHeading,explanation);previousGroup=group;}
       const card=document.createElement('article'),img=document.createElement('img'),heading=document.createElement('h2'),details=document.createElement('p'),link=document.createElement('a');
       img.src=c.imageDataUrl;img.alt=`候補${i+1}: ${data.input.title}`;
       const pending=c.assessment.version==='0.1.0'&&c.metadata.textLayout?.elements.some(e=>e.role==='title'&&e.textBackdrop.kind==='image');
-      heading.textContent=`${i+1}. ${c.style} — ${pending?'採点の接続確認中':`レイアウト ${c.assessment.overall}/100`}`;
+      const range=Number.isFinite(c.assessment.overallMax)&&c.assessment.overallMax!==c.assessment.overall?`${c.assessment.overall}〜${c.assessment.overallMax}点`:`${c.assessment.overall}/100`;
+      heading.textContent=`${i+1}. ${c.style} — ${pending?'採点の接続確認中':`レイアウト ${range}`}`;
       details.textContent=pending?'画像上の文字のコントラストは未評価です。採点側の更新と合流して確認します。':c.assessment.reasons.join(' / ');
+      if(Array.isArray(c.assessment.unevaluated)){details.textContent+=` / 内訳：${Object.entries(c.assessment.metrics).map(([key,value])=>`${metricLabels[key]??key} ${value===null?'未評価':`${value}点`}`).join('・')}`;if(missing.length)details.textContent+=' / 点数の幅は評価できた項目から計算した暫定の範囲です。信頼区間やCTR予測ではありません。';}
       if(c.metadata.textLayout?.elements.some(e=>e.resolvedFontFamily===null))details.textContent+=' / 一部の文字は同梱フォント非対応です。絵文字などの見た目は環境によって変わり、収まりは未評価です。';
       const pngButton=document.createElement('button');pngButton.type='button';pngButton.textContent='PNGを保存';pngButton.addEventListener('click',()=>saveRaster(c,pngButton));
       const jpegButton=document.createElement('button');jpegButton.type='button';jpegButton.textContent='JPEGを保存';jpegButton.addEventListener('click',()=>saveRaster(c,jpegButton,'jpeg'));

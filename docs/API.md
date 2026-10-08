@@ -14,7 +14,7 @@ title: trim後1〜60 Unicodeコードポイント、制御文字・改行不可�
 genre: education / gaming / vlog / other、省略時other。未知の項目は400。
 成功200は `apiVersion`, `mode`, `input`, `candidates`, `elapsedMs` を返します。
 modeは `demo` または `ai_background`。後者はAI背景1枚を共有した3レイアウト案で、画像内容の採点は未実装。
-候補は必ず3件、`assessment.overall` 降順。同点は生成順。
+候補は必ず3件。未評価項目の組み合わせが同じ案をまとめ、グループ内は `assessment.overall` 降順、同点は生成順。グループは最初の生成順で並べ、グループ間を品質の順位とは扱わない。0.3.xの出力は全候補を同じグループとして扱う。
 
 ```json
 {
@@ -87,3 +87,4 @@ Day 3: SVG内の文字は同梱フォントから生成したpathです。PNGは
 serverとOpenAPIの新規経路は相互レビュー対象。採点側ではai_completeを既存候補のように評価しない。
 
 health に completeGeneration（enabled、keyConfigured、busy、calls、maxCalls）を追加。秘密値は返さず、エディターで生成可能な設定と回数上限を表示する。
+
