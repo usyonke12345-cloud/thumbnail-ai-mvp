@@ -21,3 +21,9 @@ test('AI button explains missing photo or consent beside the button without a pa
  vm.runInNewContext(handler,scope);await callback({currentTarget:{disabled:false}});assert.match(aiStatus.textContent,/写真を読み込んで/);
  scope.photos[0]={};await callback({currentTarget:{disabled:false}});assert.match(aiStatus.textContent,/確認にチェック/);assert.equal(calls,0);
 });
+test('health provider state matches public contract and never includes credentials',async()=>{
+ const spec=JSON.parse(await readFile(new URL('../shared/openapi.json',import.meta.url),'utf8'));
+ const provider=createOpenAIBackgroundProvider({env:{OPENAI_API_KEY:'private-test-key',OPENAI_IMAGE_ENABLED:'true'}}),state=provider.getStatus();
+ assert.deepEqual(Object.keys(state).sort(),[...spec.components.schemas.Health.properties.completeGeneration.required].sort());
+ assert.equal(state.calls,0);assert.equal(state.maxCalls,1);assert.equal(state.keyConfigured,true);assert.equal(state.enabled,true);assert.ok(!JSON.stringify(state).includes('private-test-key'));
+});

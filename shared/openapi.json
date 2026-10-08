@@ -47,7 +47,7 @@
         },
         "responses": {
           "200": {
-            "description": "Three candidates sorted by overall descending",
+            "description": "Three candidates grouped by missing assessment items; overall descending within each group, stable generation order for ties",
             "content": {
               "application/json": {
                 "schema": {
@@ -622,6 +622,38 @@
               "demo",
               "ai_background"
             ]
+          },
+          "completeGeneration": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "enabled",
+              "keyConfigured",
+              "busy",
+              "calls",
+              "maxCalls"
+            ],
+            "properties": {
+              "enabled": {
+                "type": "boolean"
+              },
+              "keyConfigured": {
+                "type": "boolean",
+                "description": "Only whether a key is present; never the key itself"
+              },
+              "busy": {
+                "type": "boolean"
+              },
+              "calls": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "maxCalls": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 100
+              }
+            }
           }
         }
       },
