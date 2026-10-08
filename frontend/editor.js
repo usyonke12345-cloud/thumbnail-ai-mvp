@@ -3,20 +3,27 @@ const canvas=document.querySelector('#preview'),ctx=canvas.getContext('2d'),stat
 const photos=[null,null],versions=[0,0],settings=[{zoom:1,x:.5,y:.5},{zoom:1,x:.5,y:.5}],cards=[];
 const layout=document.querySelector('#layout'),headline=document.querySelector('#headline'),accent=document.querySelector('#accent');
 function photo(image,box,setting){if(!image)return;const p=cropPlacement(image.naturalWidth,image.naturalHeight,box,setting.zoom,setting.x,setting.y);ctx.save();ctx.beginPath();ctx.rect(box.x,box.y,box.width,box.height);ctx.clip();ctx.drawImage(image,p.x,p.y,p.width,p.height);ctx.restore();}
-function autoLayouts(){
+let suggestionRun=0;
+async function autoLayouts(){
+ const run=++suggestionRun;
  if(!photos[0]){status.textContent='まず「使う写真」を選んでください。';return;}
  layout.value='single';ctx.fillStyle='#111620';ctx.fillRect(0,0,1280,720);photo(photos[0],{x:0,y:0,width:1280,height:720},settings[0]);
  const small=document.createElement('canvas');small.width=320;small.height=180;const sample=small.getContext('2d');sample.drawImage(canvas,0,0,320,180);
- const suggestions=suggestPhotoLayouts(sample.getImageData(0,0,320,180)),container=document.querySelector('#auto-candidates');container.replaceChildren();
+ const subject=document.querySelector('#protect-subject').value;
+ let regions=[],detection='顔検出は利用できません。主役の位置を指定すると、その領域を避ける案を優先します。';
+ if(subject!=='none'){regions=[{x:{left:0,center:430,right:860}[subject],y:0,width:420,height:720}];detection='指定した主役の領域を避ける案を優先しています。';}
+ else if(typeof window.FaceDetector==='function'){try{const faces=await new window.FaceDetector({fastMode:true}).detect(small);regions=faces.map(({boundingBox:b})=>({x:b.x*4-24,y:b.y*4-24,width:b.width*4+48,height:b.height*4+48}));detection=faces.length?`${faces.length}個の顔領域を避ける案を優先しています。`:'顔は検出できませんでした。主役の位置を指定してください。';}catch{detection='顔検出に失敗しました。主役の位置を指定してください。';}}
+ if(run!==suggestionRun)return;
+ const suggestions=suggestPhotoLayouts(sample.getImageData(0,0,320,180),regions),container=document.querySelector('#auto-candidates');container.replaceChildren();
  const names={left:'左',center:'中央',right:'右'};
  suggestions.forEach((choice,i)=>{
   document.querySelector('#text-position').value=choice.position;document.querySelector('#shade').value=choice.shade;draw();
-  const card=document.createElement('article'),image=document.createElement('img'),title=document.createElement('h2'),button=document.createElement('button');image.src=canvas.toDataURL('image/png');image.alt=`文字を${names[choice.position]}に配置した候補`;title.textContent=`案${i+1}：文字を${names[choice.position]}へ`;button.type='button';button.textContent='この案を編集・保存';button.addEventListener('click',()=>{document.querySelector('#text-position').value=choice.position;document.querySelector('#shade').value=choice.shade;draw();canvas.scrollIntoView({block:'center'});});card.append(title,image,button);container.append(card);
+  const card=document.createElement('article'),image=document.createElement('img'),title=document.createElement('h2'),button=document.createElement('button'),note=document.createElement('p');image.src=canvas.toDataURL('image/png');image.alt=`文字を${names[choice.position]}に配置した候補`;title.textContent=`案${i+1}：文字を${names[choice.position]}へ`;note.textContent=choice.overlap?'文字領域が主役の範囲に重なる候補です。調整してください。':regions.length?'文字領域は指定・検出された主役の範囲と重なりません。':'主役の位置は未確認です。';button.type='button';button.textContent='この案を編集・保存';button.addEventListener('click',()=>{document.querySelector('#text-position').value=choice.position;document.querySelector('#shade').value=choice.shade;draw();canvas.scrollIntoView({block:'center'});});card.append(title,image,note,button);container.append(card);
  });
  document.querySelector('#text-position').value=suggestions[0].position;document.querySelector('#shade').value=suggestions[0].shade;draw();
- status.textContent='写真から配置3案を作りました。模様が少なく暗い領域を優先しています。顔や商品の位置は未認識です。案を選んで保存してください。';
+ status.textContent=`写真から配置3案を作りました。${detection} 顔の検出は髪や体全体の認識ではありません。`;
 }
-document.querySelector('#auto-layout').addEventListener('click',()=>{try{autoLayouts();}catch(error){status.textContent=`配置案を作れません：${error.message}`;draw();}});
+document.querySelector('#auto-layout').addEventListener('click',async()=>{try{await autoLayouts();}catch(error){draw();status.textContent=`配置案を作れません：${error.message}`;}});
 function draw(){
  ctx.fillStyle='#111620';ctx.fillRect(0,0,1280,720);
  const compare=layout.value==='comparison',single=layout.value==='single';
@@ -43,17 +50,17 @@ function draw(){
 photos.forEach((_,index)=>{
  const card=document.createElement('article'),label=document.createElement('label'),name=document.createElement('span'),input=document.createElement('input');name.textContent=index===0?'左の写真':'右の写真';input.type='file';input.accept='image/png,image/jpeg,image/webp';label.append(name,input);card.append(label);cards.push(card);
  input.addEventListener('change',async()=>{
-  const version=++versions[index],file=input.files[0];if(!file)return;let url;
-  try{if(!['image/png','image/jpeg','image/webp'].includes(file.type)||file.size>20*1024*1024)throw new Error('PNG・JPEG・WebPの20MB以内の写真を選んでください。');url=URL.createObjectURL(file);const image=new Image();image.src=url;await image.decode();if(version!==versions[index])return;if(image.naturalWidth*image.naturalHeight>40000000)throw new Error('4000万画素以内の写真を選んでください。');photos[index]=image;draw();if(index===0&&layout.value==='single')autoLayouts();}
+  suggestionRun++;const version=++versions[index],file=input.files[0];if(!file)return;let url;
+  try{if(!['image/png','image/jpeg','image/webp'].includes(file.type)||file.size>20*1024*1024)throw new Error('PNG・JPEG・WebPの20MB以内の写真を選んでください。');url=URL.createObjectURL(file);const image=new Image();image.src=url;await image.decode();if(version!==versions[index])return;if(image.naturalWidth*image.naturalHeight>40000000)throw new Error('4000万画素以内の写真を選んでください。');photos[index]=image;draw();if(index===0&&layout.value==='single')await autoLayouts();}
   catch(error){if(version===versions[index])status.textContent=`写真を読み込めません：${error.message} 前の写真は保持しています。`;}
   finally{if(url)URL.revokeObjectURL(url);}
  });
  for(const [key,name,min,max]of [['zoom','拡大',100,200],['x','横の切り取り位置',0,100],['y','縦の切り取り位置',0,100]]){
-  const wrap=document.createElement('label'),range=document.createElement('input');wrap.textContent=name;range.type='range';range.min=min;range.max=max;range.value=settings[index][key]*100;range.addEventListener('input',()=>{settings[index][key]=Number(range.value)/100;draw();});wrap.append(range);card.append(wrap);
+  const wrap=document.createElement('label'),range=document.createElement('input');wrap.textContent=name;range.type='range';range.min=min;range.max=max;range.value=settings[index][key]*100;range.addEventListener('input',()=>{suggestionRun++;settings[index][key]=Number(range.value)/100;draw();});wrap.append(range);card.append(wrap);
  }
  document.querySelector('#photos').append(card);
 });
-for(const input of [layout,headline,accent,document.querySelector('#text-position'),document.querySelector('#shade')])input.addEventListener('input',draw);
+for(const input of [layout,headline,accent,document.querySelector('#text-position'),document.querySelector('#shade'),document.querySelector('#protect-subject')])input.addEventListener('input',()=>{suggestionRun++;draw();});
 document.querySelector('#save-editor').addEventListener('click',async event=>{
  const button=event.currentTarget;button.disabled=true;
  try{const handle=typeof window.showSaveFilePicker==='function'?await window.showSaveFilePicker({suggestedName:'photo-thumbnail.png',types:[{description:'PNG',accept:{'image/png':['.png']}}]}):null;
@@ -63,3 +70,5 @@ document.querySelector('#save-editor').addEventListener('click',async event=>{
  catch(error){status.textContent=error.name==='AbortError'?'保存をキャンセルしました。':`保存できません：${error.message}`;}finally{button.disabled=false;}
 });
 draw();
+
+

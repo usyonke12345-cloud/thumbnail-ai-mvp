@@ -24,4 +24,15 @@ test('auto layout chooses dark uncluttered space and strengthens shade over brig
  const choices=suggestPhotoLayouts({data,width,height});assert.equal(choices[0].position,'left');assert.ok(choices.find(c=>c.position==='right').shade>choices[0].shade);assert.equal(new Set(choices.map(c=>c.position)).size,3);
  assert.throws(()=>suggestPhotoLayouts({data:[],width:320,height:180}));
 });
+test('subject protection outranks dark space that covers the subject',()=>{
+ const width=320,height=180,data=new Uint8ClampedArray(width*height*4);
+ const choices=suggestPhotoLayouts({data,width,height},[{x:0,y:0,width:420,height:720}]);
+ assert.equal(choices[0].position,'right');assert.equal(choices[0].overlap,0);assert.ok(choices.find(c=>c.position==='left').overlap>0);
+ const all=suggestPhotoLayouts({data,width,height},[{x:0,y:0,width:1280,height:720}]);assert.ok(all.every(c=>c.overlap>0));
+});
+test('headline wraps ordinary English words at word boundaries',()=>{
+ const fitted=fitHeadline('FIND YOUR PERFECT HAIRSTYLE',(text,size)=>text.length*size*.6,540,480);
+ assert.equal(fitted.lines.join(' '),'FIND YOUR PERFECT HAIRSTYLE');
+ assert.ok(fitted.lines.every(line=>line.split(' ').every(word=>['FIND','YOUR','PERFECT','HAIRSTYLE'].includes(word))));
+});
 
