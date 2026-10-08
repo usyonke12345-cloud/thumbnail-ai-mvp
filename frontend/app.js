@@ -1,6 +1,11 @@
 const form=document.querySelector('#form'), button=document.querySelector('#submit'), status=document.querySelector('#status'), results=document.querySelector('#results');
 const mode=document.querySelector('#mode');
 let currentMode='demo';
+const choiceKey='thumbnail-latest-preference-v1';
+const choiceStatus=document.createElement('p'),choiceExport=document.createElement('a');
+choiceStatus.setAttribute('role','status');choiceExport.textContent='最新の選択記録をJSONで保存';choiceExport.hidden=true;results.before(choiceStatus,choiceExport);
+function showChoice(record){choiceStatus.textContent=`最新の選択：${record.style}（${record.title}） / ${record.reason||'理由未記入'}。このブラウザ内の記録です。`;choiceExport.href=`data:application/json;charset=utf-8,${encodeURIComponent(JSON.stringify(record,null,2))}`;choiceExport.download='thumbnail-preference.json';choiceExport.hidden=false;}
+try{const record=JSON.parse(localStorage.getItem(choiceKey));if(record?.version===1&&typeof record.title==='string'&&typeof record.style==='string'&&typeof record.reason==='string')showChoice(record);}catch{choiceStatus.textContent='以前の選択記録を読み込めませんでした。新しい案を選び直せます。';}
 async function saveRaster(candidate, control, format='png') {
   const jpeg=format==='jpeg',label=jpeg?'JPEG':'PNG',mime=jpeg?'image/jpeg':'image/png',extension=jpeg?'jpg':'png';
   control.disabled=true;
@@ -46,6 +51,9 @@ form.addEventListener('submit',async event=> {
       if(c.metadata?.textLayout?.elements.some(e=>e.resolvedFontFamily===null))details.textContent+=' / 一部の文字は同梱フォント非対応です。絵文字などの見た目は環境によって変わり、収まりは未評価です。';
       const pngButton=document.createElement('button');pngButton.type='button';pngButton.textContent='PNGを保存';pngButton.addEventListener('click',()=>saveRaster(c,pngButton));
       const jpegButton=document.createElement('button');jpegButton.type='button';jpegButton.textContent='JPEGを保存';jpegButton.addEventListener('click',()=>saveRaster(c,jpegButton,'jpeg'));
+      const reason=document.createElement('input'),choose=document.createElement('button');reason.type='text';reason.maxLength=500;reason.placeholder='選ぶ理由（任意）';reason.setAttribute('aria-label',`${c.style}を選ぶ理由`);choose.type='button';choose.textContent='この案を選んで記録';
+      choose.addEventListener('click',()=>{const record={version:1,selectedAt:new Date().toISOString(),title:data.input.title,genre:data.input.genre,mode:data.mode,candidateId:c.id,style:c.style,generationVersion:c.metadata?.generation_version??null,assessmentVersion:c.assessment.version,assessment:c.assessment,elapsedMs:data.elapsedMs,reason:reason.value.trim(),candidateOrder:data.candidates.map(item=>item.id)};try{localStorage.setItem(choiceKey,JSON.stringify(record));showChoice(record);choose.textContent='選択を記録しました';}catch{choiceStatus.textContent='選択記録を保存できませんでした。ブラウザの保存容量・設定を確認してください。';}});
+      card.append(reason,choose);
       link.href=c.imageDataUrl;link.download=`thumbnail-${c.style}.svg`;link.textContent='SVGを保存';const actions=document.createElement('div');actions.className='save-actions';actions.append(pngButton,jpegButton,link);card.append(img,heading,details,actions);results.append(card);
     });status.textContent=`3案を表示しました（${data.elapsedMs}ms）。画像内容は未評価です。`;
   } catch(error) {
