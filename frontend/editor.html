@@ -1,0 +1,6 @@
+<!doctype html><html lang="ja"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>写真でサムネを作る</title><link rel="stylesheet" href="/style.css"><script type="module" src="/editor.js"></script><main><h1>自分の写真で、<br>サムネを作る。</h1><p><a href="/">生成へ戻る</a> · <a href="/references">参考記録</a></p><aside>写真はこのブラウザ内で処理します。サーバーへの送信・API課金・自動保存はありません。ページを閉じると素材は消えます。利用できる写真を選んでください。人物の切り抜き・動画からの切り出しはこれからです。</aside>
+<label>構図<select id="layout"><option value="comparison">左右の写真＋中央の見出し</option><option value="portrait">左の見出し＋右の写真</option></select></label>
+<div id="photos"></div><label>サムネの見出し（改行できます）<textarea id="headline" rows="3" maxlength="100">FIND YOUR
+PERFECT
+HAIRSTYLE</textarea></label><label>強調色<input id="accent" type="color" value="#ffdc24"></label><p>文字サイズは自動調整。2行目に強調色を使います。フォントは端末によって変わります。写真上の読みやすさは自動採点していません。</p>
+<canvas id="preview" width="1280" height="720" style="width:100%;height:auto" aria-label="サムネイルのプレビュー"></canvas><p id="editor-status" role="status" aria-live="polite"></p><button id="save-editor" type="button">1280×720 PNGを保存</button></main></html>
