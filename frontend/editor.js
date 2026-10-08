@@ -70,5 +70,19 @@ document.querySelector('#save-editor').addEventListener('click',async event=>{
  catch(error){status.textContent=error.name==='AbortError'?'保存をキャンセルしました。':`保存できません：${error.message}`;}finally{button.disabled=false;}
 });
 draw();
+document.querySelector('#ai-complete').addEventListener('click',async event=>{
+ const control=event.currentTarget;if(control.disabled)return;
+ if(layout.value!=='single'||!photos[0]){status.textContent='1枚写真モードで写真を選んでください。';return;}
+ if(!document.querySelector('#ai-consent').checked){status.textContent='API送信と有料生成の確認にチェックしてください。';return;}
+ const source=document.createElement('canvas');source.width=1280;source.height=720;const c=source.getContext('2d'),p=cropPlacement(photos[0].naturalWidth,photos[0].naturalHeight,{x:0,y:0,width:1280,height:720},settings[0].zoom,settings[0].x,settings[0].y);c.drawImage(photos[0],p.x,p.y,p.width,p.height);
+ const payload={title:document.querySelector('#ai-title').value,brief:document.querySelector('#ai-brief').value,headline:headline.value,imageDataUrl:source.toDataURL('image/png'),consent:true};
+ if(payload.imageDataUrl.length>3*1024*1024){status.textContent='写真が大きすぎます。より小さな写真を選んでください。';return;}
+ control.disabled=true;status.textContent='写真から完成画像を生成しています。自動再試行はしません。';
+ const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),190000);
+ try{const response=await fetch('/api/v1/complete-thumbnail',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),signal:controller.signal});const data=await response.json();if(!response.ok)throw new Error(data.error?.message??'生成に失敗しました。');
+  const image=document.createElement('img'),link=document.createElement('a'),note=document.createElement('p');image.src=data.imageDataUrl;image.alt='AIによる完成サムネ';link.href=data.imageDataUrl;link.download='ai-complete-thumbnail.png';link.textContent='完成PNGを保存（1536×864）';note.textContent=data.limitations.join(' ');document.querySelector('#ai-result').replaceChildren(image,note,link);status.textContent='完成画像を表示しました。文字と主役を確認して保存してください。';
+ }catch(error){status.textContent=error.name==='AbortError'?'待機期限を超えました。課金済みの可能性があります。利用履歴を確認してください。':`${error.message} 前回の完成画像は保持しています。`;}
+ finally{clearTimeout(timer);control.disabled=false;}
+});
 
 

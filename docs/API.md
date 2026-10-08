@@ -77,3 +77,11 @@ modeは生成設定に応じてai_background。healthはAPIキーの有効性や
 人工fixtureはdocs/fixtures/generation-metadata.jsonです。採点側0.3.0への対応は別ブランチで進めます。
 
 Day 3: SVG内の文字は同梱フォントから生成したpathです。PNGは画面側で変換・保存します。採点はmetadata.textLayoutの使用が必要です。追加依存はnpm ciで導入します。
+
+## POST /api/v1/complete-thumbnail（実験・有料）
+
+写真1枚からAIが文字と構図まで仕上げる。title（1〜120文字）、brief（1〜1000文字）、headline（1〜80文字、改行可）、imageDataUrl（1280×720 PNG、3MB以内）、consent:true が必須。入力JSON上限4MB。1536×864 PNG1枚と生成版・未評価事項を返す。Candidate/Assessmentは返さず採点pipelineを通さない。既存APIの契約は維持。画像はサーバーで保存せずOpenAIへ送信する。文字・人物保持と品質の目視確認が必要。
+
+モデルgpt-image-2.5-flare、images/edits、medium品質、n=1。画像生成と編集は同じプロセス内の回数・同時実行制限を共有。失敗も1回、自動再試行なし。金額のハード上限ではない。参考: https://developers.openai.com/api/reference/resources/images/methods/edit
+
+serverとOpenAPIの新規経路は相互レビュー対象。採点側ではai_completeを既存候補のように評価しない。

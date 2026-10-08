@@ -248,6 +248,120 @@
           }
         }
       }
+    },
+    "/api/v1/complete-thumbnail": {
+      "post": {
+        "summary": "Opt-in paid complete thumbnail from one photograph",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "title",
+                  "brief",
+                  "headline",
+                  "imageDataUrl",
+                  "consent"
+                ],
+                "properties": {
+                  "title": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 120
+                  },
+                  "brief": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 1000
+                  },
+                  "headline": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 80
+                  },
+                  "imageDataUrl": {
+                    "type": "string",
+                    "maxLength": 3145728,
+                    "description": "1280x720 PNG data URL"
+                  },
+                  "consent": {
+                    "type": "boolean",
+                    "const": true
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "One unscored AI complete PNG",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "apiVersion",
+                    "mode",
+                    "imageDataUrl",
+                    "width",
+                    "height",
+                    "generation_version",
+                    "limitations"
+                  ],
+                  "properties": {
+                    "apiVersion": {
+                      "const": "1"
+                    },
+                    "mode": {
+                      "const": "ai_complete"
+                    },
+                    "imageDataUrl": {
+                      "type": "string"
+                    },
+                    "width": {
+                      "const": 1536
+                    },
+                    "height": {
+                      "const": 864
+                    },
+                    "generation_version": {
+                      "type": "string"
+                    },
+                    "limitations": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input or missing consent"
+          },
+          "413": {
+            "description": "Input too large"
+          },
+          "429": {
+            "description": "Concurrent request or shared call limit"
+          },
+          "502": {
+            "description": "Provider network or response error"
+          },
+          "503": {
+            "description": "Missing key, disabled paid requests or provider auth"
+          },
+          "504": {
+            "description": "Provider deadline exceeded"
+          }
+        }
+      }
     }
   },
   "components": {
