@@ -24,7 +24,7 @@ function textsFor(candidate, image) {
 
 /** Contract: score(candidate, input) => Promise<Assessment>. No network or generation imports. */
 export async function score(candidate, input) {
-  const m = candidate.metadata;
+  const m = candidate.metadata ?? {}; // metadataが無い候補も落とさず、各項目を未評価として返す
   const image = checkImage(candidate);
   const { method, label, texts } = textsFor(candidate, image);
   const title = texts.filter(t => t.role === 'title'), small = texts.filter(t => t.role === 'footer');
@@ -71,7 +71,9 @@ export async function score(candidate, input) {
     reasons.push(`コントラスト: 未評価（${uncheckedWhy}ため）。`);
     limitations.push('文字と背面のコントラストは未評価です。metadataの配色（foreground/background）では代用していません。');
   }
-  reasons.push(`タイトル ${m.textLength}文字・${m.lineCount}行`);
+  if (Number.isFinite(m.textLength)) reasons.push(`タイトル ${m.textLength}文字・${m.lineCount}行`);
+  else limitations.push('metadata.textLength が無いため、タイトルの短さは未評価です。');
+  if (font === null) limitations.push('文字サイズ（textLayout の fontSize・metadata.fontSize）が無いため、文字サイズは未評価です。');
   if (m.textLength > 30) reasons.push('文字を短くした案も比較してください。');
   if (fitEvaluated && overflow > 0) reasons.push(`${estimated ? '推定で' : ''}タイトルが領域から約${Math.round(overflow)}px はみ出します。文字数や行数を見直してください。`);
   else if (fitEvaluated) reasons.push(`タイトルは${estimated ? '推定で' : ''}領域内に収まっています。`);
