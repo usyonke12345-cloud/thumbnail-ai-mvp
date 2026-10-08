@@ -15,7 +15,7 @@ test('complete edit uploads one image and shares call budget with background gen
  assert.match(await provider(validateComplete(input)),/^data:image\/png/);await assert.rejects(()=>provider({title:'background'}),e=>e.code==='GENERATION_LIMIT');assert.equal(calls,1);
 });
 test('AI button explains missing photo or consent beside the button without a paid request',async()=>{
- const source=await readFile(new URL('../frontend/editor.js',import.meta.url),'utf8'),handler=source.slice(source.lastIndexOf("document.querySelector('#ai-complete').addEventListener"));
+ const source=await readFile(new URL('../frontend/editor.js',import.meta.url),'utf8'),handler=source.slice(source.lastIndexOf("document.querySelector('#ai-complete').addEventListener")).split('// Draft lifecycle')[0];
  let callback,calls=0;const nodes=new Map([['#ai-complete',{addEventListener:(type,fn)=>callback=fn}],['#ai-consent',{checked:false}]]),aiStatus={textContent:''};
  const scope={document:{querySelector:s=>nodes.get(s)},layout:{value:'single'},photos:[null],aiStatus,fetch:()=>{calls++;throw new Error('must not call');}};
  vm.runInNewContext(handler,scope);await callback({currentTarget:{disabled:false}});assert.match(aiStatus.textContent,/写真を読み込んで/);

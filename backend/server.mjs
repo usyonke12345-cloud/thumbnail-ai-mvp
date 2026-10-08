@@ -7,7 +7,7 @@ import { ApiError } from '../shared/contracts.mjs';
 import { generationMode } from './generation/index.mjs';
 import {generateComplete} from './generation/complete.mjs';
 import {generateBackground} from './generation/openai.mjs';
-const assets=new Map([['/editor',['editor.html','text/html; charset=utf-8']],['/editor.js',['editor.js','text/javascript; charset=utf-8']],['/editor-layout.js',['editor-layout.js','text/javascript; charset=utf-8']],['/', ['index.html','text/html; charset=utf-8']],['/app.js',['app.js','text/javascript; charset=utf-8']],['/style.css',['style.css','text/css; charset=utf-8']],['/references',['references.html','text/html; charset=utf-8']],['/references.js',['references.js','text/javascript; charset=utf-8']]]);
+const assets=new Map([["/editor-draft.js",["editor-draft.js","text/javascript; charset=utf-8"]],['/editor',['editor.html','text/html; charset=utf-8']],['/editor.js',['editor.js','text/javascript; charset=utf-8']],['/editor-layout.js',['editor-layout.js','text/javascript; charset=utf-8']],['/', ['index.html','text/html; charset=utf-8']],['/app.js',['app.js','text/javascript; charset=utf-8']],['/style.css',['style.css','text/css; charset=utf-8']],['/references',['references.html','text/html; charset=utf-8']],['/references.js',['references.js','text/javascript; charset=utf-8']]]);
 export function makeServer() {
   const server=createServer(async(req,res)=> {
     const send=(status,value)=>{res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'});res.end(JSON.stringify(value));};
@@ -34,4 +34,5 @@ export function makeServer() {
 if(process.argv[1] && resolve(process.argv[1])===fileURLToPath(import.meta.url)) {
   makeServer().listen(Number(process.env.PORT ?? 3000),'127.0.0.1',()=>console.log(`Thumbnail demo: http://127.0.0.1:${process.env.PORT ?? 3000}`));
 }
+
 

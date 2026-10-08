@@ -1,0 +1,12 @@
+export function validateDraft(value){
+ if(!value||value.version!==1||!['single','comparison','portrait'].includes(value.layout)||!Array.isArray(value.settings)||value.settings.length!==2)throw new Error('下書きの形式に対応していません。');
+ for(const s of value.settings)if(!s||![s.zoom,s.x,s.y].every(Number.isFinite)||s.zoom<1||s.zoom>2||s.x<0||s.x>1||s.y<0||s.y>1)throw new Error('下書きの配置値が不正です。');
+ if(!Array.isArray(value.files)||value.files.length!==2||value.files.some(f=>f!==null&&(!(f instanceof Blob)||!['image/png','image/jpeg','image/webp'].includes(f.type)||f.size>20*1024*1024)))throw new Error('下書きの写真が不正です。');
+ if(value.result&&(!/^data:image\/png;base64,[A-Za-z0-9+/]+={0,2}$/.test(value.result.imageDataUrl)||value.result.imageDataUrl.length>24*1024*1024))throw new Error('下書きの完成画像が不正です。');
+ return {version:1,layout:value.layout,settings:value.settings.map(s=>({...s})),files:value.files,headline:typeof value.headline==='string'?value.headline.slice(0,100):'',title:typeof value.title==='string'?value.title.slice(0,120):'',brief:typeof value.brief==='string'?value.brief.slice(0,1000):'',accent:/^#[0-9a-f]{6}$/i.test(value.accent)?value.accent:'#ffdc24',position:['left','center','right'].includes(value.position)?value.position:'left',protect:['none','left','center','right'].includes(value.protect)?value.protect:'none',shade:Math.min(85,Math.max(0,Number(value.shade)||0)),result:value.result?{imageDataUrl:value.result.imageDataUrl,limitations:['復元した完成画像です。文字と人物を確認してください。']}:null};
+}
+async function database(){return new Promise((resolve,reject)=>{const request=indexedDB.open('thumbnail-photo-editor',1);request.onupgradeneeded=()=>request.result.createObjectStore('draft');request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error);request.onblocked=()=>reject(new Error('別のタブを閉じて再度お試しください。'));});}
+async function operation(mode,action){const db=await database();try{return await new Promise((resolve,reject)=>{const transaction=db.transaction('draft',mode),request=action(transaction.objectStore('draft'));let result;request.onsuccess=()=>result=request.result;transaction.oncomplete=()=>resolve(result);transaction.onabort=()=>reject(transaction.error??new Error('保存を完了できませんでした。'));transaction.onerror=()=>reject(transaction.error);});}finally{db.close();}}
+export const loadDraft=()=>operation('readonly',store=>store.get('current'));
+export const saveDraft=value=>operation('readwrite',store=>store.put(validateDraft(value),'current'));
+export const deleteDraft=()=>operation('readwrite',store=>store.delete('current'));

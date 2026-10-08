@@ -1,4 +1,8 @@
 import {cropPlacement,fitHeadline,suggestPhotoLayouts} from './editor-layout.js';
+import {loadDraft,saveDraft,deleteDraft,validateDraft} from './editor-draft.js';
+const storedFiles=[null,null];let completedResult=null,restoring=true,saveTimer,saveQueue=Promise.resolve();
+function scheduleDraft(){if(restoring)return;clearTimeout(saveTimer);document.querySelector('#draft-status').textContent='下書きを保存しています…';saveTimer=setTimeout(()=>{const draft={version:1,layout:layout.value,settings,files:storedFiles,headline:headline.value,title:document.querySelector('#ai-title').value,brief:document.querySelector('#ai-brief').value,accent:accent.value,position:document.querySelector('#text-position').value,protect:document.querySelector('#protect-subject').value,shade:document.querySelector('#shade').value,result:completedResult};saveQueue=saveQueue.catch(()=>{}).then(()=>saveDraft(draft)).then(()=>{document.querySelector('#draft-status').textContent='下書きをこのブラウザに保存しました。リロード後に復元できます。';}).catch(()=>{document.querySelector('#draft-status').textContent='下書きを保存できません。容量やブラウザ設定を確認し、完成PNGをファイルへ保存してください。';});},300);}
+function showCompleted(data){completedResult=data;const image=document.createElement('img'),link=document.createElement('a'),note=document.createElement('p');image.src=data.imageDataUrl;image.alt='AIによる完成サムネ';link.href=data.imageDataUrl;link.download='ai-complete-thumbnail.png';link.textContent='完成PNGを保存（1536×864）';note.textContent=data.limitations.join(' ');document.querySelector('#ai-result').replaceChildren(image,note,link);}
 const canvas=document.querySelector('#preview'),ctx=canvas.getContext('2d'),status=document.querySelector('#editor-status');
 const photos=[null,null],versions=[0,0],settings=[{zoom:1,x:.5,y:.5},{zoom:1,x:.5,y:.5}],cards=[];
 const layout=document.querySelector('#layout'),headline=document.querySelector('#headline'),accent=document.querySelector('#accent');
@@ -34,6 +38,7 @@ async function autoLayouts(){
 }
 document.querySelector('#auto-layout').addEventListener('click',async()=>{try{await autoLayouts();}catch(error){draw();status.textContent=`配置案を作れません：${error.message}`;}});
 function draw(){
+ scheduleDraft();
  ctx.fillStyle='#111620';ctx.fillRect(0,0,1280,720);
  const compare=layout.value==='comparison',single=layout.value==='single';
  cards.forEach((card,i)=>{card.hidden=single?i===1:!compare&&i===0;card.querySelector('span').textContent=single?'使う写真':i===0?'左の写真':'右の写真';});
@@ -60,7 +65,7 @@ photos.forEach((_,index)=>{
  const card=document.createElement('article'),label=document.createElement('label'),name=document.createElement('span'),input=document.createElement('input');name.textContent=index===0?'左の写真':'右の写真';input.type='file';input.accept='image/png,image/jpeg,image/webp';label.append(name,input);card.append(label);cards.push(card);
  input.addEventListener('change',async()=>{
   suggestionRun++;const version=++versions[index],file=input.files[0];if(!file)return;let url;
-  try{if(!['image/png','image/jpeg','image/webp'].includes(file.type)||file.size>20*1024*1024)throw new Error('PNG・JPEG・WebPの20MB以内の写真を選んでください。');url=URL.createObjectURL(file);const image=new Image();image.src=url;await image.decode();if(version!==versions[index])return;if(image.naturalWidth*image.naturalHeight>40000000)throw new Error('4000万画素以内の写真を選んでください。');photos[index]=image;draw();if(index===0&&layout.value==='single')await autoLayouts();}
+  try{if(!['image/png','image/jpeg','image/webp'].includes(file.type)||file.size>20*1024*1024)throw new Error('PNG・JPEG・WebPの20MB以内の写真を選んでください。');url=URL.createObjectURL(file);const image=new Image();image.src=url;await image.decode();if(version!==versions[index])return;if(image.naturalWidth*image.naturalHeight>40000000)throw new Error('4000万画素以内の写真を選んでください。');storedFiles[index]=file;photos[index]=image;draw();if(index===0&&layout.value==='single')await autoLayouts();}
   catch(error){if(version===versions[index])status.textContent=`写真を読み込めません：${error.message} 前の写真は保持しています。`;}
   finally{if(url)URL.revokeObjectURL(url);}
  });
@@ -88,13 +93,34 @@ document.querySelector('#ai-complete').addEventListener('click',async event=>{
  const payload={title:document.querySelector('#ai-title').value,brief:document.querySelector('#ai-brief').value,headline:headline.value,imageDataUrl:source.toDataURL('image/png'),consent:true};
  if(payload.imageDataUrl.length>3*1024*1024){aiStatus.textContent='写真が大きすぎます。より小さな写真を選んでください。';return;}
  const sentPhoto=document.createElement('img'),sentLabel=document.createElement('p');sentPhoto.src=payload.imageDataUrl;sentPhoto.alt='今回APIへ送信する入力写真';sentLabel.textContent='今回APIへ送信する写真です。完成画像でもこの人物・素材が保持されているか確認してください。';document.querySelector('#ai-source').replaceChildren(sentLabel,sentPhoto);
- control.disabled=true;aiStatus.textContent='写真から完成画像を生成しています。自動再試行はしません。';
+ control.disabled=true;document.querySelector('#clear-draft').disabled=true;aiStatus.textContent='写真から完成画像を生成しています。自動再試行はしません。';
  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),190000);
  try{const response=await fetch('/api/v1/complete-thumbnail',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),signal:controller.signal});const data=await response.json();if(!response.ok)throw new Error(data.error?.message??'生成に失敗しました。');
-  const image=document.createElement('img'),link=document.createElement('a'),note=document.createElement('p');image.src=data.imageDataUrl;image.alt='AIによる完成サムネ';link.href=data.imageDataUrl;link.download='ai-complete-thumbnail.png';link.textContent='完成PNGを保存（1536×864）';note.textContent=data.limitations.join(' ');document.querySelector('#ai-result').replaceChildren(image,note,link);aiStatus.textContent='完成画像を表示しました。文字と主役を確認して保存してください。';
+  showCompleted(data);scheduleDraft();aiStatus.textContent='完成画像を表示しました。文字と主役を確認して保存してください。';
  }catch(error){aiStatus.textContent=error.name==='AbortError'?'待機期限を超えました。課金済みの可能性があります。利用履歴を確認してください。':`${error.message} 前回の完成画像は保持しています。`;}
- finally{clearTimeout(timer);control.disabled=false;const message=aiStatus.textContent;await checkAIStatus();aiStatus.textContent=message;}
+ finally{clearTimeout(timer);document.querySelector('#clear-draft').disabled=false;control.disabled=false;const message=aiStatus.textContent;await checkAIStatus();aiStatus.textContent=message;}
 });
+
+// Draft lifecycle: restoring never sends images or resumes a paid request.
+for(const selector of ['#ai-title','#ai-brief'])document.querySelector(selector).addEventListener('input',scheduleDraft);
+async function restoreDraft(){
+ try{const saved=await loadDraft();if(saved){const draft=validateDraft(saved);layout.value=draft.layout;headline.value=draft.headline;accent.value=draft.accent;document.querySelector('#ai-title').value=draft.title;document.querySelector('#ai-brief').value=draft.brief;document.querySelector('#text-position').value=draft.position;document.querySelector('#protect-subject').value=draft.protect;document.querySelector('#shade').value=draft.shade;
+  for(let i=0;i<2;i++){Object.assign(settings[i],draft.settings[i]);const ranges=cards[i].querySelectorAll('input[type="range"]');['zoom','x','y'].forEach((key,n)=>ranges[n].value=settings[i][key]*100);if(draft.files[i]){const url=URL.createObjectURL(draft.files[i]);try{const image=new Image();image.src=url;await image.decode();photos[i]=image;storedFiles[i]=draft.files[i];}finally{URL.revokeObjectURL(url);}}}
+  if(draft.result)showCompleted(draft.result);draw();document.querySelector('#draft-status').textContent='写真・入力内容・完成画像の下書きを復元しました。API送信の確認は毎回チェックしてください。';
+ }else document.querySelector('#draft-status').textContent='変更した内容は、このブラウザに自動保存します。';}
+ catch{document.querySelector('#draft-status').textContent='下書きを読み込めませんでした。ブラウザの保存設定を確認してください。通常編集は使えます。';}
+ finally{restoring=false;document.querySelector('#editor-workspace').disabled=false;document.querySelector('#ai-consent').checked=false;}
+}
+document.querySelector('#clear-draft').addEventListener('click',async()=>{
+ if(!window.confirm('このブラウザの保存済み写真・入力内容・完成画像を消しますか？ 必要なPNGは先にファイルへ保存してください。'))return;
+ restoring=true;clearTimeout(saveTimer);document.querySelector('#editor-workspace').disabled=true;
+ try{await saveQueue.catch(()=>{});await deleteDraft();for(let i=0;i<2;i++){storedFiles[i]=null;photos[i]=null;versions[i]++;cards[i].querySelector('input[type="file"]').value='';}completedResult=null;document.querySelector('#ai-result').replaceChildren();document.querySelector('#ai-source').replaceChildren();document.querySelector('#auto-candidates').replaceChildren();headline.value='';document.querySelector('#ai-title').value='';document.querySelector('#ai-brief').value='';document.querySelector('#ai-consent').checked=false;draw();document.querySelector('#draft-status').textContent='このブラウザの下書きを消しました。';}
+ catch{document.querySelector('#draft-status').textContent='下書きを消せませんでした。ブラウザの保存設定を確認してください。';}
+ finally{restoring=false;document.querySelector('#editor-workspace').disabled=false;}
+});
+restoreDraft();
+
+
 
 
 
