@@ -1,8 +1,22 @@
-import {cropPlacement,fitHeadline} from './editor-layout.js';
+import {cropPlacement,fitHeadline,suggestPhotoLayouts} from './editor-layout.js';
 const canvas=document.querySelector('#preview'),ctx=canvas.getContext('2d'),status=document.querySelector('#editor-status');
 const photos=[null,null],versions=[0,0],settings=[{zoom:1,x:.5,y:.5},{zoom:1,x:.5,y:.5}],cards=[];
 const layout=document.querySelector('#layout'),headline=document.querySelector('#headline'),accent=document.querySelector('#accent');
 function photo(image,box,setting){if(!image)return;const p=cropPlacement(image.naturalWidth,image.naturalHeight,box,setting.zoom,setting.x,setting.y);ctx.save();ctx.beginPath();ctx.rect(box.x,box.y,box.width,box.height);ctx.clip();ctx.drawImage(image,p.x,p.y,p.width,p.height);ctx.restore();}
+function autoLayouts(){
+ if(!photos[0]){status.textContent='まず「使う写真」を選んでください。';return;}
+ layout.value='single';ctx.fillStyle='#111620';ctx.fillRect(0,0,1280,720);photo(photos[0],{x:0,y:0,width:1280,height:720},settings[0]);
+ const small=document.createElement('canvas');small.width=320;small.height=180;const sample=small.getContext('2d');sample.drawImage(canvas,0,0,320,180);
+ const suggestions=suggestPhotoLayouts(sample.getImageData(0,0,320,180)),container=document.querySelector('#auto-candidates');container.replaceChildren();
+ const names={left:'左',center:'中央',right:'右'};
+ suggestions.forEach((choice,i)=>{
+  document.querySelector('#text-position').value=choice.position;document.querySelector('#shade').value=choice.shade;draw();
+  const card=document.createElement('article'),image=document.createElement('img'),title=document.createElement('h2'),button=document.createElement('button');image.src=canvas.toDataURL('image/png');image.alt=`文字を${names[choice.position]}に配置した候補`;title.textContent=`案${i+1}：文字を${names[choice.position]}へ`;button.type='button';button.textContent='この案を編集・保存';button.addEventListener('click',()=>{document.querySelector('#text-position').value=choice.position;document.querySelector('#shade').value=choice.shade;draw();canvas.scrollIntoView({block:'center'});});card.append(title,image,button);container.append(card);
+ });
+ document.querySelector('#text-position').value=suggestions[0].position;document.querySelector('#shade').value=suggestions[0].shade;draw();
+ status.textContent='写真から配置3案を作りました。模様が少なく暗い領域を優先しています。顔や商品の位置は未認識です。案を選んで保存してください。';
+}
+document.querySelector('#auto-layout').addEventListener('click',()=>{try{autoLayouts();}catch(error){status.textContent=`配置案を作れません：${error.message}`;draw();}});
 function draw(){
  ctx.fillStyle='#111620';ctx.fillRect(0,0,1280,720);
  const compare=layout.value==='comparison',single=layout.value==='single';
@@ -30,7 +44,7 @@ photos.forEach((_,index)=>{
  const card=document.createElement('article'),label=document.createElement('label'),name=document.createElement('span'),input=document.createElement('input');name.textContent=index===0?'左の写真':'右の写真';input.type='file';input.accept='image/png,image/jpeg,image/webp';label.append(name,input);card.append(label);cards.push(card);
  input.addEventListener('change',async()=>{
   const version=++versions[index],file=input.files[0];if(!file)return;let url;
-  try{if(!['image/png','image/jpeg','image/webp'].includes(file.type)||file.size>20*1024*1024)throw new Error('PNG・JPEG・WebPの20MB以内の写真を選んでください。');url=URL.createObjectURL(file);const image=new Image();image.src=url;await image.decode();if(version!==versions[index])return;if(image.naturalWidth*image.naturalHeight>40000000)throw new Error('4000万画素以内の写真を選んでください。');photos[index]=image;draw();}
+  try{if(!['image/png','image/jpeg','image/webp'].includes(file.type)||file.size>20*1024*1024)throw new Error('PNG・JPEG・WebPの20MB以内の写真を選んでください。');url=URL.createObjectURL(file);const image=new Image();image.src=url;await image.decode();if(version!==versions[index])return;if(image.naturalWidth*image.naturalHeight>40000000)throw new Error('4000万画素以内の写真を選んでください。');photos[index]=image;draw();if(index===0&&layout.value==='single')autoLayouts();}
   catch(error){if(version===versions[index])status.textContent=`写真を読み込めません：${error.message} 前の写真は保持しています。`;}
   finally{if(url)URL.revokeObjectURL(url);}
  });
