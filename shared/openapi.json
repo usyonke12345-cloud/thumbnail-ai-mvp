@@ -436,8 +436,13 @@
       "Assessment": {
         "type": "object",
         "additionalProperties": false,
+        "description": "レイアウトの仮説的な指標（採点0.4.0）。CTR予測や効果保証ではない。未評価の項目は null で、0点とは区別する。",
         "required": [
           "overall",
+          "overallMax",
+          "coverage",
+          "unevaluated",
+          "weights",
           "kind",
           "version",
           "metrics",
@@ -448,22 +453,44 @@
           "overall": {
             "type": "integer",
             "minimum": 0,
-            "maximum": 100
+            "maximum": 100,
+            "description": "未評価の項目を0点とみなした総合点（下限）。評価済み項目の値×重みの合計を四捨五入。"
           },
-          "kind": {
-            "const": "layout_heuristic"
+          "overallMax": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100,
+            "description": "未評価の項目を満点とみなした総合点（上限）。すべて評価済みなら overall と同じ。統計的な信頼区間やCTR予測ではない。"
           },
-          "version": {
-            "type": "string"
+          "coverage": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100,
+            "description": "評価できた項目の重みの合計（%）。"
           },
-          "metrics": {
+          "unevaluated": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": {
+              "enum": [
+                "contrast",
+                "brevity",
+                "font",
+                "fit"
+              ]
+            },
+            "description": "未評価（metricsがnull）の項目名。contrast, brevity, font, fit の順。すべて評価済みなら空配列。候補のグループ分けに使う。"
+          },
+          "weights": {
             "type": "object",
             "additionalProperties": false,
             "required": [
               "contrast",
               "brevity",
-              "font"
+              "font",
+              "fit"
             ],
+            "description": "総合点の重み（%、合計100）。仮説で未校正。",
             "properties": {
               "contrast": {
                 "type": "integer",
@@ -479,6 +506,65 @@
                 "type": "integer",
                 "minimum": 0,
                 "maximum": 100
+              },
+              "fit": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 100
+              }
+            }
+          },
+          "kind": {
+            "const": "layout_heuristic"
+          },
+          "version": {
+            "type": "string"
+          },
+          "metrics": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "contrast",
+              "brevity",
+              "font",
+              "fit"
+            ],
+            "properties": {
+              "contrast": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "minimum": 0,
+                "maximum": 100,
+                "description": "タイトル文字と背面のコントラスト。タイトルの全行の背面が単色（solid）と確認できた場合だけ評価。"
+              },
+              "brevity": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "minimum": 0,
+                "maximum": 100,
+                "description": "タイトルの短さ（metadata.textLength）。"
+              },
+              "font": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "minimum": 0,
+                "maximum": 100,
+                "description": "文字サイズのみ（48px以上で満点＝検証前の仮値）。"
+              },
+              "fit": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "minimum": 0,
+                "maximum": 100,
+                "description": "配置領域への収まり。タイトルの全行が測定済み（rendered/estimated、寸法あり、正常値）の場合だけ評価。"
               }
             }
           },
