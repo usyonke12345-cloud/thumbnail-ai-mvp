@@ -9,4 +9,5 @@ export function validateComplete(value){
  if(image.length<24||!image.subarray(0,8).equals(Buffer.from('89504e470d0a1a0a','hex'))||image.toString('ascii',12,16)!=='IHDR'||image.readUInt32BE(16)!==1280||image.readUInt32BE(20)!==720)throw new ApiError(400,'INVALID_IMAGE','1280×720のPNG写真を指定してください。');
  return {...value,complete:true};
 }
-export async function generateComplete(value){const input=validateComplete(value);return {apiVersion:'1',mode:'ai_complete',imageDataUrl:await generateBackground(input),width:1536,height:864,generation_version:'ai-complete-0.1.0',limitations:['画像内の文字と人物の保持は目視確認が必要です。','画像内容・文字位置・CTRは未採点です。']};}
+export async function generateComplete(value){const input=validateComplete(value);return {apiVersion:'1',mode:'ai_complete',imageDataUrl:await generateBackground(input),width:1536,height:864,generation_version:'ai-complete-0.1.1',limitations:['画像内の文字と人物の保持は目視確認が必要です。','画像内容・文字位置・CTRは未採点です。']};}
+

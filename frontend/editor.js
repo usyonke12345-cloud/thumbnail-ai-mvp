@@ -87,6 +87,7 @@ document.querySelector('#ai-complete').addEventListener('click',async event=>{
  const source=document.createElement('canvas');source.width=1280;source.height=720;const c=source.getContext('2d'),p=cropPlacement(photos[0].naturalWidth,photos[0].naturalHeight,{x:0,y:0,width:1280,height:720},settings[0].zoom,settings[0].x,settings[0].y);c.drawImage(photos[0],p.x,p.y,p.width,p.height);
  const payload={title:document.querySelector('#ai-title').value,brief:document.querySelector('#ai-brief').value,headline:headline.value,imageDataUrl:source.toDataURL('image/png'),consent:true};
  if(payload.imageDataUrl.length>3*1024*1024){aiStatus.textContent='写真が大きすぎます。より小さな写真を選んでください。';return;}
+ const sentPhoto=document.createElement('img'),sentLabel=document.createElement('p');sentPhoto.src=payload.imageDataUrl;sentPhoto.alt='今回APIへ送信する入力写真';sentLabel.textContent='今回APIへ送信する写真です。完成画像でもこの人物・素材が保持されているか確認してください。';document.querySelector('#ai-source').replaceChildren(sentLabel,sentPhoto);
  control.disabled=true;aiStatus.textContent='写真から完成画像を生成しています。自動再試行はしません。';
  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),190000);
  try{const response=await fetch('/api/v1/complete-thumbnail',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),signal:controller.signal});const data=await response.json();if(!response.ok)throw new Error(data.error?.message??'生成に失敗しました。');
