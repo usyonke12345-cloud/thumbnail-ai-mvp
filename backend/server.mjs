@@ -4,13 +4,14 @@ import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
 import { runPipeline } from './pipeline.mjs';
 import { ApiError } from '../shared/contracts.mjs';
+import { generationMode } from './generation/index.mjs';
 const assets=new Map([['/', ['index.html','text/html; charset=utf-8']],['/app.js',['app.js','text/javascript; charset=utf-8']],['/style.css',['style.css','text/css; charset=utf-8']]]);
 export function makeServer() {
   const server=createServer(async(req,res)=> {
     const send=(status,value)=>{res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'});res.end(JSON.stringify(value));};
     try {
       const path=new URL(req.url,'http://localhost').pathname;
-      if(req.method==='GET' && path==='/api/v1/health') return send(200,{status:'ok',mode:'demo'});
+      if(req.method==='GET' && path==='/api/v1/health') return send(200,{status:'ok',mode:generationMode()});
       if(req.method==='GET' && assets.has(path)) {
         const [file,mime]=assets.get(path), content=await readFile(new URL(`../frontend/${file}`,import.meta.url));
         res.writeHead(200,{'Content-Type':mime,'X-Content-Type-Options':'nosniff'});return res.end(content);
@@ -26,7 +27,7 @@ export function makeServer() {
       if(!res.headersSent) send(error instanceof ApiError?error.status:500,{error:{code:error instanceof ApiError?error.code:'INTERNAL_ERROR',message:error instanceof ApiError?error.message:'処理に失敗しました。'}});
     }
   });
-  server.requestTimeout=15000;server.headersTimeout=10000;return server;
+  server.requestTimeout=15000;server.headersTimeout=10000;server.timeout=200000;return server;
 }
 if(process.argv[1] && resolve(process.argv[1])===fileURLToPath(import.meta.url)) {
   makeServer().listen(Number(process.env.PORT ?? 3000),'127.0.0.1',()=>console.log(`Thumbnail demo: http://127.0.0.1:${process.env.PORT ?? 3000}`));
