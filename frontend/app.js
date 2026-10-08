@@ -41,7 +41,9 @@ form.addEventListener('submit',async event=> {
       heading.textContent=`${i+1}. ${c.style} — ${pending?'採点の接続確認中':`レイアウト ${range}`}`;
       details.textContent=pending?'画像上の文字のコントラストは未評価です。採点側の更新と合流して確認します。':c.assessment.reasons.join(' / ');
       if(Array.isArray(c.assessment.unevaluated)){details.textContent+=` / 内訳：${Object.entries(c.assessment.metrics).map(([key,value])=>`${metricLabels[key]??key} ${value===null?'未評価':`${value}点`}`).join('・')}`;if(missing.length)details.textContent+=' / 点数の幅は評価できた項目から計算した暫定の範囲です。信頼区間やCTR予測ではありません。';}
-      if(c.metadata.textLayout?.elements.some(e=>e.resolvedFontFamily===null))details.textContent+=' / 一部の文字は同梱フォント非対応です。絵文字などの見た目は環境によって変わり、収まりは未評価です。';
+      if(c.assessment.weights)details.textContent+=` / 重み：${Object.entries(c.assessment.weights).map(([key,value])=>`${metricLabels[key]??key} ${value}%`).join('・')}`;
+      if(c.assessment.limitations?.length)details.textContent+=` / 評価の限界：${c.assessment.limitations.join(' / ')}`;
+      if(c.metadata?.textLayout?.elements.some(e=>e.resolvedFontFamily===null))details.textContent+=' / 一部の文字は同梱フォント非対応です。絵文字などの見た目は環境によって変わり、収まりは未評価です。';
       const pngButton=document.createElement('button');pngButton.type='button';pngButton.textContent='PNGを保存';pngButton.addEventListener('click',()=>saveRaster(c,pngButton));
       const jpegButton=document.createElement('button');jpegButton.type='button';jpegButton.textContent='JPEGを保存';jpegButton.addEventListener('click',()=>saveRaster(c,jpegButton,'jpeg'));
       link.href=c.imageDataUrl;link.download=`thumbnail-${c.style}.svg`;link.textContent='SVGを保存';const actions=document.createElement('div');actions.className='save-actions';actions.append(pngButton,jpegButton,link);card.append(img,heading,details,actions);results.append(card);
