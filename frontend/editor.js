@@ -5,6 +5,8 @@ const layout=document.querySelector('#layout'),headline=document.querySelector('
 const aiStatus=document.createElement('p');aiStatus.setAttribute('role','status');aiStatus.setAttribute('aria-live','polite');document.querySelector('#ai-complete').after(aiStatus);
 async function checkAIStatus(){
  try{const response=await fetch('/api/v1/health');if(!response.ok)throw new Error();const data=await response.json(),s=data.completeGeneration;
+  const control=document.querySelector('#ai-complete');control.disabled=!s||!s.keyConfigured||!s.enabled||s.busy||s.calls>=s.maxCalls;
+  control.textContent=s&&s.calls>=s.maxCalls?'生成回数の上限です（再起動が必要）':`写真からAIで完成画像1枚を作る（有料${s?`・残り${Math.max(0,s.maxCalls-s.calls)}回`:''}）`;
   aiStatus.textContent=!s?'サーバーを更新・再起動する必要があります。':!s.keyConfigured?'APIキーがサーバーで読み込まれていません。':!s.enabled?'サーバーの有料生成が無効です。':s.calls>=s.maxCalls?`生成回数の上限です（${s.calls}/${s.maxCalls}回）。費用を確認してから再起動してください。`:s.busy?'現在、別の画像を生成しています。':'API接続の設定は準備済みです。写真を選び、送信と課金の確認にチェックして生成してください。';
  }catch{aiStatus.textContent='サーバーに接続できません。起動状態を確認してください。';}
 }
@@ -90,7 +92,8 @@ document.querySelector('#ai-complete').addEventListener('click',async event=>{
  try{const response=await fetch('/api/v1/complete-thumbnail',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),signal:controller.signal});const data=await response.json();if(!response.ok)throw new Error(data.error?.message??'生成に失敗しました。');
   const image=document.createElement('img'),link=document.createElement('a'),note=document.createElement('p');image.src=data.imageDataUrl;image.alt='AIによる完成サムネ';link.href=data.imageDataUrl;link.download='ai-complete-thumbnail.png';link.textContent='完成PNGを保存（1536×864）';note.textContent=data.limitations.join(' ');document.querySelector('#ai-result').replaceChildren(image,note,link);aiStatus.textContent='完成画像を表示しました。文字と主役を確認して保存してください。';
  }catch(error){aiStatus.textContent=error.name==='AbortError'?'待機期限を超えました。課金済みの可能性があります。利用履歴を確認してください。':`${error.message} 前回の完成画像は保持しています。`;}
- finally{clearTimeout(timer);control.disabled=false;}
+ finally{clearTimeout(timer);control.disabled=false;const message=aiStatus.textContent;await checkAIStatus();aiStatus.textContent=message;}
 });
+
 
 
