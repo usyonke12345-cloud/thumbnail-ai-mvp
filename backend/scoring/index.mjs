@@ -83,5 +83,5 @@ export async function score(candidate, input) {
   if (method === 'none') limitations.push(candidate.imageDataUrl?.startsWith('data:image/svg+xml') ? 'SVGの構造を解析できないか、文字がtext要素ではない（pathなど）ため、文字の収まりと背面は未評価です。' : 'SVG以外の画像は文字領域を分析していません。文字の収まりと背面は未評価です。');
   if (estimated) limitations.push(method === 'svg' ? '文字幅は文字種からの推定値で、実際の描画とは異なる場合があります。' : '文字範囲は生成側の推定値（measurement=estimated）で、実際の描画とは異なる場合があります。');
   limitations.push('画像内容・ジャンル適合は未評価。', '重みと閾値は仮説で、実データで校正していません。', 'CTR予測や効果保証ではありません。');
-  return { overall, overallMax, coverage, unevaluated, kind: 'layout_heuristic', version: VERSION, metrics, reasons, limitations };
+  return { overall, overallMax, coverage, unevaluated, weights: { ...WEIGHTS }, kind: 'layout_heuristic', version: VERSION, metrics, reasons, limitations };
 }
