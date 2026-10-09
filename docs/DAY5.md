@@ -62,3 +62,5 @@ node scripts/analyze-comparisons.mjs data/private/review/comparison-report.json 
 3案とも使いたくない場合は「どの案も使わないと記録」を使い、理由を残せます。JSONのdecisionはnone_acceptable、選んだcandidateIdとassessmentはnullです。候補を選んだ記録はdecision=selectedです。これは「順位が最下位」の指定とは違い、採点側CSVのpreferred_candidateへ架空の候補を入れません。選択・不採用のどちらも最新1件のみ保存します。
 
 練習用タイトルの順位一致はpracticeAgreementとして別集計する。agreementは利用確認済み実タイトルの集計を維持する。人工データを相手の正式CSVへ混ぜず、JSONで区別した参考結果を渡す。
+
+2026-10-09：『人の比較を記録』を押しても反応がない報告へ対応。必須入力によるブラウザのsubmit抑止を避け、checkValidityで不足項目を検出し保存ボタン直下に表示・フォーカスする。OS・ブラウザはUAから粗い自動入力（OSバージョンを断定せず修正可）。保存一覧が空の場合は固定保存の手順を表示し、別タブで保存したセットを明示的に更新できる。保存成功・容量エラー・入力不足・空一覧の動作テストを追加。修正後の実ブラウザ確認は未完。
