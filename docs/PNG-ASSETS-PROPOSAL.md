@@ -68,4 +68,10 @@ decodePngの追加確認にはCRCが正しい小さい人工PNGを使用した�
 
 regionStatsではstep=0/負数の検証がなく、ループを終了できないため、コード上の確認だけを行った。stepの正の有限整数検証も採点側への依頼。現在この基盤は共有APIへ接続されていない。
 
-合意前に画像資産APIや評価のkindを追加しない。文字の読みやすさや完成画像の品質を測る方法は、この土台とは別に検証する。
+2026-10-10、ユーザーから完成PNGの受け渡しと分析の接続を依頼されたため、Draft PRでレビューできるローカル診断APIを追加した。従来のAssessment.kindは変更しない。正式な画像資産・共有APIの合意とmainへのマージは引き続き相互レビュー対象。文字の読みやすさや完成画像の品質を測る方法は、この土台とは別に検証する。
+
+## 接続実装（2026-10-10）
+
+採点側076bc4dで展開サイズ制限、IEND、余分なデータ、step検証が修正されたことを確認し、生成側へ統合した。backend/analysis/complete-png.mjsからこのPNG解析を呼び、画像資産image-assets-1.0.0を追加のPOST /api/v1/complete-diagnosticsで受け取る。source_photoとcomplete_thumbnailを扱い、backgroundAssetId、textRegions、renderedTextはnull。OCRや文字検出をしたことにはしない。最大4資産・合計32MiB・JSON45MiBとし、SHA-256・バイト数・役割・全参照を確認する。
+
+共有hashの統計だけをキャッシュし、RGBAは保持しない。RGB/グレースケールのtRNS透明色、未対応圧縮・フィルタ方式、未知の必須チャンクは生成側adapterで未評価とする。色プロファイル変換はせずsRGBと仮定する。APIにrequest/responseのOpenAPI定義と人工fixtureを同梱した。診断と人の比較を非公開で渡す手順は [COMPLETE-PNG-ANALYSIS.md](COMPLETE-PNG-ANALYSIS.md)。

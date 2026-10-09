@@ -2,8 +2,8 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Thumbnail AI MVP",
-    "version": "0.2.0",
-    "description": "Local mock or opt-in AI background with three SVG layouts. Score is a text-panel heuristic, not image-content analysis or CTR prediction."
+    "version": "0.3.0",
+    "description": "Local SVG layout heuristics, opt-in paid complete PNG generation, and local PNG diagnostics. Complete PNG diagnostics are not a quality or CTR score."
   },
   "servers": [
     {
@@ -293,7 +293,12 @@
                   },
                   "composition": {
                     "type": "string",
-                    "enum": ["auto", "text_left", "text_right", "text_top"],
+                    "enum": [
+                      "auto",
+                      "text_left",
+                      "text_right",
+                      "text_top"
+                    ],
                     "default": "auto",
                     "description": "Optional composition intent for the photo edit. Omitted means photo-aware automatic composition. Preservation and exact layout still require visual checking."
                   }
@@ -365,6 +370,49 @@
           },
           "504": {
             "description": "Provider deadline exceeded"
+          }
+        }
+      }
+    },
+    "/api/v1/complete-diagnostics": {
+      "post": {
+        "operationId": "diagnoseCompletePng",
+        "description": "Local PNG diagnostics, not a quality Assessment. Maximum 4 referenced assets, 16MiB per PNG, 32MiB combined, 45MiB JSON. Integrity/reference errors return 400; corrupt or unsupported PNGs return 200 with status unavailable. Source photos are never treated as text-free backgrounds. Does not call external APIs or consume generation quota.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompleteDiagnosticRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Diagnostics, including explicit unavailable results. No quality score.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CompleteDiagnosticResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid asset input, reference, hash, length or JSON"
+          },
+          "405": {
+            "description": "POST required"
+          },
+          "413": {
+            "description": "JSON exceeds 45MiB"
+          },
+          "415": {
+            "description": "application/json required"
+          },
+          "500": {
+            "description": "Internal failure"
           }
         }
       }
@@ -999,6 +1047,421 @@
             "items": {
               "$ref": "#/components/schemas/TextElement"
             }
+          }
+        }
+      },
+      "PngAsset": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "assetId",
+          "role",
+          "sha256",
+          "mimeType",
+          "width",
+          "height",
+          "byteLength",
+          "dataUrl"
+        ],
+        "properties": {
+          "assetId": {
+            "type": "string",
+            "pattern": "^[a-zA-Z0-9_-]{1,200}$",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "role": {
+            "enum": [
+              "source_photo",
+              "complete_thumbnail"
+            ]
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "mimeType": {
+            "const": "image/png"
+          },
+          "width": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 4096
+          },
+          "height": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 4096
+          },
+          "byteLength": {
+            "type": "integer",
+            "minimum": 24,
+            "maximum": 16777216
+          },
+          "dataUrl": {
+            "type": "string",
+            "pattern": "^data:image/png;base64,[A-Za-z0-9+/]+={0,2}$",
+            "maxLength": 22369646
+          }
+        }
+      },
+      "CompleteImageReference": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "imageId",
+          "assetId",
+          "role",
+          "generationVersion",
+          "sourcePhotoAssetId",
+          "backgroundAssetId",
+          "headlineProvided",
+          "renderedTextVerified",
+          "textRegions"
+        ],
+        "properties": {
+          "imageId": {
+            "type": "string",
+            "pattern": "^[a-zA-Z0-9_-]{1,200}$",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "assetId": {
+            "type": "string",
+            "pattern": "^[a-zA-Z0-9_-]{1,200}$",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "role": {
+            "const": "complete_thumbnail"
+          },
+          "generationVersion": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 100
+          },
+          "sourcePhotoAssetId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^[a-zA-Z0-9_-]{1,200}$",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "backgroundAssetId": {
+            "type": "null"
+          },
+          "headlineProvided": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 80
+          },
+          "renderedTextVerified": {
+            "const": false
+          },
+          "textRegions": {
+            "type": "null"
+          }
+        }
+      },
+      "CompleteDiagnosticRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "assetVersion",
+          "assets",
+          "images"
+        ],
+        "properties": {
+          "assetVersion": {
+            "const": "image-assets-1.0.0"
+          },
+          "assets": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 4,
+            "items": {
+              "$ref": "#/components/schemas/PngAsset"
+            }
+          },
+          "images": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 4,
+            "items": {
+              "$ref": "#/components/schemas/CompleteImageReference"
+            }
+          }
+        }
+      },
+      "PngLuminance": {
+        "type": [
+          "object",
+          "null"
+        ],
+        "additionalProperties": false,
+        "required": [
+          "samples",
+          "mean",
+          "std",
+          "p5",
+          "p50",
+          "p95"
+        ],
+        "properties": {
+          "samples": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "mean": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "std": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "p5": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "p50": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "p95": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          }
+        }
+      },
+      "PngAssetDiagnostic": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "assetId",
+          "sha256",
+          "role",
+          "byteLength",
+          "status",
+          "width",
+          "height",
+          "luminance",
+          "sampleStep",
+          "nearlyUniform",
+          "reasons"
+        ],
+        "properties": {
+          "assetId": {
+            "type": "string",
+            "pattern": "^[a-zA-Z0-9_-]{1,200}$",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "role": {
+            "enum": [
+              "source_photo",
+              "complete_thumbnail"
+            ]
+          },
+          "byteLength": {
+            "type": "integer",
+            "minimum": 24,
+            "maximum": 16777216
+          },
+          "status": {
+            "enum": [
+              "analyzed",
+              "unavailable"
+            ]
+          },
+          "width": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1,
+            "maximum": 4096
+          },
+          "height": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1,
+            "maximum": 4096
+          },
+          "luminance": {
+            "$ref": "#/components/schemas/PngLuminance"
+          },
+          "sampleStep": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1
+          },
+          "nearlyUniform": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "reasons": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "CompleteImageDiagnostic": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "imageId",
+          "assetId",
+          "sourcePhotoAssetId",
+          "backgroundAssetId",
+          "headlineProvided",
+          "status",
+          "qualityScore",
+          "renderedText",
+          "unevaluated",
+          "reasons",
+          "limitations"
+        ],
+        "properties": {
+          "imageId": {
+            "type": "string",
+            "pattern": "^[a-zA-Z0-9_-]{1,200}$",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "assetId": {
+            "type": "string",
+            "pattern": "^[a-zA-Z0-9_-]{1,200}$",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "sourcePhotoAssetId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^[a-zA-Z0-9_-]{1,200}$",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "backgroundAssetId": {
+            "type": "null"
+          },
+          "headlineProvided": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 80
+          },
+          "status": {
+            "enum": [
+              "analyzed",
+              "unavailable"
+            ]
+          },
+          "qualityScore": {
+            "type": "null"
+          },
+          "renderedText": {
+            "type": "null"
+          },
+          "unevaluated": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": {
+              "enum": [
+                "rendered_text",
+                "readability",
+                "text_fit",
+                "text_contrast",
+                "subject_preservation",
+                "composition_quality"
+              ]
+            }
+          },
+          "reasons": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "limitations": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "CompleteDiagnosticResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "analysisVersion",
+          "kind",
+          "assessment",
+          "assets",
+          "images",
+          "decodedImages",
+          "note"
+        ],
+        "properties": {
+          "analysisVersion": {
+            "const": "complete-png-diagnostics-0.1.0"
+          },
+          "kind": {
+            "const": "image_diagnostics"
+          },
+          "assessment": {
+            "type": "null"
+          },
+          "assets": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 4,
+            "items": {
+              "$ref": "#/components/schemas/PngAssetDiagnostic"
+            }
+          },
+          "images": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 4,
+            "items": {
+              "$ref": "#/components/schemas/CompleteImageDiagnostic"
+            }
+          },
+          "decodedImages": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 4
+          },
+          "note": {
+            "type": "string"
           }
         }
       }

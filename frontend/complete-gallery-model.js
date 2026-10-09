@@ -53,12 +53,17 @@ export function validateQualityReview(review,group,images){
  if(review?.version!==1||review.groupId!==group.id||!date(review.recordedAt)||!['selected','none_acceptable'].includes(review.decision)||(review.decision==='selected'?!ids.includes(review.imageId):review.imageId!==null))fail('使いたい案、または「全部使わない」を選んでください。');
  if(typeof review.reason!=='string'||review.reason.length>1000||!Array.isArray(review.issues)||new Set(review.issues).size!==review.issues.length||review.issues.some(x=>!['text','subject','composition','other'].includes(x)))fail('理由・気になる点の記録が不正です。');
  if(!Array.isArray(review.displayWidths)||review.displayWidths.length!==ids.length||new Set(review.displayWidths.map(x=>x.imageId)).size!==ids.length||review.displayWidths.some(x=>!ids.includes(x.imageId)||!Number.isFinite(x.width)||x.width<=0))fail('比較した実際の表示幅を確認してください。');
+ if(review.context!==undefined)validateReviewContext(review.context);
  return review;
+}
+export function validateReviewContext(value){
+ if(value?.version!==1||typeof value.reviewerId!=='string'||!/^r[0-9a-z_-]{1,39}$/i.test(value.reviewerId)||!['unknown','original','external','synthetic'].includes(value.titleSource)||typeof value.titlePermissionConfirmed!=='boolean'||typeof value.photoPermissionConfirmed!=='boolean')fail('評価者はr01のような匿名IDを指定し、タイトルの出典と利用確認を確かめてください。');
+ return {version:1,reviewerId:value.reviewerId,titleSource:value.titleSource,titlePermissionConfirmed:value.titlePermissionConfirmed,photoPermissionConfirmed:value.photoPermissionConfirmed};
 }
 export function comparisonBundle(state,groupId){
  const group=state.groups.find(x=>x.id===groupId);if(!group)fail('比較する組がありません。');
  const images=state.images.filter(x=>x.groupId===groupId),review=state.reviews.find(x=>x.groupId===groupId)??null;
- return {version:'complete-comparison-1.1.0',kind:'human_quality_review',assessment:null,group,images,review,reviewCoversAllImages:!!review&&images.length===review.displayWidths.length&&images.every(x=>review.displayWidths.some(w=>w.imageId===x.id)),note:'完成PNGは未採点です。人の選択は自動学習やCTR予測ではありません。写真・完成画像を含む非公開の比較記録です。'};
+ return {version:'complete-comparison-1.2.0',kind:'human_quality_review',assessment:null,group,images,review,reviewCoversAllImages:!!review&&images.length===review.displayWidths.length&&images.every(x=>review.displayWidths.some(w=>w.imageId===x.id)),note:'完成PNGは未採点です。人の選択は自動学習やCTR予測ではありません。写真・完成画像を含む非公開の比較記録です。'};
 }
 export function parseCostUsd(value){
  if(typeof value!=='string')fail('実費はUSDの金額で入力してください。');
@@ -78,7 +83,8 @@ export function recordObservation(state,imageId,value){
 export function gallerySummary(state){
  const bundles=state.groups.map(g=>comparisonBundle(state,g.id)),current=bundles.filter(x=>x.reviewCoversAllImages),times=state.images.map(x=>x.elapsedMs).filter(x=>Number.isInteger(x)&&x>=0).sort((a,b)=>a-b);
  const observations=state.images.map(x=>x.observation===undefined?null:validateObservation(x.observation)),costs=observations.map(x=>x?.costUsd).filter(x=>x!==null&&x!==undefined);
- return {images:state.images.length,groups:state.groups.length,reviewedGroups:current.length,comparedGroups:current.filter(x=>x.images.length>=2).length,singleImageReviews:current.filter(x=>x.images.length===1).length,allRejectedGroups:current.filter(x=>x.review.decision==='none_acceptable').length,staleReviews:bundles.filter(x=>x.review&&!x.reviewCoversAllImages).length,
+ const comparisons=current.filter(x=>x.group.input&&x.images.length>=2&&x.review.context),authorized=comparisons.filter(x=>['original','external'].includes(x.review.context.titleSource)&&x.review.context.titlePermissionConfirmed&&x.review.context.photoPermissionConfirmed);
+ return {images:state.images.length,groups:state.groups.length,reviewedGroups:current.length,comparedGroups:current.filter(x=>x.images.length>=2).length,singleImageReviews:current.filter(x=>x.images.length===1).length,allRejectedGroups:current.filter(x=>x.review.decision==='none_acceptable').length,staleReviews:bundles.filter(x=>x.review&&!x.reviewCoversAllImages).length,collection:{target:20,humanComparisons:comparisons.length,authorizedRealComparisons:authorized.length,note:'現在保存中の組のみ。出典・利用確認は人の申告です。完成PNGは未採点で、採点との一致は算出しません。'},
   generationTime:{known:times.length,unknown:state.images.length-times.length,medianMs:times.length?(times[Math.floor((times.length-1)/2)]+times[Math.floor(times.length/2)])/2:null,p95Ms:times.length?times[Math.ceil(times.length*.95)-1]:null},
   cost:{currency:'USD',confirmedImages:costs.length,unknownImages:state.images.length-costs.length,confirmedTotalUsd:costs.length?costs.reduce((sum,x)=>sum+Math.round(x*1e6),0)/1e6:null},
   pngSave:{saved:observations.filter(x=>x?.pngSave==='saved').length,failed:observations.filter(x=>x?.pngSave==='failed').length,unknown:observations.filter(x=>!x||x.pngSave==='unknown').length},

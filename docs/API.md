@@ -127,3 +127,13 @@ serverとOpenAPIの新規経路は相互レビュー対象。採点側ではai_c
 
 health に completeGeneration（enabled、keyConfigured、busy、calls、maxCalls）を追加。秘密値は返さず、エディターで生成可能な設定と回数上限を表示する。
 
+## POST /api/v1/complete-diagnostics（ローカル・無料）
+
+image-assets-1.0.0のassetsとimagesを受け取り、image_diagnosticsを返す。PNGを外部APIへ送信せず、有料生成回数も消費しない。assetsは入力写真source_photoと完成画像complete_thumbnailだけで、SHA-256・寸法・バイト数・PNG data URLを持つ。imagesは資産を参照する。文字なし背景はnull、生成時の見出しは指示として保持し、renderedTextVerified:false・textRegions:nullとする。
+
+最大4資産、1PNG16MiB、合計32MiB、JSON45MiB、各辺4096pxまで。全資産が参照されること、役割・バイト数・SHA-256・base64形式を検証する。入力不正は400 INVALID_DIAGNOSTIC_INPUT。破損・未対応PNGや宣言寸法との不一致は200のstatus:unavailableと理由で返す。PNG展開の上限・CRC・IENDを確認し、同じhashは1回だけ展開する。
+
+結果は実寸法、sRGBと仮定した相対輝度の間引き統計、ほぼ単色の兆候だけ。色プロファイル変換はしない。assessment、qualityScore、renderedTextはnullで、文字・読みやすさ・収まり・文字コントラスト・人物保持・構図品質をunevaluatedに明示する。Candidate/Assessmentのkind・指標・重みは変えない。入力写真を文字なし背景として扱わない。
+
+OpenAPIのCompleteDiagnosticRequest/Response、人工例docs/fixtures/complete-diagnostics.json、受け渡し手順docs/COMPLETE-PNG-ANALYSIS.mdを参照。共有APIの追加と画像資産の仕様は相互レビュー対象。
+

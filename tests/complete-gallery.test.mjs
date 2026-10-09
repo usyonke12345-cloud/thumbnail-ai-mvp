@@ -65,7 +65,7 @@ test('PNG reports count each retained image once and distinguish one-image confi
  const review={version:1,groupId:state.groups[0].id,recordedAt:new Date().toISOString(),decision:'selected',imageId:'image-0',reason:'使いたい',issues:[],displayWidths:state.images.map(x=>({imageId:x.id,width:246}))};state.reviews.push(review);
  let summary=gallerySummary(state);assert.equal(summary.cost.confirmedTotalUsd,.3);assert.equal(summary.cost.unknownImages,1);assert.deepEqual(summary.pngSave,{saved:1,failed:1,unknown:1});assert.equal(summary.generationTime.medianMs,2000);assert.equal(summary.generationTime.p95Ms,9000);assert.equal(summary.comparedGroups,1);
  state=recordObservation(state,'image-0',{version:1,recordedAt:new Date().toISOString(),costUsd:.12,pngSave:'saved'});assert.equal(gallerySummary(state).cost.confirmedTotalUsd,.32);
- const report=comparisonReport(state);assert.equal(report.sets.length,1);assert.equal(report.sets[0].version,'complete-comparison-1.1.0');assert.equal(report.sets[0].assessment,null);assert.equal(report.sets[0].images[0].observation.costUsd,.12);
+ const report=comparisonReport(state);assert.equal(report.sets.length,1);assert.equal(report.sets[0].version,'complete-comparison-1.2.0');assert.equal(report.sets[0].assessment,null);assert.equal(report.sets[0].images[0].observation.costUsd,.12);
  state=addToGallery(state,await createEntry(payload,{...result,imageDataUrl:png(1536,864,3)},{id:'image-3'}));summary=gallerySummary(state);assert.equal(summary.staleReviews,1);assert.equal(summary.comparedGroups,0);assert.equal(summary.generationTime.unknown,1);
  const solo=addToGallery(empty(),await createEntry(payload,result,{id:'solo'}));solo.reviews.push({...review,groupId:solo.groups[0].id,imageId:'solo',displayWidths:[{imageId:'solo',width:168}]});assert.equal(gallerySummary(solo).singleImageReviews,1);assert.equal(gallerySummary(solo).comparedGroups,0);
 });
@@ -81,6 +81,18 @@ test('manual cost/save observations survive reload, report all groups, and expos
  await dom.find(x=>x.textContent==='全組の画像・記録・集計JSONを保存').events.click();const report=JSON.parse(downloads[0][1]);assert.equal(report.sets.length,2);assert.equal(report.summary.cost.confirmedTotalUsd,.01);assert.equal(report.summary.pngSave.saved,1);assert.equal(report.summary.pngSave.unknown,1);
 });
 const editor=await readFile(new URL('../frontend/editor.js',import.meta.url),'utf8'),handler=editor.slice(editor.lastIndexOf("document.querySelector('#ai-complete').addEventListener")).split('// Draft lifecycle')[0];
+test('PNG diagnosis succeeds or explains failure without changing the images, review or manual generation',async()=>{
+ const dom=documentFixture(),storage=storageFixture();let calls=0,fail=false;
+ const app=createCompleteGallery({...dom,storage,download:()=>{},diagnose:async(b,id)=>{calls++;assert.equal(b.images[0].id,id);if(fail)throw new Error('offline');return {assets:[{assetId:'a',status:'analyzed',width:1536,height:864,luminance:{mean:.2},nearlyUniform:false}],images:[{imageId:id,assetId:'a'}]};}});await app.ready;await app.remember(payload,result,{id:'a'});
+ const inspect=dom.find(x=>x.textContent==='このPNGを無料で診断');await inspect.events.click();assert.equal(calls,1);assert.equal(inspect.disabled,false);assert.match(inspect.children.length?inspect.textContent:dom.root.querySelectorAll('p').find(x=>x.textContent.includes('PNG診断：')).textContent,/未評価/);
+ fail=true;await inspect.events.click();assert.equal(inspect.disabled,false);assert.ok(dom.root.querySelectorAll('p').some(x=>x.textContent.includes('offline')&&x.textContent.includes('保持')));assert.equal(storage.state.images.length,1);assert.equal(storage.state.reviews.length,0);
+});
+test('anonymous evaluator and declared provenance persist; unconfirmed permissions are never inferred',async()=>{
+ const dom=documentFixture(),storage=storageFixture(),app=createCompleteGallery({...dom,storage,download:()=>{}});await app.ready;await app.remember(payload,result,{id:'a'});await app.remember(payload,{...result,imageDataUrl:png(1536,864,1)},{id:'b'});
+ const form=dom.find(x=>x.attrs['aria-label']==='AI完成画像の品質確認');dom.find(x=>x.attrs['aria-label']==='AI完成画像の使いたい案').value='none';await form.events.submit({preventDefault(){}});assert.equal(storage.state.reviews[0].context.titlePermissionConfirmed,false);assert.equal(gallerySummary(storage.state).collection.authorizedRealComparisons,0);
+ dom.find(x=>x.attrs['aria-label']==='AI完成画像のタイトル出典').value='original';dom.find(x=>x.attrs['aria-label']==='タイトルの利用確認').checked=true;dom.find(x=>x.attrs['aria-label']==='写真の利用確認').checked=true;await form.events.submit({preventDefault(){}});assert.equal(gallerySummary(storage.state).collection.authorizedRealComparisons,1);
+ const reload=documentFixture(),next=createCompleteGallery({...reload,storage,download:()=>{}});await next.ready;assert.equal(reload.find(x=>x.attrs['aria-label']==='AI完成画像の評価者ID').value,'r01');assert.equal(reload.find(x=>x.attrs['aria-label']==='写真の利用確認').checked,true);
+});
 function paidFixture({archiveFails=false,saveFails=false,requestFails=false}={}){
  let callback,calls=0,shown=0,remembered=null,archived=0;const old=structuredClone(result),nodes={};
  for(const id of ['#ai-title','#ai-brief','#ai-composition','#ai-consent','#clear-draft','#ai-source','#ai-complete'])nodes[id]={value:'',checked:false,disabled:false,addEventListener:(name,fn)=>callback=fn,replaceChildren(){}};
