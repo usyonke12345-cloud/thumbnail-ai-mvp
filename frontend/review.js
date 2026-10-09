@@ -32,6 +32,6 @@ $('review-form').addEventListener('submit',async event=>{
  }catch(e){message(e.message);}finally{busy=false;$('save-review').disabled=!current;}
 });
 $('export-report').addEventListener('click',()=>download('comparison-report.json',JSON.stringify({version:1,sets:sets.map(({candidates,...set})=>({...set,candidates:candidates.map(({imageDataUrl,...c})=>c)})),reviews,summary:summarizeReviews(reviews,sets)},null,2),'application/json'));
-function exportCsv(kind){const rows=exported();const fields=kind==='preferences'?PREFERENCE_FIELDS:['candidate_id','style','overall','scoring_version'];download(`${kind}.csv`,csv(fields,rows[kind]),'text/csv;charset=utf-8');const note=document.createElement('p');note.textContent=`出力 ${rows[kind].length}行。除外 ${rows.excluded.length}評価（人工・未確認・不採用・評価範囲違いなど）。実際の幅が指定幅と異なる記録も除外します。CSVは表計算ソフトで文字列として読み込んでください。`;$('export-note').append(note);}
+function exportCsv(kind){const rows=exported();const fields=kind==='preferences'?PREFERENCE_FIELDS:['candidate_id','style','overall','scoring_version'];download(`${kind}.csv`,csv(fields,rows[kind]),'text/csv;charset=utf-8');const note=document.createElement('p');note.textContent=`出力 ${rows[kind].length}行。除外 ${rows.excluded.length}評価（人工・未確認・不採用・評価範囲/採点版/重みの違いなど）。実際の幅が指定幅と異なる記録も除外します。CSVは表計算ソフトで文字列として読み込んでください。`;$('export-note').append(note);}
 $('export-preferences').addEventListener('click',()=>exportCsv('preferences'));$('export-scores').addEventListener('click',()=>exportCsv('scores'));
 refresh().catch(e=>message(`保存データを読めませんでした：${e.message}`));
