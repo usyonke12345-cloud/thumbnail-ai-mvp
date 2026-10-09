@@ -21,6 +21,9 @@ test('choosing a candidate records versions and reason locally without another A
  await app.run();app.created.find(n=>n.tag==='input').value='文字が読みやすい';app.created.find(n=>n.textContent==='この案を選んで記録').click();
  const record=JSON.parse(app.stored.get('thumbnail-latest-preference-v1'));
  assert.equal(record.candidateId,'chosen');assert.equal(record.reason,'文字が読みやすい');assert.equal(record.generationVersion,'0.4.0');assert.equal(record.assessmentVersion,'0.4.0');assert.equal(app.calls(),1);assert.equal(JSON.stringify(record).includes('data:image'),false);
+ assert.equal(record.candidates[0].assessment.metrics.contrast,null);
+ assert.equal(record.candidates[0].generationVersion,'0.4.0');
+ assert.deepEqual(app.created.find(n=>n.tag==='article').children.slice(0,3).map(n=>n.tag),['img','h2','p']);
 });
 test('network, provider and deadline failures retain previous candidates and permit another click',async()=>{
  for(const scenario of ['network','provider','deadline']){
