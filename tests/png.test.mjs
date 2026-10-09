@@ -5,7 +5,14 @@ import { decodePng, PngError, MAX_PIXELS } from '../backend/scoring/png.mjs';
 import { regionStats, worstContrastAgainst, isNearlyUniform } from '../backend/scoring/image-stats.mjs';
 
 // テスト用の最小PNG書き出し（人工画像のみ）。各行にフィルタ0〜4を順に使い、展開の正しさを確かめる。
-const chunk = (type, data) => { const len = Buffer.alloc(4); len.writeUInt32BE(data.length); return Buffer.concat([len, Buffer.from(type, 'latin1'), data, Buffer.alloc(4)]); };
+const CRC_TABLE = Array.from({ length: 256 }, (_, n) => { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; return c >>> 0; });
+const crc32 = buf => { let c = 0xffffffff; for (const b of buf) c = CRC_TABLE[(c ^ b) & 0xff] ^ (c >>> 8); return (c ^ 0xffffffff) >>> 0; };
+const chunk = (type, data) => { const len = Buffer.alloc(4), crc = Buffer.alloc(4); len.writeUInt32BE(data.length); const td = Buffer.concat([Buffer.from(type, 'latin1'), data]); crc.writeUInt32BE(crc32(td)); return Buffer.concat([len, td, crc]); };
+const SIG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+const ihdrOf = (w, h, colorType = 6, depth = 8) => { const d = Buffer.alloc(13); d.writeUInt32BE(w, 0); d.writeUInt32BE(h, 4); d[8] = depth; d[9] = colorType; return d; };
+// 展開後のデータ（フィルタ種別＋画素）をそのまま指定してPNGを組み立てる
+const rawPng = (w, h, raw, { iend = true, after = Buffer.alloc(0) } = {}) =>
+  Buffer.concat([SIG, chunk('IHDR', ihdrOf(w, h)), chunk('IDAT', deflateSync(raw)), ...(iend ? [chunk('IEND', Buffer.alloc(0))] : []), after]);
 function encode({ width, height, colorType, depth = 8, bytes, palette, trns, interlace = 0, filters = true }) {
   const channels = { 0: 1, 2: 3, 3: 1, 4: 2, 6: 4 }[colorType];
   const stride = Math.ceil(width * channels * depth / 8), bpp = Math.max(1, (channels * depth) >> 3);
@@ -75,4 +82,32 @@ test('region statistics, worst-case contrast and near-uniform detection', () => 
   assert.ok(worstContrastAgainst('#ffffff', left) > 20);              // 黒の上の白文字は高コントラスト
   assert.ok(Math.abs(worstContrastAgainst('#ffffff', all) - 1) < 1e-9); // 白い部分もある背面では最悪1:1
   assert.equal(regionStats(img, { x: 100, y: 100, width: 5, height: 5 }), null); // 画像外
+});
+
+test('reported cases: oversized inflated data and missing IEND are rejected (1×1 RGBA needs exactly 5 bytes)', () => {
+  const good = Buffer.from([0, 10, 20, 30, 255]); // フィルタ0＋RGBA 1画素
+  assert.deepEqual([...decodePng(rawPng(1, 1, good)).rgba], [10, 20, 30, 255]);
+  assert.throws(() => decodePng(rawPng(1, 1, Buffer.concat([good, Buffer.alloc(65531)]))), /多すぎ/, '65,536バイトは拒否');
+  assert.throws(() => decodePng(rawPng(1, 1, Buffer.concat([good, Buffer.alloc(1)]))), /多すぎ/, '1バイト余分でも拒否');
+  assert.throws(() => decodePng(rawPng(1, 1, good.subarray(0, 4))), /一致しません/, '不足も拒否');
+  assert.throws(() => decodePng(rawPng(1, 1, good, { iend: false })), /IENDがありません/);
+  assert.throws(() => decodePng(rawPng(1, 1, good, { after: Buffer.from('extra') })), /余分なデータ/);
+});
+
+test('chunk structure is enforced: IHDR first and once, CRC matches, input size limit', async () => {
+  const { MAX_INPUT_BYTES } = await import('../backend/scoring/png.mjs');
+  const good = rawPng(1, 1, Buffer.from([0, 1, 2, 3, 255]));
+  const idat = chunk('IDAT', deflateSync(Buffer.from([0, 1, 2, 3, 255]))), iend = chunk('IEND', Buffer.alloc(0)), ihdr = chunk('IHDR', ihdrOf(1, 1));
+  assert.throws(() => decodePng(Buffer.concat([SIG, idat, ihdr, iend])), /先頭/);
+  assert.throws(() => decodePng(Buffer.concat([SIG, ihdr, ihdr, idat, iend])), /複数/);
+  const badCrc = Buffer.from(good); badCrc[good.length - 13] ^= 1; // IDATの末尾付近を1bit反転
+  assert.throws(() => decodePng(badCrc), /CRC/);
+  assert.throws(() => decodePng(Buffer.concat([good, Buffer.alloc(MAX_INPUT_BYTES)])), /大きすぎ/);
+});
+
+test('regionStats rejects step that is not a positive integer and non-finite rects', () => {
+  const img = decodePng(rawPng(2, 1, Buffer.from([0, 0, 0, 0, 255, 255, 255, 255, 255])));
+  for (const step of [0, -1, 1.5, NaN, Infinity, '2']) assert.throws(() => regionStats(img, undefined, { step }), RangeError, String(step));
+  assert.throws(() => regionStats(img, { x: 0, y: 0, width: NaN, height: 1 }), RangeError);
+  assert.equal(regionStats(img, undefined, { step: 1 }).samples, 2);
 });

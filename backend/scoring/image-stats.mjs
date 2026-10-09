@@ -14,6 +14,9 @@ const pct = (sorted, p) => sorted[Math.min(sorted.length - 1, Math.max(0, Math.r
  * step で間引いて計算量を抑える（1280×720 なら step=2 で約23万画素）。
  */
 export function regionStats(img, rect = { x: 0, y: 0, width: img.width, height: img.height }, { step = 2 } = {}) {
+  // step が0・負数・小数・NaN・無限大だとループが終わらない、または意味を持たないため拒否する
+  if (!Number.isSafeInteger(step) || step < 1) throw new RangeError(`step は1以上の整数にしてください（${step}）`);
+  if (![rect?.x, rect?.y, rect?.width, rect?.height].every(Number.isFinite)) throw new RangeError('rect の x・y・width・height は有限の数にしてください');
   const x0 = Math.max(0, Math.floor(rect.x)), y0 = Math.max(0, Math.floor(rect.y));
   const x1 = Math.min(img.width, Math.ceil(rect.x + rect.width)), y1 = Math.min(img.height, Math.ceil(rect.y + rect.height));
   const lums = [];
