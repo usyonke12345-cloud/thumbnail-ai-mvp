@@ -5,3 +5,5 @@
 #results>h2,#results>p{grid-column:1/-1;margin:0}article input{width:100%;margin:12px 0}article>button{margin-bottom:12px}
 
 .preview-controls{display:flex;flex-wrap:wrap;gap:10px;margin:16px 0}.preview-controls button[aria-pressed=true]{outline:2px solid #c7d2fe;outline-offset:2px}#results article img{display:block;width:min(100%,var(--preview-width,100%));margin:auto}
+
+.selected-candidate{outline:3px solid #a5b4fc;outline-offset:3px}

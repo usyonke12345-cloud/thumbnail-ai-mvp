@@ -7,10 +7,10 @@ function setup(request){
  const status={textContent:''},button={disabled:false},old={id:'old-candidate'};
  const results={children:[old],style:{setProperty(key,value){this[key]=value;}},before(){},append(...items){this.children.push(...items);},replaceChildren(){this.children=[];}};
  const created=[],stored=new Map();
- const createElement=tag=>{const node={tag,value:'',children:[],setAttribute(){},append(...items){this.children.push(...items);},addEventListener(event,fn){this[event]=fn;}};created.push(node);return node;};
+ const createElement=tag=>{const node={tag,value:'',children:[],setAttribute(key,value){this[key]=value;},removeAttribute(key){delete this[key];},classList:{toggle(){}},append(...items){this.children.push(...items);},addEventListener(event,fn){this[event]=fn;}};created.push(node);return node;};
  let submit,timeout,cleared=false,calls=0;
  const nodes={'#form':{addEventListener:(_,fn)=>submit=fn},'#submit':button,'#status':status,'#results':results,'#mode':{},'#title':{value:'動画の作り方'},'#genre':{value:'education'}};
- const context={document:{querySelector:s=>nodes[s],createElement},localStorage:{getItem:k=>stored.get(k)??null,setItem:(k,v)=>stored.set(k,v)},AbortController,TypeError,setTimeout(fn,ms){assert.equal(ms,190000);timeout=fn;return 1;},clearTimeout(){cleared=true;},fetch:async(url,options)=>url.endsWith('health')?{ok:true,json:async()=>({mode:'demo'})}:(calls++,request(options,()=>timeout()))};
+ const context={document:{querySelector:s=>nodes[s],createElement},localStorage:{getItem:k=>stored.get(k)??null,setItem:(k,v)=>stored.set(k,v),removeItem:k=>stored.delete(k)},AbortController,TypeError,setTimeout(fn,ms){assert.equal(ms,190000);timeout=fn;return 1;},clearTimeout(){cleared=true;},fetch:async(url,options)=>url.endsWith('health')?{ok:true,json:async()=>({mode:'demo'})}:(calls++,request(options,()=>timeout()))};
  vm.runInNewContext(source,context);
  return {status,button,results,old,created,stored,run:()=>submit({preventDefault(){}}),calls:()=>calls,cleared:()=>cleared};
 }
@@ -24,6 +24,8 @@ test('choosing a candidate records versions and reason locally without another A
  assert.equal(record.candidates[0].assessment.metrics.contrast,null);
  assert.equal(record.candidates[0].generationVersion,'0.4.0');
  assert.equal(record.actualDisplayWidth,168);
+ assert.equal(app.created.find(n=>n.textContent==='選択した案（理由を更新できます）')['aria-pressed'],'true');
+ app.created.find(n=>n.textContent==='最新の選択記録を消す').click();assert.equal(app.stored.size,0);assert.equal(app.calls(),1);assert.equal(app.created.find(n=>n.textContent==='最新の選択記録をJSONで保存').hidden,true);
  assert.deepEqual(app.created.find(n=>n.tag==='article').children.slice(0,3).map(n=>n.tag),['img','h2','p']);
 });
 test('network, provider and deadline failures retain previous candidates and permit another click',async()=>{
