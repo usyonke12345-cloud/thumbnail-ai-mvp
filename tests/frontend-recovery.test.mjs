@@ -36,6 +36,15 @@ test('network, provider and deadline failures retain previous candidates and per
   await app.run();assert.equal(app.calls(),2);
  }
 });
+
+test('rejecting all candidates records a separate decision and never invents a preferred candidate',async()=>{
+ const candidates=['bold','contrast','clean'].map(style=>({id:style,style,metadata:{},imageDataUrl:'data:image/svg+xml;base64,AAAA',assessment:{overall:50,version:'0.4.0',reasons:[]}}));
+ const app=setup(async()=>({ok:true,json:async()=>({mode:'demo',input:{title:'比較用タイトル',genre:'other'},candidates,elapsedMs:10})}));
+ const reject=app.created.find(n=>n.textContent==='どの案も使わないと記録');reject.click();assert.equal(app.stored.size,0);
+ await app.run();app.created.find(n=>n.tag==='textarea').value='主役が隠れる';reject.click();
+ const record=JSON.parse(app.stored.get('thumbnail-latest-preference-v1'));
+ assert.equal(record.decision,'none_acceptable');assert.equal(record.candidateId,null);assert.equal(record.assessment,null);assert.equal(record.candidates.length,3);assert.equal(record.reason,'主役が隠れる');assert.equal(app.calls(),1);
+});
 test('a second submit while pending never sends another generation request',async()=>{
  let release;const app=setup(()=>new Promise(resolve=>release=resolve));const pending=app.run();assert.equal(app.button.disabled,true);await app.run();assert.equal(app.calls(),1);
  release({ok:false,json:async()=>({error:{message:'試験用エラー'}})});await pending;assert.equal(app.button.disabled,false);
