@@ -290,6 +290,12 @@
                   "consent": {
                     "type": "boolean",
                     "const": true
+                  },
+                  "composition": {
+                    "type": "string",
+                    "enum": ["auto", "text_left", "text_right", "text_top"],
+                    "default": "auto",
+                    "description": "Optional composition intent for the photo edit. Omitted means photo-aware automatic composition. Preservation and exact layout still require visual checking."
                   }
                 }
               }

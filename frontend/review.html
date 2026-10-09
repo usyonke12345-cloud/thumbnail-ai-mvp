@@ -1,6 +1,7 @@
 <!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>保存した3案の比較</title><link rel="stylesheet" href="/style.css"><script type="module" src="/review.js"></script></head><body><main>
 <h1>保存した3案を比較</h1><p><a href="/">3案を作る</a> · <a href="/editor">写真エディター</a></p>
 <p>同じ画像を後日も比較します。保存・記録・書き出しでAPIは呼びません。人の選択を記録する画面で、自動学習はしません。</p>
+<aside>使いたい案が出ない場合は、20件の比較を続けず生成の改善を先に行います。固定の3構図で違いが出ない場合は、<a href="/editor">写真からのAI完成画像</a>で構図と品質を確認します。AI生成は有料・確認チェック後の手動操作です。</aside>
 <label>保存セット <select id="sets"></select></label><button id="refresh" type="button">保存一覧を更新</button><button id="bundle" type="button" disabled>この組の画像付きJSONを保存</button><button id="next" type="button">次の未記録セットへ</button>
 <label>画像付きJSONを読み込む <input id="import" type="file" accept="application/json,.json"></label><p>読み込みは画像セットのみです。許諾や人の評価を自動で取り込みません。画像付きJSONは非公開で扱ってください。</p>
 <label>検証用の表示幅 <select id="width"><option>168</option><option>246</option><option selected>360</option></select></label>

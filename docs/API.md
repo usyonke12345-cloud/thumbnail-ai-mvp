@@ -4,6 +4,8 @@
 
 Day5の `/review`・`/review.js`・`/comparison-model.js`・`/comparison-store.js` は静的な比較画面とブラウザ保存のための配信ルートです。画像・人の評価はIndexedDBに保存し、この画面からAPIへ送信しません。Candidate/Assessmentの契約は変更しません。採点担当のCSV書き出し・ローカル分析はdocs/DAY5.mdを参照してください。
 
+写真の `/api/v1/complete-thumbnail` は任意の `composition` を受け付けます。省略時auto、指定値はauto / text_left / text_right / text_top。写真に応じた構図希望を画像編集APIの指示へ加えます。既存の入力はそのまま使え、Candidate/Assessmentには影響しません。ai-complete-0.1.2の指示変更は、実画像の品質を確認してから評価します。完成PNGは未採点、1回1枚、手動同意・期限・起動内回数制限は維持します。この共有入力の追加は相互レビュー対象です。
+
 ## POST /api/v1/thumbnails
 
 Content-Type: application/json。同期APIです。入力は最大16KiB。
