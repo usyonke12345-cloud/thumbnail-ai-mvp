@@ -13,10 +13,11 @@ export function validateSet(set){
   bytes+=c.imageDataUrl.length;const svg=atob(c.imageDataUrl.split(',')[1]);
   if(!/<svg[\s>]/i.test(svg)||/<(?:script|style|foreignObject|iframe|object|embed)\b|\son\w+\s*=|<!DOCTYPE|<!ENTITY|@import/i.test(svg)||/\b(?:href|src)\s*=\s*['"](?!data:image\/(?:png|jpeg|webp);base64,|#)[^'"]+/i.test(svg)||/url\(\s*['"]?(?!#)[^)]+/i.test(svg))fail('外部参照や実行内容を含むSVGは読み込めません。');
   const a=c.assessment;
-  if(!a||a.version!=='0.4.0'||a.kind!=='layout_heuristic'||!Array.isArray(a.unevaluated)||!a.weights||!a.metrics)fail('採点0.4.0の候補が必要です。');
-  const weights={contrast:50,brevity:30,font:10,fit:10};let missing=0,lower=0;
-  for(const [key,weight] of Object.entries(weights)){const value=a.metrics[key];if(a.weights[key]!==weight||!(value===null||Number.isInteger(value)&&value>=0&&value<=100)||(value===null)!==a.unevaluated.includes(key))fail('採点の内訳が契約と一致しません。');if(value===null)missing+=weight;else lower+=value*weight/100;}
-  if(a.unevaluated.length!==new Set(a.unevaluated).size||a.unevaluated.some(k=>!(k in weights))||a.overall!==Math.round(lower)||a.overallMax!==Math.round(lower+missing)||a.coverage!==100-missing)fail('採点の上下限・評価範囲が不正です。');
+  if(!a||typeof a.version!=='string'||!/^0\.4\.(0|[1-9][0-9]*)$/.test(a.version)||a.kind!=='layout_heuristic'||!Array.isArray(a.unevaluated)||!a.weights||!a.metrics)fail('採点0.4.xの候補が必要です。');
+  const keys=['contrast','brevity','font','fit'],weights=a.weights;let missing=0,lower=0;
+  if(Object.keys(weights).length!==keys.length||!keys.every(key=>Number.isInteger(weights[key])&&weights[key]>=0&&weights[key]<=100)||keys.reduce((total,key)=>total+weights[key],0)!==100||Object.keys(a.metrics).length!==keys.length)fail('採点の重みは4項目の整数で、合計100が必要です。');
+  for(const key of keys){const weight=weights[key],value=a.metrics[key];if(!(value===null||Number.isInteger(value)&&value>=0&&value<=100)||(value===null)!==a.unevaluated.includes(key))fail('採点の内訳が契約と一致しません。');if(value===null)missing+=weight;else lower+=value*weight/100;}
+  if(a.unevaluated.length!==new Set(a.unevaluated).size||a.unevaluated.some(k=>!keys.includes(k))||a.overall!==Math.round(lower)||a.overallMax!==Math.round(lower+missing)||a.coverage!==100-missing)fail('採点の上下限・評価範囲が不正です。');
   if(typeof c.metadata?.generation_version!=='string'||!c.metadata.generation_version)fail('生成バージョンがありません。');
  }
  if(bytes>50*1024*1024)fail('比較セットが大きすぎます。');
@@ -41,7 +42,7 @@ export function validateReview(review,set){
  if(!(review.costUsd===null||Number.isFinite(review.costUsd)&&review.costUsd>=0)||!['unknown','yes','no'].includes(review.saved))fail('実費・保存確認が不正です。');
  return review;
 }
-const groupKey=c=>[...c.assessment.unevaluated].sort().join('|');
+const groupKey=c=>JSON.stringify({unevaluated:[...c.assessment.unevaluated].sort(),version:c.assessment.version,weights:['contrast','brevity','font','fit'].map(key=>c.assessment.weights[key])});
 export function comparable(set){return new Set(set.candidates.map(groupKey)).size===1;}
 export function compareReview(review,set){
  validateReview(review,set);
