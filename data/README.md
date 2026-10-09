@@ -75,7 +75,10 @@ Excelで保存したCSV（先頭にBOMが付く）もそのまま検証できる
 - 同じPC・ブラウザ・ズーム100%で見比べ、`os`、`browser`、`rendered_font`（実際に表示されたフォント。Chromeなら開発者ツールの Computed →「Rendered Fonts」）を必ず書く。同じ評価者・組・表示幅の中で環境が違う行は不正行になる。
 - 最初の組は生成側の `synthetic-01`（`feature/generation-provider` の `docs/readability/`、`generation_version` は manifest の `readability-fixture-0.1.0`）。検証用の配置で、本番の文字パネルとは異なる。
 
-1. `data/templates/readability.template.csv` を `data/private/readability.csv` にコピーして記録する。
+1. 評価者ごとに記録シートを作って記録する（`synthetic-01` の文字サイズ×表示幅の9行。記入欄は空欄、同じ表示幅の中で見せる順は評価者ごとに入れ替わり、`note` に「表示順」が入る）：
+   `node data/readability-sheet.mjs r01 "Windows 11" "Chrome 141" "<実際のフォント>" > data/private/readability.csv`
+   （2人目以降は開始番号を指定して追記：`node data/readability-sheet.mjs r02 ... 10 | tail -n +2 >> data/private/readability.csv`）
+   空の記録表から手で書く場合は `data/templates/readability.template.csv` を `data/private/readability.csv` にコピーする。
 2. `node data/readability.mjs data/private/readability.csv` で検証・集計する。文字サイズ×表示幅ごとに、件数・正答率・秒数の中央値・平均順位・縮小後の文字の高さ（`scaled_px` ＝ 文字サイズ × 表示幅 ÷ 1280）を出す。
 3. 同じ評価者・組・表示幅の中で、順位や文字サイズが重なる行は不正行として報告される。
 
