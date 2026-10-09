@@ -9,7 +9,7 @@ function draw(){current=sets.find(s=>s.id===$('sets').value);$('review-images').
  let number=1;while(reviews.some(r=>r.sampleId===`s${String(number).padStart(3,'0')}`))number++;$('sample').value=reviews.find(r=>r.setId===current.id)?.sampleId??`s${String(number).padStart(3,'0')}`;
  if(current.mode==='demo')$('cost').value='0';message(`${current.input.title} / 組ID ${current.id}。画像・バージョンは固定です。`);
 }
-function showSummary(){const summary=summarizeReviews(reviews,sets);$('progress').textContent=`人による比較：${summary.progress.completed} / 20件（残り${summary.progress.remaining}件）`;$('summary').textContent=JSON.stringify(summary,null,2);}
+function showSummary(){const summary=summarizeReviews(reviews,sets);$('progress').textContent=`人による比較：${summary.progress.humanCompleted} / 20件 ／ 利用確認済み実タイトル：${summary.progress.completed} / 20件`;$('summary').textContent=JSON.stringify(summary,null,2);}
 async function refresh(selected){sets=await listSets();reviews=await listReviews();$('sets').replaceChildren();for(const s of sets){const option=document.createElement('option');option.value=s.id;option.textContent=`${s.input.title} — ${s.id}`;$('sets').append(option);}if(selected)$('sets').value=selected;draw();showSummary();}
 const exported=()=>partnerRows(reviews.filter(r=>Math.round(r.displayWidth)===Number($('width').value)),sets);
 $('sets').addEventListener('change',draw);$('width').addEventListener('change',()=>{const elements=$('review-images').querySelectorAll('img');for(const img of elements)img.style.width=`min(100%, ${Number($('width').value)}px)`;message('同じ画像の表示幅を変更しました。実際の幅は記録時に測ります。');});
