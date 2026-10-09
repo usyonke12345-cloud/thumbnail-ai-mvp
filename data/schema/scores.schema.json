@@ -29,6 +29,11 @@
     "scoring_version": {
       "type": "string",
       "minLength": 1
+    },
+    "unevaluated": {
+      "type": "string",
+      "pattern": "^$|^(contrast|brevity|font|fit)(\\|(contrast|brevity|font|fit))*$",
+      "description": "任意。採点0.4.0以降の未評価項目を | でつないだもの（例: contrast|fit）。全項目評価済みなら空。未評価の組み合わせが違う組は順位比較しない"
     }
   }
 }
