@@ -2,6 +2,8 @@
 
 正本は `shared/openapi.json`。破壊的変更は2人で合意してから行い、呼び出し側とfixtureを同じPRで更新します。
 
+完成PNG比較用の`/complete-gallery.js`・`/complete-gallery-model.js`・`/complete-gallery-store.js`は静的配信ルートです。画像と人の選択はブラウザ内に保存し、既存の完成画像API入力やCandidate/Assessmentを変更しません。画像付きの非公開JSONは`complete-comparison-1.0.0`（未採点）で、画像資産APIの提案とは別形式です。詳細はdocs/COMPLETE-COMPARISON.md。
+
 Day5の `/review`・`/review.js`・`/comparison-model.js`・`/comparison-store.js` は静的な比較画面とブラウザ保存のための配信ルートです。画像・人の評価はIndexedDBに保存し、この画面からAPIへ送信しません。Candidate/Assessmentの契約は変更しません。採点担当のCSV書き出し・ローカル分析はdocs/DAY5.mdを参照してください。
 
 写真の `/api/v1/complete-thumbnail` は任意の `composition` を受け付けます。省略時auto、指定値はauto / text_left / text_right / text_top。写真に応じた構図希望を画像編集APIの指示へ加えます。既存の入力はそのまま使え、Candidate/Assessmentには影響しません。ai-complete-0.1.2の指示変更は、実画像の品質を確認してから評価します。完成PNGは未採点、1回1枚、手動同意・期限・起動内回数制限は維持します。この共有入力の追加は相互レビュー対象です。

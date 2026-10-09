@@ -1,5 +1,7 @@
 import {cropPlacement,fitHeadline,suggestPhotoLayouts} from './editor-layout.js';
 import {loadDraft,saveDraft,deleteDraft,validateDraft} from './editor-draft.js';
+import {createCompleteGallery} from './complete-gallery.js';
+const completeGallery=createCompleteGallery({root:document.querySelector('#complete-comparison')});
 const storedFiles=[null,null];let completedResult=null,restoring=true,saveTimer,saveQueue=Promise.resolve();
 function scheduleDraft(){if(restoring)return;clearTimeout(saveTimer);document.querySelector('#draft-status').textContent='下書きを保存しています…';saveTimer=setTimeout(()=>{const draft={version:1,layout:layout.value,settings,files:storedFiles,headline:headline.value,title:document.querySelector('#ai-title').value,brief:document.querySelector('#ai-brief').value,composition:document.querySelector('#ai-composition').value,accent:accent.value,position:document.querySelector('#text-position').value,protect:document.querySelector('#protect-subject').value,shade:document.querySelector('#shade').value,result:completedResult};saveQueue=saveQueue.catch(()=>{}).then(()=>saveDraft(draft)).then(()=>{document.querySelector('#draft-status').textContent='下書きをこのブラウザに保存しました。リロード後に復元できます。';}).catch(()=>{document.querySelector('#draft-status').textContent='下書きを保存できません。容量やブラウザ設定を確認し、完成PNGをファイルへ保存してください。';});},300);}
 function showCompleted(data){completedResult=data;const image=document.createElement('img'),link=document.createElement('a'),note=document.createElement('p');image.src=data.imageDataUrl;image.alt='AIによる完成サムネ';link.href=data.imageDataUrl;link.download='ai-complete-thumbnail.png';link.textContent='完成PNGを保存（1536×864）';note.textContent=data.limitations.join(' ');document.querySelector('#ai-result').replaceChildren(image,note,link);}
@@ -93,12 +95,18 @@ document.querySelector('#ai-complete').addEventListener('click',async event=>{
  const payload={title:document.querySelector('#ai-title').value,brief:document.querySelector('#ai-brief').value,headline:headline.value,composition:document.querySelector('#ai-composition').value,imageDataUrl:source.toDataURL('image/png'),consent:true};
  if(payload.imageDataUrl.length>3*1024*1024){aiStatus.textContent='写真が大きすぎます。より小さな写真を選んでください。';return;}
  const sentPhoto=document.createElement('img'),sentLabel=document.createElement('p');sentPhoto.src=payload.imageDataUrl;sentPhoto.alt='今回APIへ送信する入力写真';sentLabel.textContent='今回APIへ送信する写真です。完成画像でもこの人物・素材が保持されているか確認してください。';document.querySelector('#ai-source').replaceChildren(sentLabel,sentPhoto);
- control.disabled=true;document.querySelector('#clear-draft').disabled=true;aiStatus.textContent='写真から完成画像を生成しています。自動再試行はしません。';
+ control.disabled=true;document.querySelector('#clear-draft').disabled=true;
+ // Preserve the previous real PNG before another paid request. Its old input is unknown.
+ if(completedResult){try{await completeGallery.rememberLegacy(completedResult);}catch(error){aiStatus.textContent=`前の完成画像を比較一覧に保存できません：${error.message} PNGを保存してから再度お試しください。`;control.disabled=false;document.querySelector('#clear-draft').disabled=false;return;}}
+ aiStatus.textContent='写真から完成画像を生成しています。自動再試行はしません。';
+ const started=performance.now();
  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),190000);
  try{const response=await fetch('/api/v1/complete-thumbnail',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),signal:controller.signal});const data=await response.json();if(!response.ok)throw new Error(data.error?.message??'生成に失敗しました。');
-  showCompleted(data);scheduleDraft();aiStatus.textContent='完成画像を表示しました。文字と主役を確認して保存してください。';
+  showCompleted(data);scheduleDraft();
+  try{await completeGallery.remember(payload,data,{elapsedMs:Math.round(performance.now()-started)});aiStatus.textContent='完成画像を比較一覧に保存しました。小さい表示で文字・主役・構図を見比べてください。';}
+  catch(error){aiStatus.textContent=`完成画像は生成できましたが、比較保存に失敗しました：${error.message} 表示中の完成PNGをファイルに保存してください。`;}
  }catch(error){aiStatus.textContent=error.name==='AbortError'?'待機期限を超えました。課金済みの可能性があります。利用履歴を確認してください。':`${error.message} 前回の完成画像は保持しています。`;}
- finally{clearTimeout(timer);document.querySelector('#clear-draft').disabled=false;control.disabled=false;const message=aiStatus.textContent;await checkAIStatus();aiStatus.textContent=message;}
+ finally{clearTimeout(timer);document.querySelector('#ai-consent').checked=false;document.querySelector('#clear-draft').disabled=false;control.disabled=false;const message=aiStatus.textContent;await checkAIStatus();aiStatus.textContent=message;}
 });
 
 // Draft lifecycle: restoring never sends images or resumes a paid request.
@@ -113,9 +121,9 @@ async function restoreDraft(){
  finally{restoring=false;document.querySelector('#editor-workspace').disabled=false;document.querySelector('#ai-consent').checked=false;}
 }
 document.querySelector('#clear-draft').addEventListener('click',async()=>{
- if(!window.confirm('このブラウザの保存済み写真・入力内容・完成画像を消しますか？ 必要なPNGは先にファイルへ保存してください。'))return;
+ if(!window.confirm('このブラウザの写真下書き・入力内容・完成画像・比較履歴を消しますか？ 必要なPNGは先にファイルへ保存してください。'))return;
  restoring=true;clearTimeout(saveTimer);document.querySelector('#editor-workspace').disabled=true;
- try{await saveQueue.catch(()=>{});await deleteDraft();for(let i=0;i<2;i++){storedFiles[i]=null;photos[i]=null;versions[i]++;cards[i].querySelector('input[type="file"]').value='';}completedResult=null;document.querySelector('#ai-composition').value='auto';document.querySelector('#ai-result').replaceChildren();document.querySelector('#ai-source').replaceChildren();document.querySelector('#auto-candidates').replaceChildren();headline.value='';document.querySelector('#ai-title').value='';document.querySelector('#ai-brief').value='';document.querySelector('#ai-consent').checked=false;draw();document.querySelector('#draft-status').textContent='このブラウザの下書きを消しました。';}
+ try{await saveQueue.catch(()=>{});await completeGallery.clear();await deleteDraft();for(let i=0;i<2;i++){storedFiles[i]=null;photos[i]=null;versions[i]++;cards[i].querySelector('input[type="file"]').value='';}completedResult=null;document.querySelector('#ai-composition').value='auto';document.querySelector('#ai-result').replaceChildren();document.querySelector('#ai-source').replaceChildren();document.querySelector('#auto-candidates').replaceChildren();headline.value='';document.querySelector('#ai-title').value='';document.querySelector('#ai-brief').value='';document.querySelector('#ai-consent').checked=false;draw();document.querySelector('#draft-status').textContent='このブラウザの下書きと完成画像の比較履歴を消しました。';}
  catch{document.querySelector('#draft-status').textContent='下書きを消せませんでした。ブラウザの保存設定を確認してください。';}
  finally{restoring=false;document.querySelector('#editor-workspace').disabled=false;}
 });
