@@ -2,7 +2,7 @@
 
 正本は `shared/openapi.json`。破壊的変更は2人で合意してから行い、呼び出し側とfixtureを同じPRで更新します。
 
-完成PNG比較用の`/complete-gallery.js`・`/complete-gallery-model.js`・`/complete-gallery-store.js`は静的配信ルートです。画像と人の選択はブラウザ内に保存し、既存の完成画像API入力やCandidate/Assessmentを変更しません。画像付きの非公開JSONは`complete-comparison-1.0.0`（未採点）で、画像資産APIの提案とは別形式です。詳細はdocs/COMPLETE-COMPARISON.md。
+完成PNG比較用の`/complete-gallery.js`・`/complete-gallery-model.js`・`/complete-gallery-store.js`は静的配信ルートです。画像と人の選択はブラウザ内に保存し、既存の完成画像API入力やCandidate/Assessmentを変更しません。画像付きの非公開JSONは`complete-comparison-1.1.0`（未採点）、全組の集計付きJSONは`complete-comparison-report-1.0.0`で、画像資産APIの提案とは別形式です。実費と保存結果は人が確認して入力し、未確認はnull/unknown。採点側への正式取り込みは形式レビュー待ちです。詳細はdocs/COMPLETE-COMPARISON.md。
 
 Day5の `/review`・`/review.js`・`/comparison-model.js`・`/comparison-store.js` は静的な比較画面とブラウザ保存のための配信ルートです。画像・人の評価はIndexedDBに保存し、この画面からAPIへ送信しません。Candidate/Assessmentの契約は変更しません。採点担当のCSV書き出し・ローカル分析はdocs/DAY5.mdを参照してください。
 

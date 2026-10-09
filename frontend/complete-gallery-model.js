@@ -58,5 +58,33 @@ export function validateQualityReview(review,group,images){
 export function comparisonBundle(state,groupId){
  const group=state.groups.find(x=>x.id===groupId);if(!group)fail('比較する組がありません。');
  const images=state.images.filter(x=>x.groupId===groupId),review=state.reviews.find(x=>x.groupId===groupId)??null;
- return {version:'complete-comparison-1.0.0',kind:'human_quality_review',assessment:null,group,images,review,reviewCoversAllImages:!!review&&images.length===review.displayWidths.length&&images.every(x=>review.displayWidths.some(w=>w.imageId===x.id)),note:'完成PNGは未採点です。人の選択は自動学習やCTR予測ではありません。写真・完成画像を含む非公開の比較記録です。'};
+ return {version:'complete-comparison-1.1.0',kind:'human_quality_review',assessment:null,group,images,review,reviewCoversAllImages:!!review&&images.length===review.displayWidths.length&&images.every(x=>review.displayWidths.some(w=>w.imageId===x.id)),note:'完成PNGは未採点です。人の選択は自動学習やCTR予測ではありません。写真・完成画像を含む非公開の比較記録です。'};
+}
+export function parseCostUsd(value){
+ if(typeof value!=='string')fail('実費はUSDの金額で入力してください。');
+ const input=value.trim();if(!input)return null;
+ if(!/^\d+(\.\d{1,6})?$/.test(input)||Number(input)>1000)fail('実費は0〜1000 USD、小数6桁までの金額で入力してください。未確認なら空欄にしてください。');
+ return Number(input);
+}
+export function validateObservation(value){
+ const cost=value?.costUsd;
+ if(value?.version!==1||!date(value.recordedAt)||!(cost===null||Number.isFinite(cost)&&cost>=0&&cost<=1000&&Math.abs(cost*1e6-Math.round(cost*1e6))<1e-6)||!['unknown','saved','failed'].includes(value.pngSave))fail('実費・PNG保存結果の記録が不正です。');
+ return {version:1,recordedAt:value.recordedAt,costUsd:cost,pngSave:value.pngSave};
+}
+export function recordObservation(state,imageId,value){
+ const observation=validateObservation(value);if(!state.images.some(x=>x.id===imageId))fail('記録する完成画像がありません。');
+ return {...state,images:state.images.map(x=>x.id===imageId?{...x,observation}:x)};
+}
+export function gallerySummary(state){
+ const bundles=state.groups.map(g=>comparisonBundle(state,g.id)),current=bundles.filter(x=>x.reviewCoversAllImages),times=state.images.map(x=>x.elapsedMs).filter(x=>Number.isInteger(x)&&x>=0).sort((a,b)=>a-b);
+ const observations=state.images.map(x=>x.observation===undefined?null:validateObservation(x.observation)),costs=observations.map(x=>x?.costUsd).filter(x=>x!==null&&x!==undefined);
+ return {images:state.images.length,groups:state.groups.length,reviewedGroups:current.length,comparedGroups:current.filter(x=>x.images.length>=2).length,singleImageReviews:current.filter(x=>x.images.length===1).length,allRejectedGroups:current.filter(x=>x.review.decision==='none_acceptable').length,staleReviews:bundles.filter(x=>x.review&&!x.reviewCoversAllImages).length,
+  generationTime:{known:times.length,unknown:state.images.length-times.length,medianMs:times.length?(times[Math.floor((times.length-1)/2)]+times[Math.floor(times.length/2)])/2:null,p95Ms:times.length?times[Math.ceil(times.length*.95)-1]:null},
+  cost:{currency:'USD',confirmedImages:costs.length,unknownImages:state.images.length-costs.length,confirmedTotalUsd:costs.length?costs.reduce((sum,x)=>sum+Math.round(x*1e6),0)/1e6:null},
+  pngSave:{saved:observations.filter(x=>x?.pngSave==='saved').length,failed:observations.filter(x=>x?.pngSave==='failed').length,unknown:observations.filter(x=>!x||x.pngSave==='unknown').length},
+  note:'現在ブラウザ内に残っている生成成功画像のみの集計です。削除した画像・失敗したAPI試行は含まず、API成功率や累計費用は算出しません。1枚だけの品質確認と、2枚以上の比較を区別します。'};
+}
+export function comparisonReport(state,{exportedAt=new Date().toISOString()}={}){
+ if(!date(exportedAt))fail('書き出し時刻が不正です。');
+ return {version:'complete-comparison-report-1.0.0',kind:'human_quality_report',exportedAt,assessment:null,summary:gallerySummary(state),sets:state.groups.map(g=>comparisonBundle(state,g.id)),note:'写真・完成PNGを含む非公開データです。SVG比較CSVとは別形式で、許諾済み20タイトルや正式な採点検証件数には自動で加えません。'};
 }

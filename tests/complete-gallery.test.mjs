@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import vm from 'node:vm';
-import {createEntry,createLegacyEntry,addToGallery,validateQualityReview,comparisonBundle,MAX_IMAGES} from '../frontend/complete-gallery-model.js';
+import {createEntry,createLegacyEntry,addToGallery,validateQualityReview,comparisonBundle,MAX_IMAGES,parseCostUsd,validateObservation,recordObservation,gallerySummary,comparisonReport} from '../frontend/complete-gallery-model.js';
 import {createCompleteGallery} from '../frontend/complete-gallery.js';
 import {makeServer} from '../backend/server.mjs';
 function png(w,h,variant=0){const b=Buffer.alloc(25);Buffer.from('89504e470d0a1a0a','hex').copy(b);b.write('IHDR',12);b.writeUInt32BE(w,16);b.writeUInt32BE(h,20);b[24]=variant;return `data:image/png;base64,${b.toString('base64')}`;}
@@ -37,18 +37,48 @@ function documentFixture(){
  const document={createElement(tag){return {tag,children:[],textContent:'',value:'',style:{},dataset:{},attrs:{},events:{},checked:false,disabled:false,append(...nodes){this.children.push(...nodes);},prepend(...nodes){this.children.unshift(...nodes);},replaceChildren(...nodes){this.children=[...nodes];},setAttribute(k,v){this.attrs[k]=v;},addEventListener(k,fn){this.events[k]=fn;},querySelectorAll(tag){return all(this).filter(x=>x!==this&&x.tag===tag);},getBoundingClientRect(){return {width:168};}};}};
  const root=document.createElement('section');return {document,root,find:predicate=>all(root).find(predicate)};
 }
-function storageFixture(){let state=empty(),rejectReview=false;return {get state(){return state;},set rejectReview(value){rejectReview=value;},async load(){return structuredClone(state);},async add(entry){state=addToGallery(state,entry);return structuredClone(state);},async review(review){if(rejectReview)throw new Error('保存容量が足りません。');validateQualityReview(review,state.groups.find(x=>x.id===review.groupId),state.images);state.reviews=[review];return structuredClone(state);},async remove(id){state={groups:state.groups.filter(x=>x.id!==id),images:state.images.filter(x=>x.groupId!==id),reviews:[]};return structuredClone(state);},async clear(){state=empty();return structuredClone(state);}};}
+function storageFixture(){let state=empty(),rejectReview=false;return {get state(){return state;},set rejectReview(value){rejectReview=value;},async load(){return structuredClone(state);},async add(entry){state=addToGallery(state,entry);return structuredClone(state);},async observe(id,value){if(rejectReview)throw new Error('保存容量が足りません。');state=recordObservation(state,id,value);return structuredClone(state);},async review(review){if(rejectReview)throw new Error('保存容量が足りません。');validateQualityReview(review,state.groups.find(x=>x.id===review.groupId),state.images);state.reviews=[review];return structuredClone(state);},async remove(id){state={groups:state.groups.filter(x=>x.id!==id),images:state.images.filter(x=>x.groupId!==id),reviews:[]};return structuredClone(state);},async clear(){state=empty();return structuredClone(state);}};}
 test('gallery reloads real images, saves all rejected, and explains failures next to the save button',async()=>{
  const dom=documentFixture(),storage=storageFixture(),downloads=[];
  const app=createCompleteGallery({...dom,storage,download:(...args)=>downloads.push(args),confirm:()=>true});await app.ready;
  await app.remember(payload,result,{id:'a'});await app.remember({...payload,composition:'text_right'},{...result,imageDataUrl:png(1536,864,1)},{id:'b'});
- const form=dom.find(x=>x.tag==='form'),save=dom.find(x=>x.type==='submit'),decision=dom.find(x=>x.attrs['aria-label']==='AI完成画像の使いたい案');
+ const form=dom.find(x=>x.attrs['aria-label']==='AI完成画像の品質確認'),save=form.children.find(x=>x.type==='submit'),decision=dom.find(x=>x.attrs['aria-label']==='AI完成画像の使いたい案');
  await form.events.submit({preventDefault(){}});assert.match(form.children.at(-2).textContent,/選んで/);assert.equal(storage.state.reviews.length,0);
  decision.value='none';await form.events.submit({preventDefault(){}});assert.equal(storage.state.reviews[0].decision,'none_acceptable');assert.equal(storage.state.reviews[0].displayWidths.length,2);assert.ok(storage.state.reviews[0].displayWidths.every(x=>x.width===168));assert.equal(save.disabled,false);
  const reloaded=documentFixture(),next=createCompleteGallery({...reloaded,storage,download:()=>{},confirm:()=>true});await next.ready;assert.equal(reloaded.find(x=>x.attrs['aria-label']==='AI完成画像の使いたい案').value,'none');assert.equal(reloaded.root.querySelectorAll('img').length,3);
  storage.rejectReview=true;await form.events.submit({preventDefault(){}});assert.match(form.children.at(-2).textContent,/容量/);assert.equal(save.disabled,false);
  await dom.find(x=>x.textContent==='写真・完成画像・比較記録のJSONを保存').events.click();assert.equal(JSON.parse(downloads[0][1]).assessment,null);
  await next.clear();assert.equal(storage.state.images.length,0);
+});
+test('unknown costs stay null, confirmed zero stays zero, and invalid monetary/save inputs are rejected',async()=>{
+ assert.equal(parseCostUsd('  '),null);assert.equal(parseCostUsd('0'),0);assert.equal(parseCostUsd('0.010000'),.01);
+ for(const value of ['-0.01','1e-2','0.0000001','1,000','1000.000001','NaN','Infinity'])assert.throws(()=>parseCostUsd(value));
+ const entry=await createEntry(payload,result,{id:'a'}),state=addToGallery(empty(),entry),record={version:1,recordedAt:new Date().toISOString(),costUsd:null,pngSave:'unknown'};
+ assert.equal(validateObservation({...record,apiKey:'never-save'}).apiKey,undefined);
+ for(const change of [{costUsd:NaN},{costUsd:Infinity},{costUsd:-1},{costUsd:.0000001},{pngSave:'yes'},{recordedAt:'invalid'}])assert.throws(()=>recordObservation(state,'a',{...record,...change}));
+ assert.throws(()=>recordObservation(state,'missing',record));assert.equal(state.images[0].observation,undefined);
+ const next=recordObservation(state,'a',{...record,costUsd:0,pngSave:'saved'});assert.equal(gallerySummary(next).cost.confirmedTotalUsd,0);assert.equal(gallerySummary(state).cost.confirmedTotalUsd,null);assert.equal(next.groups[0].sourceImageDataUrl,payload.imageDataUrl);
+});
+test('PNG reports count each retained image once and distinguish one-image confirmation, comparison and stale choices',async()=>{
+ let state=empty();for(let i=0;i<3;i++)state=addToGallery(state,await createEntry(payload,{...result,imageDataUrl:png(1536,864,i)},{id:`image-${i}`,elapsedMs:[1000,2000,9000][i]}));
+ state=recordObservation(state,'image-0',{version:1,recordedAt:new Date().toISOString(),costUsd:.1,pngSave:'saved'});state=recordObservation(state,'image-1',{version:1,recordedAt:new Date().toISOString(),costUsd:.2,pngSave:'failed'});
+ const review={version:1,groupId:state.groups[0].id,recordedAt:new Date().toISOString(),decision:'selected',imageId:'image-0',reason:'使いたい',issues:[],displayWidths:state.images.map(x=>({imageId:x.id,width:246}))};state.reviews.push(review);
+ let summary=gallerySummary(state);assert.equal(summary.cost.confirmedTotalUsd,.3);assert.equal(summary.cost.unknownImages,1);assert.deepEqual(summary.pngSave,{saved:1,failed:1,unknown:1});assert.equal(summary.generationTime.medianMs,2000);assert.equal(summary.generationTime.p95Ms,9000);assert.equal(summary.comparedGroups,1);
+ state=recordObservation(state,'image-0',{version:1,recordedAt:new Date().toISOString(),costUsd:.12,pngSave:'saved'});assert.equal(gallerySummary(state).cost.confirmedTotalUsd,.32);
+ const report=comparisonReport(state);assert.equal(report.sets.length,1);assert.equal(report.sets[0].version,'complete-comparison-1.1.0');assert.equal(report.sets[0].assessment,null);assert.equal(report.sets[0].images[0].observation.costUsd,.12);
+ state=addToGallery(state,await createEntry(payload,{...result,imageDataUrl:png(1536,864,3)},{id:'image-3'}));summary=gallerySummary(state);assert.equal(summary.staleReviews,1);assert.equal(summary.comparedGroups,0);assert.equal(summary.generationTime.unknown,1);
+ const solo=addToGallery(empty(),await createEntry(payload,result,{id:'solo'}));solo.reviews.push({...review,groupId:solo.groups[0].id,imageId:'solo',displayWidths:[{imageId:'solo',width:168}]});assert.equal(gallerySummary(solo).singleImageReviews,1);assert.equal(gallerySummary(solo).comparedGroups,0);
+});
+test('manual cost/save observations survive reload, report all groups, and expose errors beside their own button',async()=>{
+ const dom=documentFixture(),storage=storageFixture(),downloads=[],app=createCompleteGallery({...dom,storage,download:(...args)=>downloads.push(args)});await app.ready;
+ await app.remember(payload,result,{id:'a'});await app.remember({...payload,title:'別の動画'},{...result,imageDataUrl:png(1536,864,1)},{id:'b'});
+ const form=dom.find(x=>x.attrs['aria-label']==='案Aの実費と保存結果'),cost=dom.find(x=>x.attrs['aria-label']==='案Aの実費USD'),pngSave=dom.find(x=>x.attrs['aria-label']==='案AのPNG保存結果');
+ assert.equal(cost.value,'');assert.equal(pngSave.value,'unknown');cost.value='bad';await form.events.submit({preventDefault(){}});assert.match(form.children.at(-2).textContent,/USD/);assert.equal(storage.state.images[1].observation,undefined);
+ cost.value='.01';await form.events.submit({preventDefault(){}});assert.equal(storage.state.images[1].observation,undefined);
+ cost.value='0.01';pngSave.value='saved';await form.events.submit({preventDefault(){}});assert.equal(storage.state.images[1].observation.costUsd,.01);assert.equal(storage.state.images[0].observation,undefined);
+ const reloaded=documentFixture(),next=createCompleteGallery({...reloaded,storage,download:()=>{}});await next.ready;assert.equal(reloaded.find(x=>x.attrs['aria-label']==='案Aの実費USD').value,'0.01');assert.equal(reloaded.find(x=>x.attrs['aria-label']==='案AのPNG保存結果').value,'saved');
+ storage.rejectReview=true;cost.value='0.02';await form.events.submit({preventDefault(){}});assert.match(form.children.at(-2).textContent,/容量/);assert.equal(storage.state.images[1].observation.costUsd,.01);assert.equal(form.children.find(x=>x.type==='submit').disabled,false);
+ await dom.find(x=>x.textContent==='全組の画像・記録・集計JSONを保存').events.click();const report=JSON.parse(downloads[0][1]);assert.equal(report.sets.length,2);assert.equal(report.summary.cost.confirmedTotalUsd,.01);assert.equal(report.summary.pngSave.saved,1);assert.equal(report.summary.pngSave.unknown,1);
 });
 const editor=await readFile(new URL('../frontend/editor.js',import.meta.url),'utf8'),handler=editor.slice(editor.lastIndexOf("document.querySelector('#ai-complete').addEventListener")).split('// Draft lifecycle')[0];
 function paidFixture({archiveFails=false,saveFails=false,requestFails=false}={}){

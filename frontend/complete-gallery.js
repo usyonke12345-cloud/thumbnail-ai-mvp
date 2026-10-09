@@ -1,4 +1,4 @@
-import {COMPOSITIONS,MAX_IMAGES,createEntry,createLegacyEntry,comparisonBundle,validateQualityReview} from './complete-gallery-model.js';
+import {COMPOSITIONS,MAX_IMAGES,createEntry,createLegacyEntry,comparisonBundle,validateQualityReview,parseCostUsd,gallerySummary,comparisonReport} from './complete-gallery-model.js';
 import {galleryStorage} from './complete-gallery-store.js';
 export function createCompleteGallery({root,document=globalThis.document,storage=galleryStorage,download=downloadFile,confirm=message=>window.confirm(message)}={}){
  let state={groups:[],images:[],reviews:[]},selected='',width=360;
@@ -9,7 +9,9 @@ export function createCompleteGallery({root,document=globalThis.document,storage
  const toolbar=el('div');toolbar.className='preview-controls';const widthButtons=[];
  for(const size of [168,246,360]){const button=el('button',`${size}px`);button.type='button';button.addEventListener('click',()=>{width=size;for(const [n,b]of widthButtons)b.setAttribute('aria-pressed',String(n===width));renderImages();});toolbar.append(button);widthButtons.push([size,button]);button.setAttribute('aria-pressed',String(size===width));}
  const info=el('p'),source=el('div'),images=el('div');images.className='complete-gallery-images';
- const form=el('form');form.className='complete-quality-form';form.noValidate=true;
+ const summary=el('pre');summary.className='complete-gallery-summary';
+ const exportAll=el('button','全組の画像・記録・集計JSONを保存');exportAll.type='button';
+ const form=el('form');form.className='complete-quality-form';form.noValidate=true;form.setAttribute('aria-label','AI完成画像の品質確認');
  const decision=el('select'),decisionLabel=el('label','使いたい案 ');decisionLabel.append(decision);decision.setAttribute('aria-label','AI完成画像の使いたい案');
  const reason=el('textarea'),reasonLabel=el('label','選んだ理由・直したい点（任意）');reason.maxLength=1000;reason.rows=2;reasonLabel.append(reason);reason.setAttribute('aria-label','AI完成画像の理由');
  const issues=el('div');issues.className='complete-quality-issues';const issueInputs=[];
@@ -19,14 +21,30 @@ export function createCompleteGallery({root,document=globalThis.document,storage
  const note=el('p','点数はまだ付けていません。「全部使わない」も記録できます。選択は生成AIや採点モデルへ自動送信されません。');
  form.append(decisionLabel,reasonLabel,el('p','気になる点（任意）'),issues,save,qualityFeedback,note);
  const actions=el('div');actions.className='save-actions';const exportButton=el('button','写真・完成画像・比較記録のJSONを保存'),remove=el('button','この組を比較一覧から削除');exportButton.type=remove.type='button';actions.append(exportButton,remove);
- root.replaceChildren(heading,intro,feedback,label,refresh,toolbar,info,source,images,form,actions);
+ root.replaceChildren(heading,intro,feedback,summary,exportAll,label,refresh,toolbar,info,source,images,form,actions);
  function current(){return state.groups.find(x=>x.id===selected);}
  function outputs(){return state.images.filter(x=>x.groupId===selected);}
  function renderImages(){
-  images.replaceChildren();outputs().forEach((image,i)=>{const card=el('article'),title=el('h3',`案${String.fromCharCode(65+i)}：${COMPOSITIONS[image.composition]??'以前の完成画像'}`),preview=el('img'),details=el('p'),link=el('a','この完成PNGを保存');preview.src=image.result.imageDataUrl;preview.alt=`AI完成画像の案${String.fromCharCode(65+i)}`;preview.style.width=`min(100%,${width}px)`;preview.style.height='auto';preview.dataset.imageId=image.id;link.href=image.result.imageDataUrl;link.download=`ai-complete-${image.id}.png`;details.textContent=`${image.result.generation_version??'生成版不明'}・${image.elapsedMs===null?'生成時間不明':`${(image.elapsedMs/1000).toFixed(1)}秒`}・未採点`;card.append(title,preview,details,link);images.append(card);});
+  images.replaceChildren();outputs().forEach((image,i)=>{
+   const name=`案${String.fromCharCode(65+i)}`,card=el('article'),title=el('h3',`${name}：${COMPOSITIONS[image.composition]??'以前の完成画像'}`),preview=el('img'),details=el('p'),link=el('a','この完成PNGを保存');
+   preview.src=image.result.imageDataUrl;preview.alt=`AI完成画像の${name}`;preview.style.width=`min(100%,${width}px)`;preview.style.height='auto';preview.dataset.imageId=image.id;link.href=image.result.imageDataUrl;link.download=`ai-complete-${image.id}.png`;
+   details.textContent=`${image.result.generation_version??'生成版不明'}・${image.elapsedMs===null?'生成時間不明':`${(image.elapsedMs/1000).toFixed(1)}秒`}・未採点`;
+   const record=el('form'),cost=el('input'),costLabel=el('label','この画像の実費（USD・任意）'),pngSave=el('select'),saveLabel=el('label','PNG保存を確認した結果'),button=el('button','実費と保存結果を記録'),status=el('p');
+   record.className='complete-observation-form';record.noValidate=true;record.setAttribute('aria-label',`${name}の実費と保存結果`);cost.type='text';cost.inputMode='decimal';cost.maxLength=20;cost.placeholder='未確認は空欄';cost.value=image.observation?.costUsd===null||image.observation?.costUsd===undefined?'':String(image.observation.costUsd);cost.setAttribute('aria-label',`${name}の実費USD`);costLabel.append(cost);
+   for(const [value,text]of [['unknown','未確認'],['saved','ファイル保存を確認できた'],['failed','ファイル保存できなかった']]){const option=el('option',text);option.value=value;pngSave.append(option);}pngSave.value=image.observation?.pngSave??'unknown';pngSave.setAttribute('aria-label',`${name}のPNG保存結果`);saveLabel.append(pngSave);button.type='submit';status.setAttribute('role','status');status.setAttribute('aria-live','polite');
+   record.append(costLabel,saveLabel,button,status,el('p','実費は請求・利用履歴でこの生成分を確認した場合だけ入力してください。保存ボタンを押しただけでは成功と記録しません。'));
+   record.addEventListener('submit',async event=>{event.preventDefault();if(button.disabled)return;button.disabled=true;try{const observation={version:1,recordedAt:new Date().toISOString(),costUsd:parseCostUsd(cost.value),pngSave:pngSave.value};state=await storage.observe(image.id,observation);renderSummary();status.textContent='実費と保存結果をブラウザ内に保存しました。追加料金はありません。';}catch(error){status.textContent=error.message;}finally{button.disabled=false;}});
+   card.append(title,preview,details,link,record);images.append(card);
+  });
+ }
+ function renderSummary(){
+  const report=gallerySummary(state),seconds=value=>value===null?'不明':`${(value/1000).toFixed(1)}秒`;
+  summary.textContent=`保存中：${report.images}枚 / ${report.groups}組\n選択記録：2枚以上の比較 ${report.comparedGroups}組 / 1枚の確認 ${report.singleImageReviews}組 / 案追加後の再確認待ち ${report.staleReviews}組\n生成時間：中央値 ${seconds(report.generationTime.medianMs)} / p95 ${seconds(report.generationTime.p95Ms)}（時間不明 ${report.generationTime.unknown}枚）\n確認済み実費：${report.cost.confirmedTotalUsd===null?'未確認':`${report.cost.confirmedTotalUsd} USD`}（実費不明 ${report.cost.unknownImages}枚）\nPNG保存：確認できた ${report.pngSave.saved}枚 / できなかった ${report.pngSave.failed}枚 / 未確認 ${report.pngSave.unknown}枚\n現在残っている成功画像だけの集計です。削除・失敗分は含みません。`;
+  exportAll.disabled=!state.images.length;
  }
  function render(){
   qualityFeedback.textContent='';
+  renderSummary();
   select.replaceChildren();const groups=[...state.groups].reverse();if(!groups.some(x=>x.id===selected))selected=groups[0]?.id??'';
   groups.forEach((g,i)=>{const option=el('option',g.input?`${i+1}：${g.input.title}`:'以前の完成画像（入力条件不明）');option.value=g.id;select.append(option);});select.value=selected;
   const group=current(),has=!!group;for(const node of [select,form,toolbar,actions,info,source])node.hidden=!has;
@@ -44,6 +62,7 @@ export function createCompleteGallery({root,document=globalThis.document,storage
  select.addEventListener('change',()=>{selected=select.value;render();});
  form.addEventListener('submit',async event=>{event.preventDefault();if(save.disabled)return;save.disabled=true;try{const group=current();if(!group)throw new Error('比較する組がありません。');const review={version:1,groupId:group.id,recordedAt:new Date().toISOString(),decision:decision.value==='none'?'none_acceptable':'selected',imageId:decision.value==='none'?null:decision.value,reason:reason.value,issues:issueInputs.filter(x=>x.checked).map(x=>x.value),displayWidths:[...images.querySelectorAll('img')].map(x=>({imageId:x.dataset.imageId,width:x.getBoundingClientRect().width}))};validateQualityReview(review,group,state.images);state=await storage.review(review);render();qualityFeedback.textContent=feedback.textContent='この組の選択と理由をブラウザ内に保存しました。API送信・追加料金はありません。';}catch(error){qualityFeedback.textContent=feedback.textContent=error.message;}finally{save.disabled=false;}});
  exportButton.addEventListener('click',()=>{try{download(`${selected}.json`,JSON.stringify(comparisonBundle(state,selected),null,2),'application/json');feedback.textContent='写真・完成PNG・比較記録のJSONを出力しました。非公開で扱ってください。';}catch(error){feedback.textContent=error.message;}});
+ exportAll.addEventListener('click',()=>{try{download('complete-comparison-report.json',JSON.stringify(comparisonReport(state),null,2),'application/json');feedback.textContent='全組の写真・完成PNG・記録・集計を出力しました。非公開で扱ってください。';}catch(error){feedback.textContent=error.message;}});
  remove.addEventListener('click',async()=>{if(!confirm('この組を比較一覧から削除しますか？ 必要なPNGとJSONは先に保存してください。編集下書きの最後の完成PNGは別に残ります。'))return;remove.disabled=true;try{state=await storage.remove(selected);selected='';render();}catch(error){feedback.textContent=error.message;}finally{remove.disabled=false;}});
  render();feedback.textContent='完成画像の比較一覧を読み込んでいます…';
  const ready=reload().catch(error=>{feedback.textContent=`比較保存を読み込めません：${error.message} 完成PNGはファイルにも保存してください。`;});
