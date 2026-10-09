@@ -81,6 +81,6 @@ Excelで保存したCSV（先頭にBOMが付く）もそのまま検証できる
    （2人目以降は開始番号を指定して追記：`node data/readability-sheet.mjs r02 ... 10 | tail -n +2 >> data/private/readability.csv`）
    空の記録表から手で書く場合は `data/templates/readability.template.csv` を `data/private/readability.csv` にコピーする。
 2. `node data/readability.mjs data/private/readability.csv` で検証・集計する。文字サイズ×表示幅ごとに、件数・正答率・秒数の中央値・平均順位・縮小後の文字の高さ（`scaled_px` ＝ 文字サイズ × 表示幅 ÷ 1280）を出す。
-3. 同じ評価者・組・表示幅の中で、順位や文字サイズが重なる行は不正行として報告される。
+3. 同じ評価者・組・表示幅の中で、文字サイズが重なる行と、枚数を超える順位の行は不正行として報告される。**差がない場合は同じ順位を付けてよい**（例：1位が1枚で残り2枚に差がなければ、2枚とも2）。
 
 評価者が少人数なので結果は参考値とし、これだけで重みや閾値を決めない。
