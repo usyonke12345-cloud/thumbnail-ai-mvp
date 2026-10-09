@@ -2,6 +2,8 @@
 
 正本は `shared/openapi.json`。破壊的変更は2人で合意してから行い、呼び出し側とfixtureを同じPRで更新します。
 
+Day5の `/review`・`/review.js`・`/comparison-model.js`・`/comparison-store.js` は静的な比較画面とブラウザ保存のための配信ルートです。画像・人の評価はIndexedDBに保存し、この画面からAPIへ送信しません。Candidate/Assessmentの契約は変更しません。採点担当のCSV書き出し・ローカル分析はdocs/DAY5.mdを参照してください。
+
 ## POST /api/v1/thumbnails
 
 Content-Type: application/json。同期APIです。入力は最大16KiB。

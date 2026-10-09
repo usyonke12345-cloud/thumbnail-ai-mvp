@@ -10,6 +10,9 @@ choiceStatus.setAttribute('role','status');choiceExport.textContent='最新の�
 const choiceClear=document.createElement('button');choiceClear.type='button';choiceClear.textContent='最新の選択記録を消す';choiceClear.hidden=true;results.before(choiceClear);
 const choiceCards=new Map();
 let currentComparison=null;
+let frozenSet=null;
+const freezeButton=document.createElement('button'),reviewLink=document.createElement('a');freezeButton.type='button';freezeButton.textContent='この3案を固定保存';freezeButton.disabled=true;reviewLink.href='/review';reviewLink.textContent='保存した3案の比較・20件の記録へ';results.before(freezeButton,reviewLink);
+freezeButton.addEventListener('click',async()=>{if(!currentComparison||freezeButton.disabled)return;freezeButton.disabled=true;const response=currentComparison;try{const [{freezeComparison},{saveSet}]=await Promise.all([import('/comparison-model.js'),import('/comparison-store.js')]);const set=frozenSet??freezeComparison(response,crypto.randomUUID());await saveSet(set);if(currentComparison===response)frozenSet=set;choiceStatus.textContent=`3案を固定保存しました。組ID ${set.id}。比較画面で同じ画像を再表示できます。`;}catch(error){choiceStatus.textContent=`固定保存できませんでした：${error.message}`;}finally{freezeButton.disabled=!currentComparison;}});
 const rejectControls=document.createElement('div'),rejectReason=document.createElement('textarea'),rejectButton=document.createElement('button');rejectControls.hidden=true;rejectReason.maxLength=500;rejectReason.placeholder='どの案も使わない理由（任意）';rejectReason.setAttribute('aria-label','どの案も使わない理由');rejectButton.type='button';rejectButton.textContent='どの案も使わないと記録';rejectControls.append(rejectReason,rejectButton);results.before(rejectControls);
 function markChoice(id){for(const [key,{card,choose}] of choiceCards){card.classList.toggle('selected-candidate',key===id);choose.setAttribute('aria-pressed',String(key===id));choose.textContent=key===id?'選択した案（理由を更新できます）':'この案を選んで記録';}}
 choiceClear.addEventListener('click',()=>{try{localStorage.removeItem(choiceKey);markChoice(null);choiceExport.hidden=true;choiceExport.removeAttribute('href');choiceClear.hidden=true;choiceStatus.textContent='最新の選択記録を消しました。保存済みのJSONファイルは残ります。';}catch{choiceStatus.textContent='選択記録を消せませんでした。ブラウザの保存設定を確認してください。';}});
@@ -45,7 +48,7 @@ form.addEventListener('submit',async event=> {
     showMode(data.mode);
     results.replaceChildren();
     choiceCards.clear();
-    currentComparison=data;rejectControls.hidden=false;rejectReason.value='';
+    currentComparison=data;frozenSet=null;freezeButton.disabled=false;rejectControls.hidden=false;rejectReason.value='';
     const metricLabels={contrast:'コントラスト',brevity:'短さ',font:'文字サイズ',fit:'収まり'};
     let previousGroup=null;
     data.candidates.forEach((c,i)=> {
