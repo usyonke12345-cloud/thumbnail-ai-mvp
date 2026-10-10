@@ -8,7 +8,7 @@ Day5の `/review`・`/review.js`・`/comparison-model.js`・`/comparison-store.j
 
 完成PNGの比較JSONは、各組または全組reportを`/editor`から読み込めます。SHA-256と固定した入力・画像の参照を再検証し、最大6画像・保存済みとの合計64MiBの暫定上限内で一括保存します。JSONファイルは70MiBまで。読み込みはブラウザ内だけで、新しいHTTP APIやCandidate/Assessmentの変更はありません。人の記録・利用確認・実費は保存された申告として復元し、新しい評価や許諾確認として扱いません。書き出し形式の版も維持します。
 
-写真の `/api/v1/complete-thumbnail` は任意の `composition`・`headlineMode`・`design` を受け付けます。生成版はai-complete-0.2.1。既存の見出し指定入力はそのまま使え、Candidate/Assessmentには影響しません。完成PNGは未採点、1回1枚、手動同意・期限・起動内回数制限は維持します。この共有入力と書き出し形式の追加は相互レビュー対象です。人工fixtureはdocs/fixtures/complete-generation-options.json、OpenAPIとの照合テストはtests/complete-generation-contract.test.mjsです。
+写真の `/api/v1/complete-thumbnail` は任意の `composition`・`headlineMode`・`design` を受け付けます。生成版はai-complete-0.3.0。既存の見出し指定入力はそのまま使え、Candidate/Assessmentには影響しません。完成PNGは未採点、1回1枚、手動同意・期限・起動内回数制限は維持します。この共有入力と書き出し形式の追加は相互レビュー対象です。人工fixtureはdocs/fixtures/complete-generation-options.json、OpenAPIとの照合テストはtests/complete-generation-contract.test.mjsです。
 
 ## POST /api/v1/thumbnails
 
@@ -126,7 +126,7 @@ Day 3: SVG内の文字は同梱フォントから生成したpathです。PNGは
 - headlineMode: manual / auto。APIで省略するとmanual（既存の呼び出しとの互換）。画面の初期値はauto。
 - manualではheadline（1〜80文字、改行可）が必須。指定した文言を描画するよう指示する。
 - autoではheadlineを省略・null・空文字のいずれかにする。タイトルと内容から短い見出しを画像生成中に選ぶ。実際の文言はレスポンスで取得せず、画像で確認する。文字起こしや生成前の文言プレビューは行わない。
-- design: auto / photo_focus / editorial / impact。省略時auto。写真全面＋下部のサンセリフ、上部のセリフ／明朝、横の細長い太字見出し、の方向を指定する。特定のdesignを固定すると同じレシピを繰り返す。autoの画面では保存済み成功履歴から3方向を順に選び、具体的な値を送信・保存する。失敗した生成は履歴を進めない。APIへ直接autoを送る場合はモデルが1つのレシピを選ぶ。字体と座標は生成への希望で、実測情報ではない。[定義と確認手順](COMPLETE-DESIGN-RECIPES.md)。
+- design: auto / photo_focus / editorial / impact。省略時auto。写真全面＋下部のサンセリフ、上部のセリフ／明朝、横の細長い太字見出し、の方向を指定する。特定のdesignを固定すると同じレシピを繰り返す。autoはそのままAPIへ送り、写真の主役・余白・動画内容から画像モデルが字体・大きさ・配置を判断する。3つの手動レシピだけに限定せず、履歴による順番切り替えは行わない。同じ写真・内容では似た構成になる場合もある。保存するdesign=autoは希望で、モデルが使った実字体・位置・判断理由ではない。字体と座標は生成への希望で、実測情報ではない。[定義と確認手順](COMPLETE-DESIGN-RECIPES.md)。
 - composition: auto / text_left / text_right / text_top。省略時auto。明示した配置はデザインの既定の見出し領域を置き換え、字体は維持する。既定配置と指定配置を同時に送らない。写真の保持を優先し、人物の切り抜き移動は許さず、写真全体の切り取りと拡縮だけを指示する。
 
 見出しと構図は同じ画像編集API呼び出しで作る。見出し用の追加リクエストは行わず、既存と同じ1回1枚。料金は実際の利用履歴で確認する。構図の違い・人物保持・適切な見出しは新しい指示でも実画像の確認が必要。

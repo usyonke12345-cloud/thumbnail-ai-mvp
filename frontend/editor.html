@@ -9,10 +9,10 @@ HAIRSTYLE</textarea></label><label>強調色<input id="accent" type="color" valu
 <label>動画の内容<textarea id="ai-brief" maxlength="1000" placeholder="今回の動画の内容を入力"></textarea></label>
 <label>サムネ内の見出し<select id="ai-headline-mode"><option value="auto">AIに短い見出しを考えてもらう</option><option value="manual">上の見出しをそのまま使う</option></select></label>
 <p>AIに任せる場合、見出しの入力は不要です。タイトルと動画の内容から画像生成時に短い文言を考えます。完成画像で言葉と読みやすさを確認してください。</p>
-<label>デザインの方向<select id="ai-design"><option value="auto">おまかせ・次は違う方向を試す</option><option value="photo_focus">写真を主役にする</option><option value="editorial">落ち着いた誌面風</option><option value="impact">文字を大きく見せる</option></select></label>
+<label>デザインの方向<select id="ai-design"><option value="auto">写真と内容からAIが決める</option><option value="photo_focus">写真を主役にする</option><option value="editorial">落ち着いた誌面風</option><option value="impact">文字を大きく見せる</option></select></label>
 <label>AI完成画像の構図<select id="ai-composition"><option value="auto">写真と内容に合わせてAIが決める</option><option value="text_left">文字を左・主役を右</option><option value="text_right">文字を右・主役を左</option><option value="text_top">見出しを上・主役を大きく</option></select></label>
 <section id="ai-design-guide" aria-label="AI完成画像の字体と配置の指定"></section>
-<p>おまかせでは同じ入力の保存済み履歴から次の方向を選びます。特定のデザインを選ぶと、その指定を繰り返します。構図を左・右・上に固定すると、デザインの既定の見出し位置より優先します。人物を切り抜いて移動せず、写真全体の切り取りと文字の配置で仕上げるよう指示します。</p>
+<p>デザインと構図をAIに任せる場合、写真の主役・余白・動画の雰囲気から構成を選びます。同じ写真で似た構成になる場合もあります。特定のデザインや構図を選ぶと、その指定を優先します。人物を切り抜いて移動せず、写真全体の切り取りと文字の配置で仕上げるよう指示します。完成画像で文字と写真の保持を確認してください。</p>
 <label><input id="ai-consent" type="checkbox"> 写真・タイトル・動画内容・見出しの指定をOpenAIへ送り、有料で1枚生成することを確認しました</label><button id="ai-complete" type="button">写真からAIで完成画像1枚を作る（有料）</button>
 <p>1枚写真モードの写真を使います。生成はmedium品質。文字・顔・髪型が正しく保たれたか確認してください。失敗や期限超過でも料金が発生する場合があります。</p>
 <section id="ai-source"></section><section id="ai-result"></section><section id="complete-comparison" aria-label="AI完成画像の比較"></section><button id="auto-layout" type="button">写真から配置3案を作る</button><p>写真1枚の読み込み後、明るさと細かな模様を比較して3案を作ります。対応ブラウザでは顔検出を試します。検出できない場合や商品には主役の位置を指定してください。文字が主役を隠していないか確認してください。再生成・文字編集は無料です。</p><section id="auto-candidates" aria-label="写真からの自動配置候補"></section>

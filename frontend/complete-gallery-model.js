@@ -30,12 +30,6 @@ async function comparisonInput(payload){
  const sourceSha256=await hashPng(payload.imageDataUrl),input={title:payload.title,brief:payload.brief,headline:headline.headline,sourceSha256,...(headline.headlineMode?{headlineMode:headline.headlineMode}:{})};
  return {input,groupId:`complete-${await hashBytes(new TextEncoder().encode(JSON.stringify(input)))}`};
 }
-export async function chooseDesign(state,payload){
- const {groupId}=await comparisonInput(payload),previous=state.images.filter(x=>x.groupId===groupId).sort((a,b)=>Date.parse(a.capturedAt)-Date.parse(b.capturedAt)||a.id.localeCompare(b.id)),directions=['photo_focus','editorial','impact'];
- const last=previous.at(-1)?.design,index=directions.indexOf(last);
- if(previous.length&&index<0)return 'photo_focus';
- return directions[index>=0?(index+1)%directions.length:parseInt(groupId.slice(-8),16)%directions.length];
-}
 export async function createEntry(payload,value,{id=crypto.randomUUID(),capturedAt=new Date().toISOString(),elapsedMs=null}={}){
  const {input,groupId}=await comparisonInput(payload);
  const composition=payload.composition??'auto';if(!Object.hasOwn(COMPOSITIONS,composition))fail('構図の希望が不正です。');

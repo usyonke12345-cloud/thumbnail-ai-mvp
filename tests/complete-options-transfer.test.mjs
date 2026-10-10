@@ -51,3 +51,11 @@ test('changed automatic policy, declared design or old format cannot silently ch
  const analysis=createCompleteReviewAnalysis();await analysis.consume(legacy);
  assert.equal(analysis.finish().version,'complete-evaluation-dataset-1.0.0');
 });
+
+test('model-selected layout exports and reimports as automatic intent without fabricating actual fonts, zones or preferences',async()=>{
+ const entry=await createEntry({title:'A quiet walk',brief:'A slow morning around the town',headline:null,headlineMode:'auto',design:'auto',composition:'auto',imageDataUrl:dataUrl(png(1280,720))},{imageDataUrl:dataUrl(png(1536,864)),generation_version:'ai-complete-0.3.0',limitations:['Actual typography and layout are not extracted.']},{id:'model-selected'});
+ const state=addToGallery({groups:[],images:[],reviews:[]},entry),exported=comparisonBundle(state,entry.group.id),normalized=await validateCompleteBundle(exported);
+ assert.equal(normalized.images[0].design,'auto');assert.equal(normalized.images[0].composition,'auto');assert.equal(normalized.images[0].result.generation_version,'ai-complete-0.3.0');assert.equal(normalized.review,null);assert.equal(normalized.assessment,null);
+ const request=await diagnosticRequest(normalized);assert.equal(request.images[0].textRegions,null);assert.equal(request.images[0].renderedTextVerified,false);
+ const analysis=createCompleteReviewAnalysis();await analysis.consume(normalized);const data=analysis.finish();assert.equal(data.images[0].design,'auto');assert.equal(data.progress.completedHumanComparisons,0);assert.equal(data.scoringAgreement,null);
+});

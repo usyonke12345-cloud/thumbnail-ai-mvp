@@ -23,7 +23,19 @@ test('design recipes request different letterforms and headline zones, while pre
   assert.match(prompt,/Render exactly the supplied headline/);assert.ok(prompt.includes(input.headline));
   assert.ok(!prompt.includes('You may isolate and reposition'));
  }
- assert.match(completePrompt({...input,design:'auto'}),/Choose exactly ONE/);
+});
+
+test('automatic art direction considers photographic space and video context without restricting the result to three recipes',async()=>{
+ const automatic=validateComplete({...input,headlineMode:'auto',headline:null,design:'auto',composition:'auto'}),prompt=completePrompt(automatic);
+ assert.match(prompt,/AUTO ART DIRECTION/);assert.match(prompt,/faces, hands and important objects/);assert.match(prompt,/unobstructed low-detail space/);assert.match(prompt,/topic and mood/);assert.match(prompt,/left, right, upper and lower headline zones/);assert.match(prompt,/not a closed list/);assert.match(prompt,/Do not create empty space by relocating/);assert.match(prompt,/broad cloudy blur/);assert.ok(!prompt.includes('DESIGN RECIPE:'));
+ let calls=0;const provider=createOpenAIBackgroundProvider({env:{OPENAI_API_KEY:'fake-test-key',OPENAI_IMAGE_ENABLED:'true'},fetchImpl:async(url,{body})=>{
+  calls++;assert.match(url,/images\/edits$/);assert.equal(body.get('n'),'1');assert.equal(body.get('quality'),'medium');assert.equal(body.get('model'),'gpt-image-2.5-flare');assert.equal(body.get('prompt'),prompt);assert.deepEqual(Buffer.from(await body.get('image[]').arrayBuffer()),photograph);
+  return new Response(JSON.stringify({data:[{b64_json:png(1536,864).toString('base64')}]}));
+ }});
+ await provider(automatic);await assert.rejects(()=>provider(automatic),e=>e.code==='GENERATION_LIMIT');assert.equal(calls,1);
+ for(const [composition,marker]of [['text_left','left-headline'],['text_right','right-headline'],['text_top','top-headline']]){
+  const fixed=completeDesignInstructions('auto',composition);assert.ok(fixed.includes(marker));assert.ok(!fixed.includes('Consider left, right, upper and lower'));assert.match(fixed,/explicit placement is a user constraint/);
+ }
 });
 
 test('explicit composition replaces every default headline zone instead of adding contradictory instructions',()=>{
@@ -54,13 +66,14 @@ function dom(){
 test('free design choices update the actual control, selected state and composition explanation, including restored values',()=>{
  const {document,all}=dom(),root=document.createElement('section'),designControl={value:'auto',events:{},addEventListener(k,v){this.events[k]=v;}},compositionControl={value:'auto',events:{},addEventListener(k,v){this.events[k]=v;}};
  let saved=0;const guide=createEditorDesignGuide({root,designControl,compositionControl,document,onSelect:()=>saved++});
- const buttons=all.filter(x=>x.tag==='button'),status=all.find(x=>x.attributes.role==='status');assert.equal(buttons.length,3);assert.equal(saved,0);
+ const automatic=all.find(x=>x.textContent==='AIに構成を任せる'),buttons=all.filter(x=>x.tag==='button'&&x!==automatic),status=all.find(x=>x.attributes.role==='status');assert.equal(buttons.length,3);assert.equal(saved,0);assert.equal(automatic.attributes['aria-pressed'],'true');assert.match(status.textContent,/写真の主役/);
  for(const [i,id]of Object.keys(COMPLETE_DESIGNS).entries()){
   buttons[i].events.click();assert.equal(designControl.value,id);assert.equal(saved,i+1);assert.equal(buttons.filter(x=>x.attributes['aria-pressed']==='true').length,1);assert.ok(status.textContent.includes(COMPLETE_DESIGNS[id].fontLabel));
  }
  compositionControl.value='text_left';compositionControl.events.change();assert.match(status.textContent,/構図を固定/);assert.match(status.textContent,/文字を左/);
  designControl.value='editorial';compositionControl.value='auto';guide.render();assert.ok(status.textContent.includes(COMPLETE_DESIGNS.editorial.layoutLabel));assert.equal(buttons[1].attributes['aria-pressed'],'true');assert.equal(saved,3);
  designControl.value='auto';guide.render();assert.ok(buttons.every(x=>x.attributes['aria-pressed']==='false'));
+ designControl.value='impact';compositionControl.value='text_right';guide.render();assert.equal(automatic.attributes['aria-pressed'],'false');automatic.events.click();assert.equal(designControl.value,'auto');assert.equal(compositionControl.value,'auto');assert.equal(automatic.attributes['aria-pressed'],'true');assert.equal(saved,4);assert.match(status.textContent,/配置もAIに任せ/);assert.ok(buttons.every(x=>x.attributes['aria-pressed']==='false'));
 });
 
 test('editor design modules and their shared catalog are served without exposing unrelated files or making paid calls',async t=>{

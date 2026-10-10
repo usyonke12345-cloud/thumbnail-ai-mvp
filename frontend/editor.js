@@ -100,7 +100,7 @@ document.querySelector('#ai-complete').addEventListener('click',async event=>{
  const sentPhoto=document.createElement('img'),sentLabel=document.createElement('p');sentPhoto.src=payload.imageDataUrl;sentPhoto.alt='今回APIへ送信する入力写真';sentLabel.textContent='今回APIへ送信する写真です。完成画像でもこの人物・素材が保持されているか確認してください。';document.querySelector('#ai-source').replaceChildren(sentLabel,sentPhoto);
  control.disabled=true;document.querySelector('#clear-draft').disabled=true;
  // Preserve the previous real PNG before another paid request. Its old input is unknown.
- try{if(completedResult)await completeGallery.rememberLegacy(completedResult);if(payload.design==='auto')payload.design=await completeGallery.nextDesign(payload);}
+ try{if(completedResult)await completeGallery.rememberLegacy(completedResult);}
  catch(error){aiStatus.textContent=`生成前の比較保存を確認できません：${error.message} PNGを保存してから再度お試しください。`;control.disabled=false;document.querySelector('#clear-draft').disabled=false;return;}
  aiStatus.textContent='写真から完成画像を生成しています。自動再試行はしません。';
  const started=performance.now();

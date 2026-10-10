@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {bundle,png,dataUrl} from './helpers/complete-png.mjs';
 import {validateCompleteImport,MAX_IMPORT_BYTES} from '../frontend/complete-png-transfer.js';
-import {mergeCompleteImport,comparisonReport,gallerySummary,createEntry,chooseDesign} from '../frontend/complete-gallery-model.js';
+import {mergeCompleteImport,comparisonReport,gallerySummary,createEntry} from '../frontend/complete-gallery-model.js';
 import {createCompleteGallery} from '../frontend/complete-gallery.js';
 import {galleryStorage} from '../frontend/complete-gallery-store.js';
 const empty=()=>({groups:[],images:[],reviews:[]});
@@ -60,15 +60,19 @@ test('changed hashes, duplicate references, conflicting identity and full capaci
  assert.deepEqual(state,snapshot);
 });
 
-test('automatic design follows the latest capture, regardless of IndexedDB key or backup order',async()=>{
+test('automatic and historic manual design intents survive import regardless of IndexedDB key or backup order',async()=>{
  const base=await bundle({count:1,review:false}),payload={...base.group.input,headline:null,headlineMode:'auto',imageDataUrl:base.group.sourceImageDataUrl};
  const latest=await createEntry({...payload,design:'editorial'},base.images[0].result,{id:'a-latest',capturedAt:'2026-10-11T00:00:00Z'});
  const older=await createEntry({...payload,design:'photo_focus'},{...base.images[0].result,imageDataUrl:dataUrl(png(1536,864,[100,80,120,255]))},{id:'z-older',capturedAt:'2026-10-10T00:00:00Z'});
  const state={groups:[latest.group],images:[latest.image,older.image],reviews:[]};
- assert.equal(await chooseDesign(state,payload),'impact');
- assert.equal(await chooseDesign({...state,images:[...state.images].reverse()},payload),'impact');
- const imported=mergeCompleteImport(empty(),await validateCompleteImport(comparisonReport(state)));
- assert.equal(await chooseDesign(imported,payload),'impact');assert.equal(imported.groups[0].input.headlineMode,'auto');
+ const automatic=await createEntry({...payload,design:'auto',composition:'auto'},{...base.images[0].result,imageDataUrl:dataUrl(png(1536,864,[20,60,120,255])),generation_version:'ai-complete-0.3.0'},{id:'model-selected',capturedAt:'2026-10-11T00:01:00Z'});
+ state.images.push(automatic.image);
+ for(const images of [state.images,[...state.images].reverse()]){
+  const imported=mergeCompleteImport(empty(),await validateCompleteImport(comparisonReport({...state,images})));
+  assert.equal(imported.groups[0].input.headlineMode,'auto');
+  assert.deepEqual(Object.fromEntries(imported.images.map(x=>[x.id,x.design])),{'a-latest':'editorial','z-older':'photo_focus','model-selected':'auto'});
+  assert.equal(imported.images.find(x=>x.id==='model-selected').composition,'auto');assert.equal(imported.reviews.length,0);
+ }
 });
 
 function domFixture(){

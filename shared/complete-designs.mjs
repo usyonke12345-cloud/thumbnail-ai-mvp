@@ -36,13 +36,17 @@ export function completeDesignInstructions(design='auto',composition='auto'){
   `PHOTOGRAPH: ${value.treatment}`
  ].join('\n');
  return recipe?describe(design,recipe):[
-  'Inspect the attached photograph and choose a composition that suits its actual subjects and video context.',
-  'Choose exactly ONE of the following design recipes and follow its typography and layout together. Do not blend the three recipes or merely change the colors.',
-  ...Object.entries(COMPLETE_DESIGNS).map(([id,value])=>describe(id,value))
+  'AUTO ART DIRECTION: inspect the attached photograph and video context, then choose a composition suited to this actual image. The user has not selected a design recipe.',
+  'PHOTO: identify the actual subject, faces, hands and important objects, their occupied areas, and unobstructed low-detail space. Keep the photographed scene and subject positions intact. Do not create empty space by relocating a person or inventing a background.',
+  'CONTEXT: match the typography and visual hierarchy to the topic and mood in the video title and brief. Quiet everyday or travel footage needs restrained lettering; a tutorial may need stronger hierarchy. Do not assume every video needs dramatic advertising.',
+  `LAYOUT: ${override?`${override.prompt} This explicit placement is a user constraint; choose type size and line breaks to fit that zone without covering faces or key objects.`:'Consider left, right, upper and lower headline zones, and choose the feasible zone that best preserves the subject and scene while keeping the words legible. Choose text size, line breaks, alignment and safe margins for the available space. Do not always default to a top strip, bottom caption or side billboard.'}`,
+  'TYPOGRAPHY: choose one coherent font style and weight to suit the context, headline length and photographic space. Readable sans-serif, serif/Mincho or condensed bold are examples, not a closed list of three templates. Do not select a layout by a preset rotation or merely recolor the same poster.',
+  'READABILITY: use the least intrusive local treatment needed. Prefer clear existing space and readable letterforms. Avoid a broad cloudy blur, heavy glow or dark halo around the headline. Do not darken or blur the whole photograph or add a large empty panel.',
+  'Make these choices within this single image edit. Output only the finished thumbnail, without layout labels, explanations or invented comparison panels.'
  ].join('\n');
 }
 export function completeDesignSummary(design='auto',composition='auto'){
  const recipe=COMPLETE_DESIGNS[design],override=placements[composition];
  return recipe?`${recipe.fontLabel}。配置の希望：${override?.label??recipe.layoutLabel}。${override?'構図を固定しています。配置も変える場合は「写真と内容に合わせてAIが決める」を選んでください。':''}`:
-  `同じ入力の保存済み履歴から、下部・上部・横の見出しと字体を組み合わせた次の方向を選びます。${override?'構図を固定しているため、見出しの位置はこの指定を優先します。':''}`;
+  `写真の主役・文字を置ける余白と動画の内容から、AIが字体・文字サイズ・配置を決めます。${override?'構図を固定しているため、見出しの位置はこの指定を優先します。':'配置もAIに任せています。'}実際の字体・位置・選択理由は未取得で、完成画像で確認します。`;
 }
