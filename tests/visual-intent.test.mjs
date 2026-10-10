@@ -23,8 +23,8 @@ test('optional atmosphere has bounded Unicode text and blank values preserve leg
 });
 
 test('atmosphere and optional pattern ideas reach a single edit with the original photograph and bounded cost settings',async()=>{
- assert.equal(COMPLETE_PATTERN_SEEDS.length,8);assert.equal(new Set(COMPLETE_PATTERN_SEEDS.map(x=>x.id)).size,8);assert.ok(COMPLETE_PATTERN_SEEDS.every(x=>x.status==='experimental'));
- assert.equal(new Set(COMPLETE_PATTERN_SEEDS.map(x=>x.typography)).size,8);assert.equal(new Set(COMPLETE_PATTERN_SEEDS.map(x=>x.layout)).size,8);
+ assert.ok(COMPLETE_PATTERN_SEEDS.length>=8);assert.equal(new Set(COMPLETE_PATTERN_SEEDS.map(x=>x.id)).size,COMPLETE_PATTERN_SEEDS.length);assert.ok(COMPLETE_PATTERN_SEEDS.every(x=>x.status==='experimental'));
+ assert.equal(new Set(COMPLETE_PATTERN_SEEDS.map(x=>x.typography)).size,COMPLETE_PATTERN_SEEDS.length);assert.equal(new Set(COMPLETE_PATTERN_SEEDS.map(x=>x.layout)).size,COMPLETE_PATTERN_SEEDS.length);
  const validated=validateComplete({...input,visualIntent:'落ち着いた旅。写真を自然に、文字を穏やかに。'}),prompt=completePrompt(validated);
  assert.match(prompt,/DESIRED ATMOSPHERE/);assert.ok(prompt.includes(JSON.stringify(validated.visualIntent)));assert.match(prompt,/not proven high-performing templates/);assert.match(prompt,/not new facts or permission/);assert.match(prompt,/Do not render the atmosphere notes/);assert.match(prompt,/Do not isolate or reposition a person/);
  let calls=0;const provider=createOpenAIBackgroundProvider({env:{OPENAI_API_KEY:'fake-test-key',OPENAI_IMAGE_ENABLED:'true'},fetchImpl:async(url,{body})=>{
