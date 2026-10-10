@@ -2,11 +2,11 @@
 
 正本は `shared/openapi.json`。破壊的変更は2人で合意してから行い、呼び出し側とfixtureを同じPRで更新します。
 
-完成PNG比較用の`/complete-gallery.js`・`/complete-gallery-model.js`・`/complete-gallery-store.js`は静的配信ルートです。画像と人の選択はブラウザ内に保存し、既存の完成画像API入力やCandidate/Assessmentを変更しません。画像付きの非公開JSONは`complete-comparison-1.1.0`（未採点）、全組の集計付きJSONは`complete-comparison-report-1.0.0`で、画像資産APIの提案とは別形式です。実費と保存結果は人が確認して入力し、未確認はnull/unknown。採点側への正式取り込みは形式レビュー待ちです。詳細はdocs/COMPLETE-COMPARISON.md。
+完成PNG比較用の`/complete-gallery.js`・`/complete-gallery-model.js`・`/complete-gallery-store.js`は静的配信ルートです。画像と人の選択はブラウザ内に保存し、Candidate/Assessmentを変更しません。画像付きの非公開JSONは、自動見出しやデザイン指定を含む場合`complete-comparison-1.3.0`（未採点）、全組の集計付きJSONは`complete-comparison-report-1.0.0`で、画像資産APIとは別形式です。旧1.0.0〜1.2.0も読み込み可能です。実費と保存結果は人が確認して入力し、未確認はnull/unknown。採点側への正式取り込みは形式レビュー待ちです。詳細はdocs/COMPLETE-COMPARISON.md。
 
 Day5の `/review`・`/review.js`・`/comparison-model.js`・`/comparison-store.js` は静的な比較画面とブラウザ保存のための配信ルートです。画像・人の評価はIndexedDBに保存し、この画面からAPIへ送信しません。Candidate/Assessmentの契約は変更しません。採点担当のCSV書き出し・ローカル分析はdocs/DAY5.mdを参照してください。
 
-写真の `/api/v1/complete-thumbnail` は任意の `composition` を受け付けます。省略時auto、指定値はauto / text_left / text_right / text_top。写真に応じた構図希望を画像編集APIの指示へ加えます。既存の入力はそのまま使え、Candidate/Assessmentには影響しません。ai-complete-0.1.2の指示変更は、実画像の品質を確認してから評価します。完成PNGは未採点、1回1枚、手動同意・期限・起動内回数制限は維持します。この共有入力の追加は相互レビュー対象です。
+写真の `/api/v1/complete-thumbnail` は任意の `composition`・`headlineMode`・`design` を受け付けます。生成版はai-complete-0.2.0。既存の見出し指定入力はそのまま使え、Candidate/Assessmentには影響しません。完成PNGは未採点、1回1枚、手動同意・期限・起動内回数制限は維持します。この共有入力と書き出し形式の追加は相互レビュー対象です。人工fixtureはdocs/fixtures/complete-generation-options.json、OpenAPIとの照合テストはtests/complete-generation-contract.test.mjsです。
 
 ## POST /api/v1/thumbnails
 
@@ -119,7 +119,15 @@ Day 3: SVG内の文字は同梱フォントから生成したpathです。PNGは
 
 ## POST /api/v1/complete-thumbnail（実験・有料）
 
-写真1枚からAIが文字と構図まで仕上げる。title（1〜120文字）、brief（1〜1000文字）、headline（1〜80文字、改行可）、imageDataUrl（1280×720 PNG、3MB以内）、consent:true が必須。入力JSON上限4MB。1536×864 PNG1枚と生成版・未評価事項を返す。Candidate/Assessmentは返さず採点pipelineを通さない。既存APIの契約は維持。画像はサーバーで保存せずOpenAIへ送信する。文字・人物保持と品質の目視確認が必要。
+写真1枚からAIが文字と構図まで仕上げる。title（1〜120文字）、brief（1〜1000文字）、imageDataUrl（1280×720 PNG、3MB以内）、consent:true が必須。入力JSON上限4MB。1536×864 PNG1枚と生成版・未評価事項を返す。Candidate/Assessmentは返さず採点pipelineを通さない。画像はサーバーで保存せずOpenAIへ送信する。文字・人物保持と品質の目視確認が必要。
+
+- headlineMode: manual / auto。APIで省略するとmanual（既存の呼び出しとの互換）。画面の初期値はauto。
+- manualではheadline（1〜80文字、改行可）が必須。指定した文言を描画するよう指示する。
+- autoではheadlineを省略・null・空文字のいずれかにする。タイトルと内容から短い見出しを画像生成中に選ぶ。実際の文言はレスポンスで取得せず、画像で確認する。文字起こしや生成前の文言プレビューは行わない。
+- design: auto / photo_focus / editorial / impact。省略時auto。写真を主役にする・落ち着いた誌面風・文字を大きく見せる方向を指定する。autoの画面では保存済み成功履歴から3方向を順に選び、具体的な値を送信・保存する。失敗した生成は履歴を進めない。APIへ直接autoを送る場合はモデルが方向を選ぶ。
+- composition: auto / text_left / text_right / text_top。省略時auto。明示した配置はデザイン方向より優先する。
+
+見出しと構図は同じ画像編集API呼び出しで作る。見出し用の追加リクエストは行わず、既存と同じ1回1枚。料金は実際の利用履歴で確認する。構図の違い・人物保持・適切な見出しは新しい指示でも実画像の確認が必要。
 
 モデルgpt-image-2.5-flare、images/edits、medium品質、n=1。画像生成と編集は同じプロセス内の回数・同時実行制限を共有。失敗も1回、自動再試行なし。金額のハード上限ではない。参考: https://developers.openai.com/api/reference/resources/images/methods/edit
 

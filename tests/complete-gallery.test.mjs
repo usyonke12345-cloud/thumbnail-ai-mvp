@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import vm from 'node:vm';
-import {createEntry,createLegacyEntry,addToGallery,validateQualityReview,comparisonBundle,MAX_IMAGES,parseCostUsd,validateObservation,recordObservation,gallerySummary,comparisonReport} from '../frontend/complete-gallery-model.js';
+import {createEntry,createLegacyEntry,addToGallery,validateQualityReview,comparisonBundle,MAX_IMAGES,parseCostUsd,validateObservation,recordObservation,gallerySummary,comparisonReport,chooseDesign} from '../frontend/complete-gallery-model.js';
 import {createCompleteGallery} from '../frontend/complete-gallery.js';
 import {makeServer} from '../backend/server.mjs';
 function png(w,h,variant=0){const b=Buffer.alloc(25);Buffer.from('89504e470d0a1a0a','hex').copy(b);b.write('IHDR',12);b.writeUInt32BE(w,16);b.writeUInt32BE(h,20);b[24]=variant;return `data:image/png;base64,${b.toString('base64')}`;}
@@ -95,9 +95,9 @@ test('anonymous evaluator and declared provenance persist; unconfirmed permissio
 });
 function paidFixture({archiveFails=false,saveFails=false,requestFails=false}={}){
  let callback,calls=0,shown=0,remembered=null,archived=0;const old=structuredClone(result),nodes={};
- for(const id of ['#ai-title','#ai-brief','#ai-composition','#ai-consent','#clear-draft','#ai-source','#ai-complete'])nodes[id]={value:'',checked:false,disabled:false,addEventListener:(name,fn)=>callback=fn,replaceChildren(){}};
- nodes['#ai-title'].value=payload.title;nodes['#ai-brief'].value=payload.brief;nodes['#ai-composition'].value=payload.composition;nodes['#ai-consent'].checked=true;
- const scope={document:{querySelector:s=>nodes[s],createElement:tag=>tag==='canvas'?{getContext:()=>({drawImage(){}}),toDataURL:()=>payload.imageDataUrl}:{}},layout:{value:'single'},photos:[{naturalWidth:1280,naturalHeight:720}],settings:[{zoom:1,x:.5,y:.5}],headline:{value:payload.headline},aiStatus:{textContent:''},completedResult:old,completeGallery:{async rememberLegacy(){archived++;if(archiveFails)throw new Error('保存できない');},async remember(p,d){if(saveFails)throw new Error('容量不足');remembered={p,d};}},cropPlacement:()=>({x:0,y:0,width:1280,height:720}),performance:{now:()=>100},AbortController,setTimeout:()=>1,clearTimeout(){},showCompleted(data){shown++;scope.completedResult=data;},scheduleDraft(){},async checkAIStatus(){},async fetch(){calls++;nodes['#ai-title'].value='Changed while waiting';return {ok:!requestFails,json:async()=>requestFails?{error:{message:'生成APIエラー'}}:{...result,imageDataUrl:png(1536,864,2)}};}};
+ for(const id of ['#ai-title','#ai-brief','#ai-composition','#ai-headline-mode','#ai-design','#ai-consent','#clear-draft','#ai-source','#ai-complete'])nodes[id]={value:'',checked:false,disabled:false,addEventListener:(name,fn)=>callback=fn,replaceChildren(){}};
+ nodes['#ai-title'].value=payload.title;nodes['#ai-brief'].value=payload.brief;nodes['#ai-composition'].value=payload.composition;nodes['#ai-headline-mode'].value='manual';nodes['#ai-design'].value='auto';nodes['#ai-consent'].checked=true;
+ const scope={document:{querySelector:s=>nodes[s],createElement:tag=>tag==='canvas'?{getContext:()=>({drawImage(){}}),toDataURL:()=>payload.imageDataUrl}:{}},layout:{value:'single'},photos:[{naturalWidth:1280,naturalHeight:720}],settings:[{zoom:1,x:.5,y:.5}],headline:{value:payload.headline},aiStatus:{textContent:''},completedResult:old,completeGallery:{async nextDesign(){return 'photo_focus';},async rememberLegacy(){archived++;if(archiveFails)throw new Error('保存できない');},async remember(p,d){if(saveFails)throw new Error('容量不足');remembered={p,d};}},cropPlacement:()=>({x:0,y:0,width:1280,height:720}),performance:{now:()=>100},AbortController,setTimeout:()=>1,clearTimeout(){},showCompleted(data){shown++;scope.completedResult=data;},scheduleDraft(){},async checkAIStatus(){},async fetch(){calls++;nodes['#ai-title'].value='Changed while waiting';return {ok:!requestFails,json:async()=>requestFails?{error:{message:'生成APIエラー'}}:{...result,imageDataUrl:png(1536,864,2)}};}};
  vm.runInNewContext(handler,scope);return {scope,nodes,calls:()=>calls,shown:()=>shown,remembered:()=>remembered,archived:()=>archived,run:()=>callback({currentTarget:nodes['#ai-complete']})};
 }
 test('one manual paid request archives the old PNG and records the sent inputs rather than later edits',async()=>{const app=paidFixture();await app.run();assert.equal(app.calls(),1);assert.equal(app.archived(),1);assert.equal(app.shown(),1);assert.equal(app.remembered().p.title,payload.title);assert.equal(app.remembered().p.imageDataUrl,payload.imageDataUrl);assert.equal(app.nodes['#ai-consent'].checked,false);});
@@ -105,6 +105,20 @@ test('archive failures make no paid request; provider failures preserve the old 
  const archive=paidFixture({archiveFails:true});await archive.run();assert.equal(archive.calls(),0);assert.equal(archive.shown(),0);assert.equal(archive.nodes['#ai-complete'].disabled,false);
  const failed=paidFixture({requestFails:true});await failed.run();assert.equal(failed.calls(),1);assert.equal(failed.shown(),0);assert.equal(failed.scope.completedResult.imageDataUrl,result.imageDataUrl);
  const quota=paidFixture({saveFails:true});await quota.run();assert.equal(quota.calls(),1);assert.equal(quota.shown(),1);assert.match(quota.scope.aiStatus.textContent,/生成できましたが、比較保存に失敗/);assert.match(quota.scope.aiStatus.textContent,/ファイルに保存/);
+});
+
+test('automatic headlines ignore the unused manual text and one manual click makes just one paid request',async()=>{
+ const app=paidFixture();app.nodes['#ai-headline-mode'].value='auto';app.scope.headline.value='';await app.run();assert.equal(app.calls(),1);assert.equal(app.remembered().p.headline,null);assert.equal(app.remembered().p.headlineMode,'auto');assert.equal(app.remembered().p.design,'photo_focus');
+ const manual=paidFixture();manual.scope.headline.value='';await manual.run();assert.equal(manual.calls(),0);assert.match(manual.scope.aiStatus.textContent,/見出しも必要/);
+ const blocked=paidFixture();blocked.scope.completeGallery.nextDesign=async()=>{throw new Error('履歴を読めない');};await blocked.run();assert.equal(blocked.calls(),0);assert.match(blocked.scope.aiStatus.textContent,/履歴を読めない/);
+});
+
+test('automatic headline and explicit text stay in separate groups; successful designs rotate and restore from stored history',async()=>{
+ const auto={...payload,headline:null,headlineMode:'auto'},manual=await createEntry(payload,result),automatic=await createEntry(auto,result);assert.notEqual(manual.group.id,automatic.group.id);assert.equal(automatic.group.input.headline,null);
+ let state=empty();const directions=[];for(let i=0;i<3;i++){const design=await chooseDesign(state,auto);directions.push(design);state=addToGallery(state,await createEntry({...auto,design},{...result,imageDataUrl:png(1536,864,i)},{id:`auto-${i}`}));}
+ assert.equal(new Set(directions).size,3);assert.equal(await chooseDesign(structuredClone(state),auto),directions[0]);assert.equal(comparisonBundle(state,state.groups[0].id).version,'complete-comparison-1.3.0');
+ assert.equal(await chooseDesign(state,{...auto,title:'別の内容'}),await chooseDesign(empty(),{...auto,title:'別の内容'}));
+ const dom=documentFixture(),storage=storageFixture(),app=createCompleteGallery({...dom,storage});await app.ready;await app.remember({...auto,design:'photo_focus'},result,{id:'one'});assert.equal(await app.nextDesign(auto),'editorial');assert.ok(dom.root.querySelectorAll('p').some(x=>x.textContent.includes('実際の文言は画像で確認')));
 });
 test('gallery modules are served as static assets without exposing stored private records',async()=>{
  const server=makeServer();await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));const url=`http://127.0.0.1:${server.address().port}`;

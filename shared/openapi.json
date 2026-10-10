@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Thumbnail AI MVP",
-    "version": "0.3.0",
+    "version": "0.3.1",
     "description": "Local SVG layout heuristics, opt-in paid complete PNG generation, and local PNG diagnostics. Complete PNG diagnostics are not a quality or CTR score."
   },
   "servers": [
@@ -262,7 +262,6 @@
                 "required": [
                   "title",
                   "brief",
-                  "headline",
                   "imageDataUrl",
                   "consent"
                 ],
@@ -278,9 +277,21 @@
                     "maxLength": 1000
                   },
                   "headline": {
+                    "type": ["string", "null"],
+                    "maxLength": 80,
+                    "description": "Required nonempty text in manual mode. In auto mode omit this field or send null/empty; actual rendered wording is not extracted."
+                  },
+                  "headlineMode": {
                     "type": "string",
-                    "minLength": 1,
-                    "maxLength": 80
+                    "enum": ["auto", "manual"],
+                    "default": "manual",
+                    "description": "Omitted retains the existing manual-headline API behavior. Auto asks the image model to choose a short headline from title and brief in the same paid image-edit call."
+                  },
+                  "design": {
+                    "type": "string",
+                    "enum": ["auto", "photo_focus", "editorial", "impact"],
+                    "default": "auto",
+                    "description": "Art-direction intent. The editor resolves auto from stored successful image history and sends a specific direction. Results still require visual checking."
                   },
                   "imageDataUrl": {
                     "type": "string",
@@ -302,7 +313,12 @@
                     "default": "auto",
                     "description": "Optional composition intent for the photo edit. Omitted means photo-aware automatic composition. Preservation and exact layout still require visual checking."
                   }
-                }
+                },
+                "allOf": [{
+                  "if": {"required": ["headlineMode"], "properties": {"headlineMode": {"const": "auto"}}},
+                  "then": {"properties": {"headline": {"enum": [null, ""]}}},
+                  "else": {"required": ["headline"], "properties": {"headline": {"type": "string", "minLength": 1}}}
+                }]
               }
             }
           }

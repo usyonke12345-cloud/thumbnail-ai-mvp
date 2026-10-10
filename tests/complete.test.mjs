@@ -13,6 +13,17 @@ test('complete input requires explicit consent and bounded photograph',()=>{
  for(const bad of [{...input,consent:false},{...input,imageDataUrl:'https://example.com/a.png'},{...input,headline:''},{...input,imageDataUrl:`data:image/png;base64,${png(2,2)}`}])assert.throws(()=>validateComplete(bad));
 });
 
+test('automatic headline uses one image edit with distinct art directions while manual calls retain exact wording',async()=>{
+ const spec=JSON.parse(await readFile(new URL('../shared/openapi.json',import.meta.url),'utf8')),schema=spec.paths['/api/v1/complete-thumbnail'].post.requestBody.content['application/json'].schema;
+ assert.deepEqual(schema.properties.headlineMode.enum,['auto','manual']);assert.ok(!schema.required.includes('headline'));assert.equal(schema.allOf[0].else.required[0],'headline');
+ const prompts=[];for(const design of schema.properties.design.enum){const validated=validateComplete({...input,headlineMode:'auto',headline:null,design});assert.equal(validated.headline,null);prompts.push(completePrompt(validated));}
+ assert.equal(new Set(prompts).size,4);assert.ok(prompts.every(x=>x.includes('Choose one short thumbnail headline')&&x.includes('do not invent results')));assert.ok(prompts.every(x=>!x.includes(input.headline)));
+ assert.ok(completePrompt(validateComplete(input)).includes(input.headline.replaceAll('\n','\\n')));assert.ok(completePrompt(validateComplete(input)).includes('Render exactly the supplied headline'));
+ for(const change of [{headlineMode:'unknown'},{headlineMode:'auto',headline:'conflicting text'},{design:'invent-people'},{headline:null}])assert.throws(()=>validateComplete({...input,...change}));
+ let calls=0;const provider=createOpenAIBackgroundProvider({env:{OPENAI_API_KEY:'test-key',OPENAI_IMAGE_ENABLED:'true'},fetchImpl:async(url,options)=>{calls++;assert.ok(options.body.get('prompt').includes('Choose one short thumbnail headline'));assert.equal(options.body.get('n'),'1');return new Response(JSON.stringify({data:[{b64_json:png(1536,864)}]}));}});
+ await provider(validateComplete({...input,headlineMode:'auto',headline:null,design:'editorial'}));assert.equal(calls,1);
+});
+
 test('photo-aware composition intents produce distinct instructions while preserving people and one-image limits',async()=>{
  const spec=JSON.parse(await readFile(new URL('../shared/openapi.json',import.meta.url),'utf8'));
  const contract=spec.paths['/api/v1/complete-thumbnail'].post.requestBody.content['application/json'].schema.properties.composition;

@@ -1,25 +1,27 @@
-import {createEntry,createLegacyEntry,validateQualityReview,validateObservation,validateReviewContext} from './complete-gallery-model.js';
+import {createEntry,createLegacyEntry,comparisonBundle,validateQualityReview,validateObservation,validateReviewContext} from './complete-gallery-model.js';
 const sha=async bytes=>[...new Uint8Array(await crypto.subtle.digest('SHA-256',bytes))].map(x=>x.toString(16).padStart(2,'0')).join('');
 const bytes=url=>Uint8Array.from(atob(url.split(',')[1]),c=>c.charCodeAt(0));
 const fail=message=>{throw new Error(message);};
-const sameInput=(a,b)=>a===null?b===null:!!b&&Object.keys(b).length===4&&['title','brief','headline','sourceSha256'].every(k=>a[k]===b[k]);
+const sameInput=(a,b)=>a===null?b===null:!!b&&Object.keys(a).length===Object.keys(b).length&&Object.keys(a).every(k=>Object.hasOwn(b,k)&&a[k]===b[k]);
 
 // Verify frozen identities again; exported summaries and imported diagnostics are not trusted.
 export async function validateCompleteBundle(value){
- if(!value||!['complete-comparison-1.0.0','complete-comparison-1.1.0','complete-comparison-1.2.0'].includes(value.version)||value.kind!=='human_quality_review'||value.assessment!==null||!value.group||!Array.isArray(value.images)||!value.images.length||value.images.length>6)fail('完成PNGの比較JSONの版・件数が不正です。');
- const group=value.group,images=[];
+ if(!value||!['complete-comparison-1.0.0','complete-comparison-1.1.0','complete-comparison-1.2.0','complete-comparison-1.3.0'].includes(value.version)||value.kind!=='human_quality_review'||value.assessment!==null||!value.group||!Array.isArray(value.images)||!value.images.length||value.images.length>6)fail('完成PNGの比較JSONの版・件数が不正です。');
+ const group=value.group,images=[];let normalizedInput=null;
+ if(value.version!=='complete-comparison-1.3.0'&&(group.input?.headlineMode!==undefined||value.images.some(x=>x.design!==undefined)))fail('自動見出しとデザイン指定には比較形式1.3.0が必要です。');
  for(const image of value.images){
   if(images.some(x=>x.id===image.id))fail('完成画像IDが重複しています。');
   const options={id:image.id,capturedAt:image.capturedAt,elapsedMs:image.elapsedMs};
-  const entry=group.input===null?await createLegacyEntry(image.result,options):await createEntry({...group.input,imageDataUrl:group.sourceImageDataUrl,composition:image.composition},image.result,options);
-  if(entry.group.id!==group.id||entry.group.sourceImageDataUrl!==group.sourceImageDataUrl||entry.image.groupId!==image.groupId||entry.image.imageSha256!==image.imageSha256||!sameInput(entry.group.input,group.input)||entry.image.composition!==image.composition||entry.image.elapsedMs!==image.elapsedMs||image.version!==1)fail('画像・入力条件・組ID・SHA-256が一致しません。');
+  const entry=group.input===null?await createLegacyEntry(image.result,options):await createEntry({...group.input,imageDataUrl:group.sourceImageDataUrl,composition:image.composition,...(image.design!==undefined?{design:image.design}:{})},image.result,options);
+  if(entry.group.id!==group.id||entry.group.sourceImageDataUrl!==group.sourceImageDataUrl||entry.image.groupId!==image.groupId||entry.image.imageSha256!==image.imageSha256||!sameInput(entry.group.input,group.input)||entry.image.composition!==image.composition||entry.image.design!==image.design||entry.image.elapsedMs!==image.elapsedMs||image.version!==1)fail('画像・入力条件・組ID・SHA-256が一致しません。');
+  normalizedInput=entry.group.input;
   if(image.result.width!==entry.image.result.width||image.result.height!==entry.image.result.height)fail('宣言寸法とPNGの寸法が一致しません。');
   images.push({...entry.image,...(image.observation?{observation:validateObservation(image.observation)}:{})});
  }
  if(group.version!==1||typeof group.capturedAt!=='string'||!Number.isFinite(Date.parse(group.capturedAt)))fail('比較組の保存時刻が不正です。');
  let review=value.review??null;
  if(review){const covered=images.filter(x=>review.displayWidths?.some(w=>w.imageId===x.id));if(!covered.length)fail('比較記録の画像参照が不正です。');validateQualityReview(review,group,covered);review={version:1,groupId:review.groupId,recordedAt:review.recordedAt,decision:review.decision,imageId:review.imageId,reason:review.reason,issues:[...review.issues],displayWidths:review.displayWidths.map(({imageId,width})=>({imageId,width})),...(review.context?{context:validateReviewContext(review.context)}:{})};}
- return {version:'complete-comparison-1.2.0',kind:'human_quality_review',assessment:null,group:{version:1,id:group.id,capturedAt:group.capturedAt,input:group.input===null?null:{title:group.input.title,brief:group.input.brief,headline:group.input.headline,sourceSha256:group.input.sourceSha256},sourceImageDataUrl:group.sourceImageDataUrl},images,review,reviewCoversAllImages:!!review&&review.displayWidths.length===images.length};
+ return comparisonBundle({groups:[{version:1,id:group.id,capturedAt:group.capturedAt,input:normalizedInput,sourceImageDataUrl:group.sourceImageDataUrl}],images,reviews:review?[review]:[]},group.id);
 }
 export async function diagnosticRequest(bundle,imageIds){
  const checked=await validateCompleteBundle(bundle),images=imageIds?checked.images.filter(x=>imageIds.includes(x.id)):checked.images;

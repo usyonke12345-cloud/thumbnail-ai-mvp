@@ -1,10 +1,10 @@
-import {COMPOSITIONS,MAX_IMAGES,createEntry,createLegacyEntry,comparisonBundle,validateQualityReview,parseCostUsd,gallerySummary,comparisonReport} from './complete-gallery-model.js';
+import {COMPOSITIONS,DESIGNS,chooseDesign,MAX_IMAGES,createEntry,createLegacyEntry,comparisonBundle,validateQualityReview,parseCostUsd,gallerySummary,comparisonReport} from './complete-gallery-model.js';
 import {galleryStorage} from './complete-gallery-store.js';
 import {diagnoseComplete,diagnosticText} from './complete-png-transfer.js';
 export function createCompleteGallery({root,document=globalThis.document,storage=galleryStorage,download=downloadFile,confirm=message=>window.confirm(message),diagnose=diagnoseComplete}={}){
  let state={groups:[],images:[],reviews:[]},selected='',width=360;
  const el=(tag,text='')=>{const node=document.createElement(tag);node.textContent=text;return node;};
- const heading=el('h2','AI完成画像を見比べる'),intro=el('p','実際に生成した完成PNGを、同じ入力写真・タイトル・内容・見出しごとに保存します。構図を変えて1枚ずつ作った結果を見比べられます。生成・自動学習はこの比較操作では行いません。'),feedback=el('p');feedback.setAttribute('role','status');feedback.setAttribute('aria-live','polite');
+ const heading=el('h2','AI完成画像を見比べる'),intro=el('p','実際に生成した完成PNGを、同じ入力写真・タイトル・内容・見出しの作り方ごとに保存します。構図やデザインを変えて1枚ずつ作った結果を見比べられます。生成・自動学習はこの比較操作では行いません。'),feedback=el('p');feedback.setAttribute('role','status');feedback.setAttribute('aria-live','polite');
  const select=el('select'),label=el('label','比較する組 ');label.append(select);select.setAttribute('aria-label','AI完成画像の比較する組');
  const refresh=el('button','保存一覧を更新');refresh.type='button';
  const toolbar=el('div');toolbar.className='preview-controls';const widthButtons=[];
@@ -32,7 +32,7 @@ export function createCompleteGallery({root,document=globalThis.document,storage
   images.replaceChildren();outputs().forEach((image,i)=>{
    const name=`案${String.fromCharCode(65+i)}`,card=el('article'),title=el('h3',`${name}：${COMPOSITIONS[image.composition]??'以前の完成画像'}`),preview=el('img'),details=el('p'),link=el('a','この完成PNGを保存');
    preview.src=image.result.imageDataUrl;preview.alt=`AI完成画像の${name}`;preview.style.width=`min(100%,${width}px)`;preview.style.height='auto';preview.dataset.imageId=image.id;link.href=image.result.imageDataUrl;link.download=`ai-complete-${image.id}.png`;
-   details.textContent=`${image.result.generation_version??'生成版不明'}・${image.elapsedMs===null?'生成時間不明':`${(image.elapsedMs/1000).toFixed(1)}秒`}・未採点`;
+   details.textContent=`${image.result.generation_version??'生成版不明'}・${image.elapsedMs===null?'生成時間不明':`${(image.elapsedMs/1000).toFixed(1)}秒`}・${image.design?`希望：${DESIGNS[image.design]}・`:''}未採点`;
    const record=el('form'),cost=el('input'),costLabel=el('label','この画像の実費（USD・任意）'),pngSave=el('select'),saveLabel=el('label','PNG保存を確認した結果'),button=el('button','実費と保存結果を記録'),status=el('p');
    record.className='complete-observation-form';record.noValidate=true;record.setAttribute('aria-label',`${name}の実費と保存結果`);cost.type='text';cost.inputMode='decimal';cost.maxLength=20;cost.placeholder='未確認は空欄';cost.value=image.observation?.costUsd===null||image.observation?.costUsd===undefined?'':String(image.observation.costUsd);cost.setAttribute('aria-label',`${name}の実費USD`);costLabel.append(cost);
    for(const [value,text]of [['unknown','未確認'],['saved','ファイル保存を確認できた'],['failed','ファイル保存できなかった']]){const option=el('option',text);option.value=value;pngSave.append(option);}pngSave.value=image.observation?.pngSave??'unknown';pngSave.setAttribute('aria-label',`${name}のPNG保存結果`);saveLabel.append(pngSave);button.type='submit';status.setAttribute('role','status');status.setAttribute('aria-live','polite');
@@ -58,7 +58,7 @@ export function createCompleteGallery({root,document=globalThis.document,storage
   outputs().forEach((x,i)=>{const option=el('option',`案${String.fromCharCode(65+i)}`);option.value=x.id;decision.append(option);});const none=el('option','全部使わない');none.value='none';decision.append(none);
   const review=state.reviews.find(x=>x.groupId===selected);reviewer.value=review?.context?.reviewerId??'r01';titleSource.value=review?.context?.titleSource??'unknown';titlePermission.checked=review?.context?.titlePermissionConfirmed??false;photoPermission.checked=review?.context?.photoPermissionConfirmed??false;decision.value=review?(review.decision==='none_acceptable'?'none':review.imageId):'';reason.value=review?.reason??'';for(const input of issueInputs)input.checked=review?.issues.includes(input.value)??false;
   if(!group){feedback.textContent='生成済みの完成画像はまだありません。写真を使ってAI生成すると、ここへ追加します。';return;}
-  if(group.input){const photo=el('img'),caption=el('p','この組でAPIへ送った写真');photo.src=group.sourceImageDataUrl;photo.alt='この比較組の入力写真';photo.style.width='min(100%,246px)';source.append(caption,photo);info.textContent=`${outputs().length}案。見出し：${group.input.headline}　構図を変えて手動生成した結果だけを比較します。写真・内容・見出しが変わると別の組になります。`;}
+  if(group.input){const photo=el('img'),caption=el('p','この組でAPIへ送った写真');photo.src=group.sourceImageDataUrl;photo.alt='この比較組の入力写真';photo.style.width='min(100%,246px)';source.append(caption,photo);info.textContent=`${outputs().length}案。見出し：${group.input.headlineMode==='auto'?'AIに任せる（実際の文言は画像で確認）':group.input.headline}　構図・デザインを変えて手動生成した結果を比較します。自動見出しの組では、案ごとに文言も変わる可能性があります。写真・内容・見出しの作り方が変わると別の組になります。`;}
   else info.textContent='復元した以前の完成画像です。生成時の入力写真・見出し・構図は記録されていないため、現在の入力と同じ組にはしません。';
   const currentReview=review&&comparisonBundle(state,selected).reviewCoversAllImages;
   feedback.textContent=`完成画像 ${state.images.length}/${MAX_IMAGES}枚をこのブラウザ内に保存しています。${currentReview?'この組の選択と理由は保存済みです。':review?'案が増えたため、以前の選択です。新しい案も比べて保存し直してください。':''}`;
@@ -72,6 +72,6 @@ export function createCompleteGallery({root,document=globalThis.document,storage
  remove.addEventListener('click',async()=>{if(!confirm('この組を比較一覧から削除しますか？ 必要なPNGとJSONは先に保存してください。編集下書きの最後の完成PNGは別に残ります。'))return;remove.disabled=true;try{state=await storage.remove(selected);selected='';render();}catch(error){feedback.textContent=error.message;}finally{remove.disabled=false;}});
  render();feedback.textContent='完成画像の比較一覧を読み込んでいます…';
  const ready=reload().catch(error=>{feedback.textContent=`比較保存を読み込めません：${error.message} 完成PNGはファイルにも保存してください。`;});
- return {ready,async remember(payload,data,options){await ready;const entry=await createEntry(payload,data,options);state=await storage.add(entry);selected=entry.group.id;render();return state.added;},async rememberLegacy(data){await ready;const entry=await createLegacyEntry(data);state=await storage.add(entry);if(state.groups.some(x=>x.id===entry.group.id))selected=entry.group.id;render();},async clear(){await ready;state=await storage.clear();selected='';render();}};
+ return {ready,async nextDesign(payload){await ready;state=await storage.load();return chooseDesign(state,payload);},async remember(payload,data,options){await ready;const entry=await createEntry(payload,data,options);state=await storage.add(entry);selected=entry.group.id;render();return state.added;},async rememberLegacy(data){await ready;const entry=await createLegacyEntry(data);state=await storage.add(entry);if(state.groups.some(x=>x.id===entry.group.id))selected=entry.group.id;render();},async clear(){await ready;state=await storage.clear();selected='';render();}};
 }
 function downloadFile(name,body,type){const url=URL.createObjectURL(new Blob([body],{type})),link=document.createElement('a');link.href=url;link.download=name;link.click();setTimeout(()=>URL.revokeObjectURL(url),10000);}
