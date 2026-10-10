@@ -1,6 +1,7 @@
 import {cropPlacement,fitHeadline,suggestPhotoLayouts} from './editor-layout.js';
 import {loadDraft,saveDraft,deleteDraft,validateDraft} from './editor-draft.js';
 import {createCompleteGallery} from './complete-gallery.js';
+import {createEditorDesignGuide} from './editor-design-guide.js';
 const completeGallery=createCompleteGallery({root:document.querySelector('#complete-comparison')});
 const storedFiles=[null,null];let completedResult=null,restoring=true,saveTimer,saveQueue=Promise.resolve();
 function scheduleDraft(){if(restoring)return;clearTimeout(saveTimer);document.querySelector('#draft-status').textContent='下書きを保存しています…';saveTimer=setTimeout(()=>{const draft={version:1,layout:layout.value,settings,files:storedFiles,headline:headline.value,headlineMode:document.querySelector('#ai-headline-mode').value,design:document.querySelector('#ai-design').value,title:document.querySelector('#ai-title').value,brief:document.querySelector('#ai-brief').value,composition:document.querySelector('#ai-composition').value,accent:accent.value,position:document.querySelector('#text-position').value,protect:document.querySelector('#protect-subject').value,shade:document.querySelector('#shade').value,result:completedResult};saveQueue=saveQueue.catch(()=>{}).then(()=>saveDraft(draft)).then(()=>{document.querySelector('#draft-status').textContent='下書きをこのブラウザに保存しました。リロード後に復元できます。';}).catch(()=>{document.querySelector('#draft-status').textContent='下書きを保存できません。容量やブラウザ設定を確認し、完成PNGをファイルへ保存してください。';});},300);}
@@ -8,6 +9,7 @@ function showCompleted(data){completedResult=data;const image=document.createEle
 const canvas=document.querySelector('#preview'),ctx=canvas.getContext('2d'),status=document.querySelector('#editor-status');
 const photos=[null,null],versions=[0,0],settings=[{zoom:1,x:.5,y:.5},{zoom:1,x:.5,y:.5}],cards=[];
 const layout=document.querySelector('#layout'),headline=document.querySelector('#headline'),accent=document.querySelector('#accent');
+const designGuide=createEditorDesignGuide({root:document.querySelector('#ai-design-guide'),designControl:document.querySelector('#ai-design'),compositionControl:document.querySelector('#ai-composition'),onSelect:()=>scheduleDraft()});
 const aiStatus=document.createElement('p');aiStatus.setAttribute('role','status');aiStatus.setAttribute('aria-live','polite');document.querySelector('#ai-complete').after(aiStatus);
 async function checkAIStatus(){
  try{const response=await fetch('/api/v1/health');if(!response.ok)throw new Error();const data=await response.json(),s=data.completeGeneration;
@@ -120,14 +122,14 @@ async function restoreDraft(){
   if(draft.result)showCompleted(draft.result);draw();document.querySelector('#draft-status').textContent='写真・入力内容・完成画像の下書きを復元しました。API送信の確認は毎回チェックしてください。';
  }else document.querySelector('#draft-status').textContent='変更した内容は、このブラウザに自動保存します。';}
  catch{document.querySelector('#draft-status').textContent='下書きを読み込めませんでした。ブラウザの保存設定を確認してください。通常編集は使えます。';}
- finally{restoring=false;document.querySelector('#editor-workspace').disabled=false;document.querySelector('#ai-consent').checked=false;}
+ finally{restoring=false;designGuide.render();document.querySelector('#editor-workspace').disabled=false;document.querySelector('#ai-consent').checked=false;}
 }
 document.querySelector('#clear-draft').addEventListener('click',async()=>{
  if(!window.confirm('このブラウザの写真下書き・入力内容・完成画像・比較履歴を消しますか？ 必要なPNGは先にファイルへ保存してください。'))return;
  restoring=true;clearTimeout(saveTimer);document.querySelector('#editor-workspace').disabled=true;
  try{await saveQueue.catch(()=>{});await completeGallery.clear();await deleteDraft();for(let i=0;i<2;i++){storedFiles[i]=null;photos[i]=null;versions[i]++;cards[i].querySelector('input[type="file"]').value='';}completedResult=null;document.querySelector('#ai-composition').value='auto';document.querySelector('#ai-design').value='auto';document.querySelector('#ai-headline-mode').value='auto';document.querySelector('#ai-result').replaceChildren();document.querySelector('#ai-source').replaceChildren();document.querySelector('#auto-candidates').replaceChildren();headline.value='';document.querySelector('#ai-title').value='';document.querySelector('#ai-brief').value='';document.querySelector('#ai-consent').checked=false;draw();document.querySelector('#draft-status').textContent='このブラウザの下書きと完成画像の比較履歴を消しました。';}
  catch{document.querySelector('#draft-status').textContent='下書きを消せませんでした。ブラウザの保存設定を確認してください。';}
- finally{restoring=false;document.querySelector('#editor-workspace').disabled=false;}
+ finally{restoring=false;designGuide.render();document.querySelector('#editor-workspace').disabled=false;}
 });
 restoreDraft();
 
