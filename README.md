@@ -60,8 +60,8 @@ Day5の比較は、3案を作って「この3案を固定保存」→ `/review` 
 ```sh
 git clone https://github.com/usyonke12345-cloud/thumbnail-ai-mvp.git
 cd thumbnail-ai-mvp
-npm test
 npm ci
+npm test
 npm start
 ```
 
@@ -99,3 +99,5 @@ Day4の復旧・制限設定と参考サムネ分析の準備: [Day4手順](docs
 完成PNGの寸法・解析可否・明るさを無料で診断し、画像付きJSONを採点担当へ渡す非公開の分析フォルダーにまとめられます。別写真・タイトルの少数確認から20件の比較へ進む手順とコマンドは [完成PNGの分析・受け渡し](docs/COMPLETE-PNG-ANALYSIS.md)。文字や人物保持の自動品質採点は未実装です。
 
 分析フォルダーの`preview.html`を開くと、元写真・完成PNG・人のコメントを並べて確認できます。表示幅の変更は無料で、画像の再生成や比較件数の追加は行いません。
+
+別のPCでは、最新版のfeature/day4-recoveryブランチを取得し、`/editor`で保存した比較JSONを読み込めます。入力写真・完成PNG・人の記録を復元し、同じ画像は重複追加しません。編集途中の下書き・元の写真ファイル・APIキーは別途移します。詳細は[PCを切り替える手順](docs/PC-HANDOFF.md)。読み込みはブラウザ内だけで行い、API呼び出しや生成はありません。

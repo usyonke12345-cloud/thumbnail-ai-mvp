@@ -31,7 +31,7 @@ async function comparisonInput(payload){
  return {input,groupId:`complete-${await hashBytes(new TextEncoder().encode(JSON.stringify(input)))}`};
 }
 export async function chooseDesign(state,payload){
- const {groupId}=await comparisonInput(payload),previous=state.images.filter(x=>x.groupId===groupId),directions=['photo_focus','editorial','impact'];
+ const {groupId}=await comparisonInput(payload),previous=state.images.filter(x=>x.groupId===groupId).sort((a,b)=>Date.parse(a.capturedAt)-Date.parse(b.capturedAt)||a.id.localeCompare(b.id)),directions=['photo_focus','editorial','impact'];
  const last=previous.at(-1)?.design,index=directions.indexOf(last);
  if(previous.length&&index<0)return 'photo_focus';
  return directions[index>=0?(index+1)%directions.length:parseInt(groupId.slice(-8),16)%directions.length];
@@ -111,4 +111,44 @@ export function gallerySummary(state){
 export function comparisonReport(state,{exportedAt=new Date().toISOString()}={}){
  if(!date(exportedAt))fail('書き出し時刻が不正です。');
  return {version:'complete-comparison-report-1.0.0',kind:'human_quality_report',exportedAt,assessment:null,summary:gallerySummary(state),sets:state.groups.map(g=>comparisonBundle(state,g.id)),note:'写真・完成PNGを含む非公開データです。SVG比較CSVとは別形式で、許諾済み20タイトルや正式な採点検証件数には自動で加えません。'};
+}
+
+const canonical=value=>Array.isArray(value)?value.map(canonical):value&&typeof value==='object'?Object.fromEntries(Object.keys(value).sort().map(k=>[k,canonical(value[k])])):value;
+const identical=(a,b)=>JSON.stringify(canonical(a))===JSON.stringify(canonical(b));
+function latestRecord(previous,incoming,label){
+ if(!previous)return incoming;if(!incoming)return previous;
+ const oldTime=Date.parse(previous.recordedAt),newTime=Date.parse(incoming.recordedAt);
+ if(oldTime===newTime&&!identical(previous,incoming))fail(`${label}の同時刻の記録が食い違っています。保存済みの記録は変更しません。`);
+ return newTime>oldTime?incoming:previous;
+}
+// Receives bundles whose hashes/inputs were checked by validateCompleteImport.
+// Computes the entire next state before an IndexedDB transaction writes anything.
+export function mergeCompleteImport(state,bundles){
+ const next={groups:[...state.groups],images:[...state.images],reviews:[...state.reviews]};
+ for(const bundle of bundles){
+  const group=bundle.group,existingGroup=next.groups.find(x=>x.id===group.id);
+  if(existingGroup&&(!identical(existingGroup.input,group.input)||existingGroup.sourceImageDataUrl!==group.sourceImageDataUrl))fail('同じ組IDの入力条件は変更できません。');
+  if(!existingGroup)next.groups.push(group);
+  for(const image of bundle.images){
+   validateEntry({group,image});
+   const existing=next.images.find(x=>x.id===image.id);
+   if(existing){
+    const {observation:oldObservation,...oldFrozen}=existing,{observation:incomingObservation,...incomingFrozen}=image;
+    if(!identical(oldFrozen,incomingFrozen))fail('同じ完成画像IDの内容が食い違っています。保存済みの画像は変更しません。');
+    const observation=latestRecord(oldObservation,incomingObservation,'実費・保存結果');
+    if(observation)next.images[next.images.indexOf(existing)]={...oldFrozen,observation:validateObservation(observation)};
+   }else{
+    if(next.images.some(x=>x.groupId===image.groupId&&x.imageSha256===image.imageSha256))fail('同じPNGが別の画像IDで記録されています。重複して読み込めません。');
+    next.images.push({...image,...(image.observation?{observation:validateObservation(image.observation)}:{})});
+   }
+  }
+  if(bundle.review){
+   const covered=next.images.filter(x=>x.groupId===group.id&&bundle.review.displayWidths.some(w=>w.imageId===x.id));
+   validateQualityReview(bundle.review,group,covered);
+   const previous=next.reviews.find(x=>x.groupId===group.id),review=latestRecord(previous,bundle.review,'人の比較');
+   next.reviews=next.reviews.filter(x=>x.groupId!==group.id);next.reviews.push(review);
+  }
+ }
+ if(next.images.length>MAX_IMAGES||next.groups.reduce((n,g)=>n+(g.sourceImageDataUrl?.length??0),0)+next.images.reduce((n,x)=>n+x.result.imageDataUrl.length,0)>MAX_STORED_CHARS)fail('完成画像の比較保存がいっぱいです。必要なPNG・比較JSONを保存してから、不要な組を削除してください。');
+ return next;
 }

@@ -3,6 +3,7 @@ const sha=async bytes=>[...new Uint8Array(await crypto.subtle.digest('SHA-256',b
 const bytes=url=>Uint8Array.from(atob(url.split(',')[1]),c=>c.charCodeAt(0));
 const fail=message=>{throw new Error(message);};
 const sameInput=(a,b)=>a===null?b===null:!!b&&Object.keys(a).length===Object.keys(b).length&&Object.keys(a).every(k=>Object.hasOwn(b,k)&&a[k]===b[k]);
+export const MAX_IMPORT_BYTES=70*1024*1024;
 
 // Verify frozen identities again; exported summaries and imported diagnostics are not trusted.
 export async function validateCompleteBundle(value){
@@ -22,6 +23,20 @@ export async function validateCompleteBundle(value){
  let review=value.review??null;
  if(review){const covered=images.filter(x=>review.displayWidths?.some(w=>w.imageId===x.id));if(!covered.length)fail('比較記録の画像参照が不正です。');validateQualityReview(review,group,covered);review={version:1,groupId:review.groupId,recordedAt:review.recordedAt,decision:review.decision,imageId:review.imageId,reason:review.reason,issues:[...review.issues],displayWidths:review.displayWidths.map(({imageId,width})=>({imageId,width})),...(review.context?{context:validateReviewContext(review.context)}:{})};}
  return comparisonBundle({groups:[{version:1,id:group.id,capturedAt:group.capturedAt,input:normalizedInput,sourceImageDataUrl:group.sourceImageDataUrl}],images,reviews:review?[review]:[]},group.id);
+}
+export async function validateCompleteImport(value){
+ const sets=value?.kind==='human_quality_review'?[value]:value?.version==='complete-comparison-report-1.0.0'&&value.kind==='human_quality_report'&&value.assessment===null&&Array.isArray(value.sets)?value.sets:null;
+ if(!sets||!sets.length||sets.length>6)fail('完成PNGの比較JSONが必要です（最大6組）。');
+ const normalized=[],groupIds=new Set(),imageIds=new Set();let totalImages=0;
+ for(const set of sets){
+  const bundle=await validateCompleteBundle(set);
+  if(groupIds.has(bundle.group.id))fail('同じファイルに比較組が重複しています。');
+  groupIds.add(bundle.group.id);
+  for(const image of bundle.images){if(imageIds.has(image.id))fail('同じファイルに完成画像IDが重複しています。');imageIds.add(image.id);}
+  totalImages+=bundle.images.length;if(totalImages>6)fail('1回に読み込める完成PNGは6枚までです。');
+  normalized.push(bundle);
+ }
+ return normalized;
 }
 export async function diagnosticRequest(bundle,imageIds){
  const checked=await validateCompleteBundle(bundle),images=imageIds?checked.images.filter(x=>imageIds.includes(x.id)):checked.images;
