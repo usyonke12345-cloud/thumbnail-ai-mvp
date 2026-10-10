@@ -7,9 +7,10 @@ export const MAX_IMPORT_BYTES=70*1024*1024;
 
 // Verify frozen identities again; exported summaries and imported diagnostics are not trusted.
 export async function validateCompleteBundle(value){
- if(!value||!['complete-comparison-1.0.0','complete-comparison-1.1.0','complete-comparison-1.2.0','complete-comparison-1.3.0'].includes(value.version)||value.kind!=='human_quality_review'||value.assessment!==null||!value.group||!Array.isArray(value.images)||!value.images.length||value.images.length>6)fail('完成PNGの比較JSONの版・件数が不正です。');
+ if(!value||!['complete-comparison-1.0.0','complete-comparison-1.1.0','complete-comparison-1.2.0','complete-comparison-1.3.0','complete-comparison-1.4.0'].includes(value.version)||value.kind!=='human_quality_review'||value.assessment!==null||!value.group||!Array.isArray(value.images)||!value.images.length||value.images.length>6)fail('完成PNGの比較JSONの版・件数が不正です。');
  const group=value.group,images=[];let normalizedInput=null;
- if(value.version!=='complete-comparison-1.3.0'&&(group.input?.headlineMode!==undefined||value.images.some(x=>x.design!==undefined)))fail('自動見出しとデザイン指定には比較形式1.3.0が必要です。');
+ if(!['complete-comparison-1.3.0','complete-comparison-1.4.0'].includes(value.version)&&(group.input?.headlineMode!==undefined||value.images.some(x=>x.design!==undefined)))fail('自動見出しとデザイン指定には比較形式1.3.0以上が必要です。');
+ if(group.input?.visualIntent!==undefined&&value.version!=='complete-comparison-1.4.0')fail('仕上がりのイメージには比較形式1.4.0が必要です。');
  for(const image of value.images){
   if(images.some(x=>x.id===image.id))fail('完成画像IDが重複しています。');
   const options={id:image.id,capturedAt:image.capturedAt,elapsedMs:image.elapsedMs};

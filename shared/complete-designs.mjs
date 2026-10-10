@@ -1,4 +1,30 @@
-// These are requested design recipes, never measurements of a generated PNG.
+// These are requested directions and experimental ideas, never measured or approved PNGs.
+export const MAX_VISUAL_INTENT_LENGTH=300;
+export function normalizeVisualIntent(value){
+ if(value===undefined)return '';
+ if(typeof value!=='string'||[...value].length>MAX_VISUAL_INTENT_LENGTH||/[\u0000-\u0009\u000b-\u001f\u007f]/u.test(value))throw new Error('仕上がりのイメージは300文字以内の文章で指定してください。');
+ return value.trim();
+}
+export const COMPLETE_MOOD_EXAMPLES=Object.freeze([
+ {label:'落ち着いた旅',text:'ゆっくりした旅の雰囲気。写真を自然に見せ、文字も穏やかに。'},
+ {label:'明るい日常',text:'明るく爽やかな日常。親しみやすく、飾りすぎない感じ。'},
+ {label:'上品・洗練',text:'上品で洗練された感じ。すっきりした誌面のような雰囲気。'},
+ {label:'映画のような雰囲気',text:'映画のタイトルのような雰囲気。写真の空気感を大切に。'},
+ {label:'柔らかく親しみやすい',text:'柔らかく親しみやすい感じ。子どもっぽくせず自然に。'},
+ {label:'わかりやすい解説',text:'内容がすぐ伝わる、わかりやすい解説のイメージ。'},
+ {label:'力強くシンプル',text:'力強くシンプルに。大げさな装飾や派手すぎる色は避けたい。'},
+ {label:'懐かしく温かい',text:'懐かしく温かい感じ。写真は自然なままで、落ち着いた雰囲気。'}
+].map(x=>Object.freeze(x)));
+export const COMPLETE_PATTERN_SEEDS=Object.freeze([
+ {id:'quiet_caption',typography:'Upright humanist sans-serif, medium weight and open counters.',layout:'A compact edge caption using an existing quiet area; keep the scene dominant.',context:'Quiet travel or everyday life.'},
+ {id:'editorial_open',typography:'Sturdy editorial serif or Japanese Mincho, regular to semibold.',layout:'An asymmetrical short headline in open space, with restrained hierarchy.',context:'Refined lifestyle or thoughtful stories.'},
+ {id:'airy_diary',typography:'Open, softly rounded sans-serif, medium weight; no childish bubble lettering.',layout:'A light compact text block in a corner or edge with safe margins.',context:'Friendly, bright daily-life footage.'},
+ {id:'cinematic_title',typography:'Upright cinematic serif or restrained sans-serif, with readable spacing and sturdy strokes.',layout:'A single line or short two-line title in existing negative space.',context:'Atmospheric personal stories; no invented dramatic events.'},
+ {id:'clear_teaching',typography:'Clear semibold sans-serif or Gothic, emphasizing one existing headline phrase.',layout:'A short hierarchical block beside an unobstructed subject; no fabricated number badges.',context:'Explanations and practical tutorials.'},
+ {id:'bold_contrast',typography:'Upright condensed bold sans-serif or Gothic, narrow flat-baseline glyphs.',layout:'A stacked headline opposite the photographed subject, only where space permits.',context:'Direct, energetic topics without unnecessary stickers.'},
+ {id:'understated_minimal',typography:'Clean geometric sans-serif, regular to medium weight; do not use tiny or hairline text.',layout:'One compact offset headline using the photo as the main visual.',context:'Simple, contemporary, uncluttered presentation.'},
+ {id:'warm_classic',typography:'Readable upright slab serif or softly shaped Gothic with solid strokes.',layout:'A short heading near a naturally quiet edge with warm neutral lettering.',context:'Warm, nostalgic tone without repainting the photograph.'}
+].map(x=>Object.freeze({...x,status:'experimental'})));
 export const COMPLETE_DESIGNS=Object.freeze({
  photo_focus:Object.freeze({
   label:'写真を主役にする',fontLabel:'直立したすっきりしたサンセリフ',layoutLabel:'写真全面＋下部の短い見出し',fontClass:'design-sans',layoutClass:'design-bottom',
@@ -41,6 +67,8 @@ export function completeDesignInstructions(design='auto',composition='auto'){
   'CONTEXT: match the typography and visual hierarchy to the topic and mood in the video title and brief. Quiet everyday or travel footage needs restrained lettering; a tutorial may need stronger hierarchy. Do not assume every video needs dramatic advertising.',
   `LAYOUT: ${override?`${override.prompt} This explicit placement is a user constraint; choose type size and line breaks to fit that zone without covering faces or key objects.`:'Consider left, right, upper and lower headline zones, and choose the feasible zone that best preserves the subject and scene while keeping the words legible. Choose text size, line breaks, alignment and safe margins for the available space. Do not always default to a top strip, bottom caption or side billboard.'}`,
   'TYPOGRAPHY: choose one coherent font style and weight to suit the context, headline length and photographic space. Readable sans-serif, serif/Mincho or condensed bold are examples, not a closed list of three templates. Do not select a layout by a preset rotation or merely recolor the same poster.',
+  'PATTERN IDEAS: the following combinations are optional experimental starting points, not proven high-performing templates. Select or adapt only what fits the actual photograph, video context and requested atmosphere; do not print these names or force a different pattern on each request.',
+  ...COMPLETE_PATTERN_SEEDS.map(x=>`${x.id}: ${x.typography} ${x.layout} Suitable context: ${x.context}`),
   'READABILITY: use the least intrusive local treatment needed. Prefer clear existing space and readable letterforms. Avoid a broad cloudy blur, heavy glow or dark halo around the headline. Do not darken or blur the whole photograph or add a large empty panel.',
   'Make these choices within this single image edit. Output only the finished thumbnail, without layout labels, explanations or invented comparison panels.'
  ].join('\n');

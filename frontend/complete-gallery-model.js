@@ -1,3 +1,4 @@
+import {normalizeVisualIntent} from '../shared/complete-designs.mjs';
 export const COMPOSITIONS={auto:'写真に合わせて自動',text_left:'文字を左・主役を右',text_right:'文字を右・主役を左',text_top:'見出しを上・主役を大きく'};
 export const DESIGNS={auto:'写真と内容に合わせて自動',photo_focus:'写真を主役にする',editorial:'落ち着いた誌面風',impact:'文字を大きく見せる'};
 export const MAX_IMAGES=6, MAX_STORED_CHARS=64*1024*1024;
@@ -25,9 +26,9 @@ function headlineInput(payload){
 }
 async function comparisonInput(payload){
  for(const [key,max]of [['title',120],['brief',1000]])if(!text(payload?.[key],max))fail('比較するタイトル・内容を確認してください。');
- const headline=headlineInput(payload);
+ const headline=headlineInput(payload),visualIntent=normalizeVisualIntent(payload.visualIntent);
  const size=png(payload.imageDataUrl,3*1024*1024);if(size.width!==1280||size.height!==720)fail('入力写真は1280×720が必要です。');
- const sourceSha256=await hashPng(payload.imageDataUrl),input={title:payload.title,brief:payload.brief,headline:headline.headline,sourceSha256,...(headline.headlineMode?{headlineMode:headline.headlineMode}:{})};
+ const sourceSha256=await hashPng(payload.imageDataUrl),input={title:payload.title,brief:payload.brief,headline:headline.headline,sourceSha256,...(headline.headlineMode?{headlineMode:headline.headlineMode}:{}),...(visualIntent?{visualIntent}:{})};
  return {input,groupId:`complete-${await hashBytes(new TextEncoder().encode(JSON.stringify(input)))}`};
 }
 export async function createEntry(payload,value,{id=crypto.randomUUID(),capturedAt=new Date().toISOString(),elapsedMs=null}={}){
@@ -46,7 +47,7 @@ export async function createLegacyEntry(value,{id=crypto.randomUUID(),capturedAt
 export function validateEntry({group,image}={}){
  if(!group||group.version!==1||!date(group.capturedAt)||!/^((complete|legacy)-[a-f0-9]{64})$/.test(group.id)||!image||image.version!==1||image.groupId!==group.id||!text(image.id,200)||!date(image.capturedAt)||!shaPattern.test(image.imageSha256))fail('完成画像の比較記録が不正です。');
  if(group.input===null){if(!group.id.startsWith('legacy-')||group.sourceImageDataUrl!==null||image.composition!==null)fail('以前の画像に入力条件を推測で付けられません。');}
- else {if(!group.id.startsWith('complete-')||!shaPattern.test(group.input.sourceSha256)||!Object.hasOwn(COMPOSITIONS,image.composition))fail('入力写真・構図の記録が不正です。');for(const [key,max]of [['title',120],['brief',1000]])if(!text(group.input[key],max))fail('入力内容が不正です。');headlineInput(group.input);if(image.design!==undefined&&!Object.hasOwn(DESIGNS,image.design))fail('デザインの希望が不正です。');const size=png(group.sourceImageDataUrl,3*1024*1024);if(size.width!==1280||size.height!==720)fail('入力写真の寸法が不正です。');}
+ else {if(!group.id.startsWith('complete-')||!shaPattern.test(group.input.sourceSha256)||!Object.hasOwn(COMPOSITIONS,image.composition))fail('入力写真・構図の記録が不正です。');for(const [key,max]of [['title',120],['brief',1000]])if(!text(group.input[key],max))fail('入力内容が不正です。');headlineInput(group.input);normalizeVisualIntent(group.input.visualIntent);if(image.design!==undefined&&!Object.hasOwn(DESIGNS,image.design))fail('デザインの希望が不正です。');const size=png(group.sourceImageDataUrl,3*1024*1024);if(size.width!==1280||size.height!==720)fail('入力写真の寸法が不正です。');}
  result(image.result);if(!(image.elapsedMs===null||Number.isInteger(image.elapsedMs)&&image.elapsedMs>=0))fail('生成時間が不正です。');return {group,image};
 }
 export function addToGallery(state,entry){
@@ -75,7 +76,7 @@ export function validateReviewContext(value){
 export function comparisonBundle(state,groupId){
  const group=state.groups.find(x=>x.id===groupId);if(!group)fail('比較する組がありません。');
  const images=state.images.filter(x=>x.groupId===groupId),review=state.reviews.find(x=>x.groupId===groupId)??null;
- return {version:group.input?.headlineMode==='auto'||images.some(x=>x.design!==undefined)?'complete-comparison-1.3.0':'complete-comparison-1.2.0',kind:'human_quality_review',assessment:null,group,images,review,reviewCoversAllImages:!!review&&images.length===review.displayWidths.length&&images.every(x=>review.displayWidths.some(w=>w.imageId===x.id)),note:'完成PNGは未採点です。人の選択は自動学習やCTR予測ではありません。写真・完成画像を含む非公開の比較記録です。'};
+ return {version:group.input?.visualIntent?'complete-comparison-1.4.0':group.input?.headlineMode==='auto'||images.some(x=>x.design!==undefined)?'complete-comparison-1.3.0':'complete-comparison-1.2.0',kind:'human_quality_review',assessment:null,group,images,review,reviewCoversAllImages:!!review&&images.length===review.displayWidths.length&&images.every(x=>review.displayWidths.some(w=>w.imageId===x.id)),note:'完成PNGは未採点です。人の選択は自動学習やCTR予測ではありません。写真・完成画像を含む非公開の比較記録です。'};
 }
 export function parseCostUsd(value){
  if(typeof value!=='string')fail('実費はUSDの金額で入力してください。');

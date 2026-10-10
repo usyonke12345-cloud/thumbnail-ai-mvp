@@ -30,10 +30,11 @@ test('synthetic complete requests agree with OpenAPI for manual compatibility an
   assert.equal(actual.headlineMode,item.expected.headlineMode,item.name);
   assert.equal(actual.headline,item.expected.headline,item.name);
   assert.equal(actual.design,item.expected.design,item.name);
+  assert.equal(actual.visualIntent,item.expected.visualIntent,item.name);
  }
  const base={...fixture.cases[0].input,imageDataUrl:fixture.imageDataUrl};
  const {headline,...noHeadline}=base;
- for(const input of [noHeadline,{...base,headlineMode:'manual',headline:null},{...base,headlineMode:'auto'},{...base,design:'unknown'},{...base,headlineMode:'unknown'},{...base,extra:true}]){
+ for(const input of [noHeadline,{...base,headlineMode:'manual',headline:null},{...base,headlineMode:'auto'},{...base,design:'unknown'},{...base,headlineMode:'unknown'},{...base,visualIntent:null},{...base,visualIntent:'x'.repeat(301)},{...base,extra:true}]){
   assert.equal(matches(input,schema),false);
   assert.throws(()=>validateComplete(input));
  }
