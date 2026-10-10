@@ -79,6 +79,8 @@ test('CLI writes exact PNG files and private records, merges repeated exports wi
   const report=JSON.parse(await readFile(join(output,'analysis.json'),'utf8'));assert.equal(report.reviews.length,1);assert.equal(report.progress.completedHumanComparisons,1);assert.ok(!JSON.stringify(report).includes('data:image'));
   for(const a of report.assets)assert.equal((await stat(join(output,a.path))).size,a.byteLength);
   assert.ok((await readFile(join(output,'README.txt'),'utf8')).includes('非公開'));
+  const preview=await readFile(join(output,'preview.html'),'utf8');assert.ok(preview.includes('元写真')&&preview.includes(report.assets[0].path));assert.ok(JSON.parse(result.stdout).outputFiles.includes('preview.html'));
+  const original=JSON.stringify(b);await writeFile(join(output,'preview.html'),original);await assert.rejects(()=>run(process.execPath,['scripts/analyze-complete-comparisons.mjs','--out',output,join(output,'preview.html')],{cwd:new URL('..',import.meta.url)}),/入力ファイルと出力ファイル/);assert.equal(await readFile(join(output,'preview.html'),'utf8'),original);
  }finally{await rm(temp,{recursive:true,force:true});}
 });
 test('HTTP diagnostics route and module work locally and do not consume a paid generation slot',async()=>{
