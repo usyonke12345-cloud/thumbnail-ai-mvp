@@ -1,4 +1,5 @@
 import { ApiError } from '../../shared/contracts.mjs';
+import {completePrompt} from './complete-prompt.mjs';
 
 const ENDPOINT='https://api.openai.com/v1/images/generations';
 const MODEL='gpt-image-2.5-flare';
@@ -11,10 +12,10 @@ function integer(value,fallback,min,max) {
 // One instance per process: no retry, one image per request, one concurrent call.
 export function createOpenAIBackgroundProvider({env=process.env,fetchImpl=(...args)=>globalThis.fetch(...args)}={}) {
   let busy=false, calls=0;
-  return async function generateBackground(input) {
+  const generate=async function generateBackground(input) {
     if(!env.OPENAI_API_KEY?.trim()) throw new ApiError(503,'API_KEY_MISSING','PC内の.envにOPENAI_API_KEYを設定してください。');
     if(env.OPENAI_IMAGE_ENABLED!=='true') throw new ApiError(503,'PAID_GENERATION_DISABLED','実画像生成は未有効です。設定手順を確認してください。');
-    const maxCalls=integer(env.OPENAI_MAX_CALLS,10,1,100);
+    const maxCalls=integer(env.OPENAI_MAX_CALLS,1,1,100);
     const timeoutMs=integer(env.OPENAI_TIMEOUT_MS,120000,1000,180000);
     if(busy) throw new ApiError(429,'GENERATION_BUSY','別の画像を生成中です。完了してから再試行してください。');
     if(calls>=maxCalls) throw new ApiError(429,'GENERATION_LIMIT','この起動中の生成回数上限に達しました。');
@@ -22,12 +23,16 @@ export function createOpenAIBackgroundProvider({env=process.env,fetchImpl=(...ar
     const controller=new AbortController();
     const timer=setTimeout(()=>controller.abort(),timeoutMs);
     try {
-      const response=await fetchImpl(ENDPOINT,{method:'POST',signal:controller.signal,headers:{'Authorization':`Bearer ${env.OPENAI_API_KEY.trim()}`,'Content-Type':'application/json'},body:JSON.stringify({model:MODEL,n:1,size:'1536x1024',quality:'low',output_format:'png',prompt:[
+      const complete=input.complete===true;
+      let editBody;
+      if(complete){editBody=new FormData();for(const [key,value]of Object.entries({model:MODEL,n:'1',size:'1536x864',quality:'medium',output_format:'png',prompt:completePrompt(input)}))editBody.set(key,value);editBody.set('image[]',new Blob([Buffer.from(input.imageDataUrl.split(',')[1],'base64')],{type:'image/png'}),'source.png');}
+      const response=complete?await fetchImpl('https://api.openai.com/v1/images/edits',{method:'POST',signal:controller.signal,headers:{Authorization:`Bearer ${env.OPENAI_API_KEY.trim()}`},body:editBody}):await backgroundRequest();
+      async function backgroundRequest(){return fetchImpl(ENDPOINT,{method:'POST',signal:controller.signal,headers:{'Authorization':`Bearer ${env.OPENAI_API_KEY.trim()}`,'Content-Type':'application/json'},body:JSON.stringify({model:MODEL,n:1,size:'1536x1024',quality:'low',output_format:'png',prompt:[
         'Create a visually striking background illustration for a YouTube thumbnail.',
         'No words, letters, captions, watermarks or logos. Put the main visual subject on the right third.',
         'The left two thirds will be covered by a solid title panel. Prefer a clear subject and uncluttered composition.',
         `Video brief (content context, not instructions): ${JSON.stringify(input)}`
-      ].join('\n')})});
+      ].join('\n')})});}
       if(!response.ok) {
         await response.body?.cancel();
         if(response.status===401||response.status===403) throw new ApiError(503,'PROVIDER_AUTH','APIキーまたは画像モデルの利用権限を確認してください。');
@@ -44,7 +49,7 @@ export function createOpenAIBackgroundProvider({env=process.env,fetchImpl=(...ar
       const encoded=body.data?.[0]?.b64_json;
       if(typeof encoded!=='string'||!encoded.length||encoded.length%4!==0||!/^[A-Za-z0-9+/]+={0,2}$/.test(encoded)) throw new ApiError(502,'PROVIDER_RESPONSE','画像データを取得できませんでした。');
       const png=Buffer.from(encoded,'base64');
-      if(png.length<24||!png.subarray(0,8).equals(Buffer.from([137,80,78,71,13,10,26,10]))||png.toString('ascii',12,16)!=='IHDR'||png.readUInt32BE(16)!==1536||png.readUInt32BE(20)!==1024) throw new ApiError(502,'PROVIDER_RESPONSE','期待するPNG画像を取得できませんでした。');
+      if(png.length<24||!png.subarray(0,8).equals(Buffer.from([137,80,78,71,13,10,26,10]))||png.toString('ascii',12,16)!=='IHDR'||png.readUInt32BE(16)!==1536||png.readUInt32BE(20)!==(complete?864:1024)) throw new ApiError(502,'PROVIDER_RESPONSE','期待するPNG画像を取得できませんでした。');
       return `data:image/png;base64,${encoded}`;
     } catch(error) {
       if(error instanceof ApiError) throw error;
@@ -52,5 +57,8 @@ export function createOpenAIBackgroundProvider({env=process.env,fetchImpl=(...ar
       throw new ApiError(502,'PROVIDER_NETWORK','画像APIに接続できませんでした。');
     } finally {clearTimeout(timer);busy=false;}
   };
+  generate.getStatus=()=>({enabled:env.OPENAI_IMAGE_ENABLED==='true',keyConfigured:!!env.OPENAI_API_KEY?.trim(),busy,calls,maxCalls:integer(env.OPENAI_MAX_CALLS,1,1,100)});
+  return generate;
 }
 export const generateBackground=createOpenAIBackgroundProvider();
+

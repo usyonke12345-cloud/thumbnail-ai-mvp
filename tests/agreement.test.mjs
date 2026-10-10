@@ -61,7 +61,26 @@ test('rescore turns a saved API response into scores.csv rows with the current v
   const response = JSON.parse(await read('../data/fixtures/response.json'));
   const rows = await rescoreRows('run-001', response);
   assert.equal(rows.length, 3);
-  for (const r of rows) assert.match(r, /^run-001,(bold|contrast|clean),\d{1,3},\d+\.\d+\.\d+$/);
+  for (const r of rows) assert.match(r, /^run-001,(bold|contrast|clean),\d{1,3},\d+\.\d+\.\d+,((contrast|brevity|font|fit)(\|(contrast|brevity|font|fit))*)?$/);
   assert.ok(!rows.join('\n').includes(response.input.title));
   await assert.rejects(rescoreRows('a,b', response));
+});
+
+test('sets whose candidates differ in unevaluated items are excluded from ranking comparison (0.4.0 agreement)', async () => {
+  const [ps, ss] = [await loadSchema(), await loadScoresSchema()];
+  const sh = (await read('../data/templates/scores.template.csv')).trim();
+  const prefs = [(await read('../data/templates/preferences.template.csv')).trim(), pref(devIds[0], 'same', 'bold'), pref(devIds[1], 'mixed', 'clean'), pref(devIds[2], 'old', 'bold')].join('\n');
+  const scores = [sh,
+    'same,bold,90,0.4.0,contrast', 'same,contrast,80,0.4.0,contrast', 'same,clean,70,0.4.0,contrast',  // 同じ評価範囲 → 比較する
+    'mixed,bold,90,0.4.0,', 'mixed,contrast,50,0.4.0,contrast', 'mixed,clean,40,0.4.0,contrast|fit', // 評価範囲が違う → 比較しない
+    'old,bold,90,0.4.0', 'old,contrast,80,0.4.0', 'old,clean,70,0.4.0',                              // 列なし（生成側CSVの4列形式）→ 比較する
+  ].join('\n');
+  const s = summarizeAgreement(parseCsv(prefs), parseCsv(scores), ps, ss);
+  assert.deepEqual(s.scores.invalid, []);
+  const [v] = s.byVersion;
+  assert.equal(v.different_coverage, 1); assert.equal(v.unmatched_preferences, 0);
+  assert.equal(v.dev.n, 2); assert.equal(v.dev.top1_hit, 2);
+  assert.ok(!v.failures.some(f => f.candidate_id === 'mixed'));
+  const bad = summarizeAgreement([], parseCsv([sh, 'x,bold,90,0.4.0,ctr'].join('\n')), ps, ss);
+  assert.equal(bad.scores.invalid.length, 1);
 });

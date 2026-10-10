@@ -1,0 +1,91 @@
+{
+  "source": "synthetic",
+  "note": "Artificial 16x9 uniform PNG. No person, permission claim or human quality result.",
+  "request": {
+    "assetVersion": "image-assets-1.0.0",
+    "assets": [
+      {
+        "assetId": "complete",
+        "role": "complete_thumbnail",
+        "sha256": "dd0daee237792d3070e297652ce9ddf662e4043a8a832447ea637afa410f0605",
+        "mimeType": "image/png",
+        "width": 16,
+        "height": 9,
+        "byteLength": 79,
+        "dataUrl": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAJCAYAAAA7KqwyAAAAFklEQVR4nGNQCaj4TwlmGDVg1ACgAQDhfxRAMhjNsAAAAABJRU5ErkJggg=="
+      }
+    ],
+    "images": [
+      {
+        "imageId": "image-a",
+        "assetId": "complete",
+        "role": "complete_thumbnail",
+        "generationVersion": "ai-complete-0.1.2",
+        "sourcePhotoAssetId": null,
+        "backgroundAssetId": null,
+        "headlineProvided": "TEST VIDEO",
+        "renderedTextVerified": false,
+        "textRegions": null
+      }
+    ]
+  },
+  "response": {
+    "analysisVersion": "complete-png-diagnostics-0.1.0",
+    "kind": "image_diagnostics",
+    "assessment": null,
+    "assets": [
+      {
+        "assetId": "complete",
+        "sha256": "dd0daee237792d3070e297652ce9ddf662e4043a8a832447ea637afa410f0605",
+        "role": "complete_thumbnail",
+        "byteLength": 79,
+        "status": "analyzed",
+        "width": 16,
+        "height": 9,
+        "luminance": {
+          "samples": 40,
+          "mean": 0.07468455477324717,
+          "std": 4.163336342344337e-17,
+          "p5": 0.07468455477324713,
+          "p50": 0.07468455477324713,
+          "p95": 0.07468455477324713
+        },
+        "sampleStep": 2,
+        "nearlyUniform": true,
+        "reasons": [
+          "画素の相対輝度を間引いて測定しました。"
+        ]
+      }
+    ],
+    "images": [
+      {
+        "imageId": "image-a",
+        "assetId": "complete",
+        "sourcePhotoAssetId": null,
+        "backgroundAssetId": null,
+        "headlineProvided": "TEST VIDEO",
+        "status": "analyzed",
+        "qualityScore": null,
+        "renderedText": null,
+        "unevaluated": [
+          "rendered_text",
+          "readability",
+          "text_fit",
+          "text_contrast",
+          "subject_preservation",
+          "composition_quality"
+        ],
+        "reasons": [
+          "見出しは生成指示で、画像内の文字として検証していません。",
+          "入力写真を文字なし背景として代用しません。"
+        ],
+        "limitations": [
+          "輝度やほぼ単色という兆候だけで、品質・文字の読みやすさ・人物の保持を採点しません。",
+          "輝度は画素値をsRGBと仮定した間引き統計です。色プロファイル変換は行いません。"
+        ]
+      }
+    ],
+    "decodedImages": 1,
+    "note": "ローカルの画像診断です。外部API送信・追加料金なし。完成PNGの品質スコアとCTR予測は未実装です。"
+  }
+}
