@@ -18,6 +18,8 @@
 
 ## 採点担当へ渡す
 
+共有先でJSONの容量が大きすぎる場合は、`/editor`の「共有用ZIPを保存」を使う。同じPNGを1枚にまとめ、写真と人の記録を画質を変えずに渡す。相手はZIPをすべて展開して`preview.html`を開ける。ZIP作成ではPNGの明るさ診断は行わない。正式な診断・横断集計をする場合は、展開したフォルダーで`node restore-report.mjs`を実行し、検証済みの`complete-comparison-report.restored.json`を以下のCLIへ渡す。転送用の`report-with-asset-references.json`は直接分析しない。通常JSONの書き出しも維持する。
+
 「全組の画像・記録・集計JSONを保存」を使う。各組のJSONだけでもよい。PNGと写真を含むため非公開で扱い、Gitには入れない。補足なしの組はcomplete-comparison-1.5.0、分析JSONはcomplete-evaluation-dataset-1.3.0。補足ありでイメージを持つ組は1.4.0、分析datasetは1.2.0、それ以外の自動見出し・デザイン指定は1.3.0。旧1.0.0〜1.4.0も読み込み可能で、欠けている実費・評価者・利用確認を補わない。補足なしはbrief:""で固定する。
 
 受け取ったJSONをdata/private/complete-review/へ置き、プロジェクトのルートで実行する。Windowsでも同じコマンドを使える。
@@ -38,7 +40,7 @@ node scripts/analyze-complete-comparisons.mjs data/private/complete-review/batch
 
 送信後は、採点担当が入力条件・画像の対応・未評価の表現を確認する。生成担当は次の写真・タイトルによる少数確認を進める。1枚だけの品質確認を20件の比較へ繰り上げない。送付した記録の指摘と、別入力での品質を確かめてから本格的な比較を再開する。
 
-analysis.jsonは、新しい見出し作成方針・デザイン指定があればcomplete-evaluation-dataset-1.1.0、なければ従来の1.0.0。画像資産の診断契約はimage-assets-1.0.0のまま。自動見出しではheadlineProvided:null、renderedTextVerified:false、textRegions:nullを維持し、文字起こしや品質採点ができたとは扱わない。preview.htmlでも「AIに任せる（実際の文言は未取得）」と希望した方向を表示する。
+analysis.jsonは、補足なしの組があればcomplete-evaluation-dataset-1.3.0、イメージの入力があれば1.2.0、それ以外の新しい見出し作成方針・デザイン指定があれば1.1.0、なければ従来の1.0.0。画像資産の診断契約はimage-assets-1.0.0のまま。自動見出しではheadlineProvided:null、renderedTextVerified:false、textRegions:nullを維持し、文字起こしや品質採点ができたとは扱わない。preview.htmlでも「AIに任せる（実際の文言は未取得）」と希望した方向を表示する。
 
 ## 20件を集める条件
 

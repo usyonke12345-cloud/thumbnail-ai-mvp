@@ -2,6 +2,8 @@
 
 正本は `shared/openapi.json`。破壊的変更は2人で合意してから行い、呼び出し側とfixtureを同じPRで更新します。
 
+共有ZIPはブラウザ内で作成し、新しいHTTP API・OpenAPIスキーマ・生成/採点版を追加しません。`private-comparison-transfer-1.0.0`のmanifestとPNG資産を同梱し、Nodeで元の比較JSONをSHA-256検証付きで復元します。既存のcomplete-comparison各版を保持し、転送用の参照JSONはAPI入力には使いません。詳細はdocs/COMPLETE-COMPARISON.md。受け渡し方法は採点担当のレビュー対象です。
+
 完成PNG比較用の`/complete-gallery.js`・`/complete-gallery-model.js`・`/complete-gallery-store.js`は静的配信ルートです。画像と人の選択はブラウザ内に保存し、Candidate/Assessmentを変更しません。画像付きの非公開JSONは、自動見出しやデザイン指定を含む場合`complete-comparison-1.3.0`（未採点）、全組の集計付きJSONは`complete-comparison-report-1.0.0`で、画像資産APIとは別形式です。旧1.0.0〜1.2.0も読み込み可能です。実費と保存結果は人が確認して入力し、未確認はnull/unknown。採点側への正式取り込みは形式レビュー待ちです。詳細はdocs/COMPLETE-COMPARISON.md。
 
 Day5の `/review`・`/review.js`・`/comparison-model.js`・`/comparison-store.js` は静的な比較画面とブラウザ保存のための配信ルートです。画像・人の評価はIndexedDBに保存し、この画面からAPIへ送信しません。Candidate/Assessmentの契約は変更しません。採点担当のCSV書き出し・ローカル分析はdocs/DAY5.mdを参照してください。

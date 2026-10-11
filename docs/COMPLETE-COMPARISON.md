@@ -38,6 +38,20 @@
 
 ## 採点担当へ渡す形式
 
+### 共有先でJSONの容量が大きすぎる場合
+
+`/editor`の「共有用ZIPを保存」で、全組の写真・完成PNG・記録をまとめられる。同じPNGはSHA-256ごとに1枚へまとめ、Base64をファイル参照へ置き換える。PNGの画質・寸法・バイト列と人の記録は変更しない。ZIP STORE形式をブラウザ内で作り、サーバーや外部サービスへ写真を送らない。ボタンの連打は抑止し、失敗しても既存の保存内容と通常JSONの書き出しを維持する。容量は画像次第なので、作成後に表示されるZIP容量と共有先の上限を確認する。ダウンロード処理の開始をPNG保存成功の記録には数えない。
+
+受け取る側はZIPをすべて展開して`preview.html`を開く。これは画像と保存済みのコメントの閲覧だけで、新しい評価や診断は行わない。`summary.json`は成功画像の現行集計、`human-reviews.jsonl`は保存済みの人の記録。実費・出典・利用確認の欠損を補わず、完成PNGは未採点のまま。
+
+Webへ取り込む、または既存の分析CLIへ渡す場合は、展開したフォルダーで次を実行する。
+
+```sh
+node restore-report.mjs
+```
+
+`complete-comparison-report.restored.json`を復元する。元の書き出しJSONとPNGのSHA-256、バイト数、参照件数を検証し、異なる既存ファイルへは上書きしない。Node標準機能だけを使う。`report-with-asset-references.json`は転送専用で、直接Webや分析CLIへ渡さない。転送形式は`private-comparison-transfer-1.0.0`で、既存のcomparison JSONの版・Candidate・Assessment・画像資産APIは変更しない。PNGの展開・明るさ診断は復元したJSONを既存CLIで処理したときに行う。
+
 補足なし（group.input.brief===""）の組はcomplete-comparison-1.5.0。brief省略・空白だけも空文字へ正規化して固定し、後から動画内容を推測で補わない。補足を付けた生成は別の組になる。旧1.0.0〜1.4.0は引き続き読み、補足ありの既存組IDを変えない。イメージの入力は1.4.0以上、補足なしは1.5.0が必要で、古い版へ書き換えたJSONは拒否する。
 
 自動見出しまたはデザイン指定を持つ組JSONの版は`complete-comparison-1.3.0`、kindは`human_quality_review`。入力写真のSHA-256、固定した入力内容、完成画像のSHA-256・生成版・構図の希望・時間、任意の実費/保存結果、人の選択/不採用・理由・気になる点・実表示幅を含む。自動見出しではgroup.inputにheadline:nullとheadlineMode:autoを保存する。手入力では従来の入力4項目と組IDを維持する。images[].designはAPIへ送った方向で、実画像の構図を解析した結果ではない。review.contextに匿名評価者ID、タイトル出典、タイトル・写真の利用確認を持つ。旧1.0.0/1.1.0/1.2.0も読み込み可能で、新項目のない既存組は1.2.0で書き出す。欠けている項目は推測で補わない。既存IndexedDBの版は1のまま。

@@ -58,3 +58,95 @@ export function diagnosticText(result,imageId){
  if(asset.status!=='analyzed')return `PNG診断：未評価。${asset.reasons.join(' ')} 文字・人物の保持・品質の点数は未評価です。`;
  return `PNG診断：${asset.width}×${asset.height}を解析しました。${asset.luminance?`平均の明るさ ${asset.luminance.mean.toFixed(3)} / ほぼ単色の兆候 ${asset.nearlyUniform?'あり':'なし'}。`:'不透明な画素のサンプルがなく、明るさは未評価。'} 文字の正しさ・読みやすさ・人物の保持・品質の点数は未評価です。`;
 }
+
+const utf8=value=>new TextEncoder().encode(value);
+const tick=()=>new Promise(resolve=>setTimeout(resolve,0));
+const crcTable=Array.from({length:256},(_,n)=>{let c=n;for(let i=0;i<8;i++)c=c&1?0xedb88320^(c>>>1):c>>>1;return c>>>0;});
+function crc32(data){let c=0xffffffff;for(const byte of data)c=crcTable[(c^byte)&255]^(c>>>8);return (c^0xffffffff)>>>0;}
+// PNG is already compressed. ZIP STORE avoids a second codec or an external service.
+async function storedZip(entries){
+ const parts=[],central=[];let offset=0,centralBytes=0;
+ for(const {name,data} of entries){
+  const filename=utf8(name),crc=crc32(data),local=new Uint8Array(30+filename.length),v=new DataView(local.buffer);
+  v.setUint32(0,0x04034b50,true);v.setUint16(4,20,true);v.setUint16(6,0x800,true);v.setUint16(12,33,true);
+  v.setUint32(14,crc,true);v.setUint32(18,data.length,true);v.setUint32(22,data.length,true);v.setUint16(26,filename.length,true);local.set(filename,30);
+  const header=new Uint8Array(46+filename.length),h=new DataView(header.buffer);
+  h.setUint32(0,0x02014b50,true);h.setUint16(4,20,true);h.setUint16(6,20,true);h.setUint16(8,0x800,true);h.setUint16(14,33,true);
+  h.setUint32(16,crc,true);h.setUint32(20,data.length,true);h.setUint32(24,data.length,true);h.setUint16(28,filename.length,true);h.setUint32(42,offset,true);header.set(filename,46);
+  parts.push(local,data);central.push(header);offset+=local.length+data.length;centralBytes+=header.length;await tick();
+ }
+ const end=new Uint8Array(22),e=new DataView(end.buffer);e.setUint32(0,0x06054b50,true);e.setUint16(8,entries.length,true);e.setUint16(10,entries.length,true);e.setUint32(12,centralBytes,true);e.setUint32(16,offset,true);
+ return new Blob([...parts,...central,end],{type:'application/zip'});
+}
+const escapeHtml=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function sharePreview(report){
+ const picture=(hash,alt)=>`<img src="assets/${hash}.png" alt="${escapeHtml(alt)}" loading="lazy">`;
+ const groups=report.sets.map((set,index)=>{
+  const input=set.group.input,review=set.review;
+  const selected=review?.decision==='none_acceptable'?'全部使わない':review?`案 ${set.images.findIndex(x=>x.id===review.imageId)+1}`:'未記録';
+  return `<section><h2>${index+1}：${escapeHtml(input?.title??'入力条件不明の以前の完成画像')}</h2>
+  <p>動画内容の補足：${escapeHtml(input?.brief||'補足なし')}<br>仕上がりのイメージ：${escapeHtml(input?.visualIntent??'未指定')}</p>
+  ${input?`<details><summary>入力写真</summary>${picture(input.sourceSha256,'入力写真')}</details>`:''}
+  <div class="images">${set.images.map((image,i)=>`<article><h3>完成案 ${i+1}</h3>${picture(image.imageSha256,`完成案 ${i+1}`)}<p>${escapeHtml(image.result.generation_version??'生成版不明')}・未採点<br>確認済み実費：${escapeHtml(image.observation?.costUsd??'未確認')} USD<br>PNG保存：${escapeHtml(({saved:'確認できた',failed:'できなかった',unknown:'未確認'})[image.observation?.pngSave]??'未確認')}</p></article>`).join('')}</div>
+  <p>保存された選択：${escapeHtml(selected)}${review&&!set.reviewCoversAllImages?'（新しい案の再確認待ち）':''}<br>理由：${escapeHtml(review?.reason??'未記録')}<br>気になる点：${escapeHtml(review?.issues.join(' / ')??'未記録')}</p></section>`;
+ }).join('');
+ return `<!doctype html><html lang="ja"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src 'self' file:; style-src 'unsafe-inline'"><title>完成PNGの共有記録</title><style>body{font:16px system-ui,sans-serif;margin:24px;background:#101525;color:#edf2ff}section{border-top:1px solid #506077;padding:16px 0}.images{display:flex;flex-wrap:wrap;gap:20px}img{width:min(100%,360px);height:auto}article{max-width:360px}p{white-space:pre-wrap;overflow-wrap:anywhere}summary{cursor:pointer}</style><h1>完成PNGの共有記録</h1><p>ZIPをすべて展開してから開いてください。保存された画像と人の記録を表示します。閲覧は新しい比較記録になりません。完成PNGは未採点です。外部通信・API課金はありません。</p>${groups}</html>`;
+}
+function restoreScript(){return `import {readFile,writeFile} from 'node:fs/promises';
+import {join,dirname} from 'node:path';
+import {fileURLToPath} from 'node:url';
+import {createHash} from 'node:crypto';
+const root=dirname(fileURLToPath(import.meta.url));
+const hash=bytes=>createHash('sha256').update(bytes).digest('hex');
+const manifest=JSON.parse(await readFile(join(root,'transfer-manifest.json'),'utf8'));
+if(manifest.version!=='private-comparison-transfer-1.0.0'||manifest.compactReport.filename!=='report-with-asset-references.json'||!Array.isArray(manifest.assets))throw new Error('Unsupported transfer manifest');
+const compact=await readFile(join(root,'report-with-asset-references.json'));
+if(compact.length!==manifest.compactReport.bytes||hash(compact)!==manifest.compactReport.sha256)throw new Error('Compact report checksum mismatch');
+let restored=compact.toString('utf8');
+for(const asset of manifest.assets){
+ if(!/^[a-f0-9]{64}$/.test(asset.sha256)||asset.path!=='assets/'+asset.sha256+'.png'||asset.token!=='private-png-sha256:'+asset.sha256)throw new Error('Invalid asset path');
+ const bytes=await readFile(join(root,asset.path));
+ if(bytes.length!==asset.bytes||hash(bytes)!==asset.sha256)throw new Error('PNG checksum mismatch');
+ if(restored.split(asset.token).length-1!==asset.occurrences)throw new Error('Asset reference count mismatch');
+ restored=restored.split(asset.token).join('data:image/png;base64,'+bytes.toString('base64'));
+}
+const bytes=Buffer.from(restored,'utf8');
+if(bytes.length!==manifest.sourceReport.bytes||hash(bytes)!==manifest.sourceReport.sha256)throw new Error('Restored report checksum mismatch');
+JSON.parse(restored);
+const destination=join(root,'complete-comparison-report.restored.json');
+try{await writeFile(destination,bytes,{flag:'wx'});}catch(error){if(error.code!=='EEXIST'||hash(await readFile(destination))!==manifest.sourceReport.sha256)throw error;}
+console.log('元の比較JSONを復元しました。SHA-256とバイト数は一致しています。');
+console.log(destination);
+`;}
+export async function createCompleteShareZip(value){
+ const original=JSON.stringify(value,null,2),originalBytes=utf8(original);
+ if(originalBytes.length>MAX_IMPORT_BYTES)fail('共有する比較記録は70MiB以下にしてください。');
+ // Freeze this export before awaiting, and verify hashes/references rather than trusting summaries.
+ const report=JSON.parse(original);await validateCompleteImport(report);
+ if(report.kind!=='human_quality_report')fail('共有ZIPには全組の比較reportが必要です。');
+ const assets=new Map(),urls=new Map(),entries=[];
+ for(const set of report.sets){
+  const references=[...(set.group.input?[{url:set.group.sourceImageDataUrl,hash:set.group.input.sourceSha256}]:[]),...set.images.map(image=>({url:image.result.imageDataUrl,hash:image.imageSha256}))];
+  for(const {url,hash}of references){
+   if(urls.has(url))continue;
+   const binary=atob(url.slice(22));if(btoa(binary)!==url.slice(22))fail('PNGのBase64表記を確認できません。通常の比較JSONで保存してください。');
+   if(!assets.has(hash)){const data=new Uint8Array(binary.length);for(let i=0;i<binary.length;i++)data[i]=binary.charCodeAt(i);assets.set(hash,{sha256:hash,path:`assets/${hash}.png`,bytes:data.length,token:`private-png-sha256:${hash}`,occurrences:0});entries.push({name:`assets/${hash}.png`,data});}
+   urls.set(url,assets.get(hash));await tick();
+  }
+ }
+ let compact=original;
+ for(const [url,asset]of urls){if(original.includes(asset.token))fail('画像参照と記録の文字が重複しました。通常の比較JSONで保存してください。');asset.occurrences+=compact.split(url).length-1;compact=compact.split(url).join(asset.token);}
+ const compactBytes=utf8(compact),manifest={version:'private-comparison-transfer-1.0.0',createdAt:new Date().toISOString(),sourceReport:{filename:'complete-comparison-report.json',bytes:originalBytes.length,sha256:await sha(originalBytes)},compactReport:{filename:'report-with-asset-references.json',bytes:compactBytes.length,sha256:await sha(compactBytes)},assets:[...assets.values()]};
+ const textFiles={
+  'report-with-asset-references.json':compact,
+  'transfer-manifest.json':JSON.stringify(manifest,null,2),
+  'summary.json':JSON.stringify(report.summary,null,2),
+  'human-reviews.jsonl':report.sets.filter(x=>x.review).map(x=>JSON.stringify(x.review)).join('\n')+'\n',
+  'preview.html':sharePreview(report),
+  'restore-report.mjs':restoreScript(),
+  'README.txt':'完成PNGの共有ZIP\n\nZIPをすべて展開してpreview.htmlを開くと、入力写真・完成PNG・保存された人の記録を確認できます。画像の画質と記録は変更していません。同じPNGはassets/へ1枚ずつ保存しました。\n\n元の比較JSONが必要な場合、展開したフォルダーで「node restore-report.mjs」を実行してください。Node標準機能だけを使い、元のJSONのSHA-256とバイト数の一致も検証します。complete-comparison-report.restored.jsonをWebへ読み込むか、既存のscripts/analyze-complete-comparisons.mjsへ渡してください。report-with-asset-references.jsonは転送専用で、直接取り込みできません。\n\nsummary.jsonは現在保存中の成功画像の集計、human-reviews.jsonlは保存された人の記録です。1枚の確認・再確認待ち・未確認の利用確認を20件完了として扱いません。完成PNGの品質点数と採点との順位一致は未実装です。このZIP作成ではPNG診断を追加実行していません。\n\nこのZIPはブラウザ内で作成し、写真を送信・生成しません。共有は本人が行ってください。写真と記録を含むため非公開で渡し、Gitに入れないでください。\n'
+ };
+ for(const [name,text]of Object.entries(textFiles))entries.push({name,data:utf8(text)});
+ const blob=await storedZip(entries);
+ return {blob,originalBytes:originalBytes.length,zipBytes:blob.size,assets:assets.size,groups:report.sets.length,images:report.sets.reduce((sum,set)=>sum+set.images.length,0)};
+}

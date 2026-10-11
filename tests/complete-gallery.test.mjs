@@ -38,6 +38,16 @@ function documentFixture(){
  const root=document.createElement('section');return {document,root,find:predicate=>all(root).find(predicate)};
 }
 function storageFixture(){let state=empty(),rejectReview=false;return {get state(){return state;},set rejectReview(value){rejectReview=value;},async load(){return structuredClone(state);},async add(entry){state=addToGallery(state,entry);return structuredClone(state);},async observe(id,value){if(rejectReview)throw new Error('保存容量が足りません。');state=recordObservation(state,id,value);return structuredClone(state);},async review(review){if(rejectReview)throw new Error('保存容量が足りません。');validateQualityReview(review,state.groups.find(x=>x.id===review.groupId),state.images);state.reviews=[review];return structuredClone(state);},async remove(id){state={groups:state.groups.filter(x=>x.id!==id),images:state.images.filter(x=>x.groupId!==id),reviews:[]};return structuredClone(state);},async clear(){state=empty();return structuredClone(state);}};}
+test('share button handles empty state, double clicks, successful download and failures without changing saved records',async()=>{
+ const dom=documentFixture(),storage=storageFixture(),downloads=[];let calls=0,release,fail=false;
+ const share=async report=>{calls++;await new Promise(resolve=>release=resolve);if(fail)throw new Error('ZIP test failure');return {blob:new Blob(['fixture']),zipBytes:7,originalBytes:100,assets:2,groups:report.sets.length,images:1};};
+ const app=createCompleteGallery({...dom,storage,share,download:(...args)=>downloads.push(args)});await app.ready;
+ const button=dom.find(x=>x.textContent==='共有用ZIPを保存');assert.equal(button.disabled,true);await button.events.click();assert.equal(calls,0);
+ await app.remember(payload,result,{id:'share-a'});const before=structuredClone(storage.state);assert.equal(button.disabled,false);
+ const pending=button.events.click();assert.equal(button.disabled,true);await button.events.click();assert.equal(calls,1);release();await pending;
+ assert.equal(button.disabled,false);assert.equal(downloads[0][0],'complete-comparison-share.zip');assert.equal(downloads[0][2],'application/zip');assert.deepEqual(storage.state,before);assert.ok(dom.root.querySelectorAll('p').some(x=>x.textContent.includes('preview.html')&&x.textContent.includes('送信はまだ')));
+ fail=true;const failed=button.events.click();release();await failed;assert.equal(button.disabled,false);assert.equal(downloads.length,1);assert.deepEqual(storage.state,before);assert.ok(dom.root.querySelectorAll('p').some(x=>x.textContent.includes('ZIP test failure')&&x.textContent.includes('保持')));
+});
 test('gallery reloads real images, saves all rejected, and explains failures next to the save button',async()=>{
  const dom=documentFixture(),storage=storageFixture(),downloads=[];
  const app=createCompleteGallery({...dom,storage,download:(...args)=>downloads.push(args),confirm:()=>true});await app.ready;

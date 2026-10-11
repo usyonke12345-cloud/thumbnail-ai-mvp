@@ -1,8 +1,8 @@
 import {COMPOSITIONS,DESIGNS,MAX_IMAGES,createEntry,createLegacyEntry,comparisonBundle,validateQualityReview,parseCostUsd,gallerySummary,comparisonReport} from './complete-gallery-model.js';
 import {galleryStorage} from './complete-gallery-store.js';
-import {diagnoseComplete,diagnosticText,validateCompleteImport,MAX_IMPORT_BYTES} from './complete-png-transfer.js';
-export function createCompleteGallery({root,document=globalThis.document,storage=galleryStorage,download=downloadFile,confirm=message=>window.confirm(message),diagnose=diagnoseComplete}={}){
- let state={groups:[],images:[],reviews:[]},selected='',width=360;
+import {diagnoseComplete,diagnosticText,validateCompleteImport,MAX_IMPORT_BYTES,createCompleteShareZip} from './complete-png-transfer.js';
+export function createCompleteGallery({root,document=globalThis.document,storage=galleryStorage,download=downloadFile,confirm=message=>window.confirm(message),diagnose=diagnoseComplete,share=createCompleteShareZip}={}){
+ let state={groups:[],images:[],reviews:[]},selected='',width=360,sharing=false;
  const el=(tag,text='')=>{const node=document.createElement(tag);node.textContent=text;return node;};
  const heading=el('h2','AI完成画像を見比べる'),intro=el('p','実際に生成した完成PNGを、同じ入力写真・タイトル・内容・見出しの作り方ごとに保存します。構図やデザインを変えて1枚ずつ作った結果を見比べられます。生成・自動学習はこの比較操作では行いません。'),feedback=el('p');feedback.setAttribute('role','status');feedback.setAttribute('aria-live','polite');
  const select=el('select'),label=el('label','比較する組 ');label.append(select);select.setAttribute('aria-label','AI完成画像の比較する組');
@@ -12,6 +12,8 @@ export function createCompleteGallery({root,document=globalThis.document,storage
  const info=el('p'),source=el('div'),images=el('div');images.className='complete-gallery-images';
  const summary=el('pre');summary.className='complete-gallery-summary';
  const exportAll=el('button','全組の画像・記録・集計JSONを保存');exportAll.type='button';
+ const exportZip=el('button','共有用ZIPを保存');exportZip.type='button';
+ const shareNote=el('p','写真の重複を除き、画質と比較記録を保ったZIPを作ります。相手は展開して確認できます。作成は無料で、相手への送信は自分で行います。');
  const importFile=el('input'),importLabel=el('label','保存した写真・完成画像・比較記録を読み込む');importFile.type='file';importFile.accept='.json,application/json';importFile.setAttribute('aria-label','完成PNG比較JSONを読み込む');importLabel.append(importFile);
  const importStatus=el('p');importStatus.setAttribute('role','status');importStatus.setAttribute('aria-live','polite');
  const importNote=el('p','このアプリで保存したJSONから、画像と記録をこのブラウザへ戻せます。読み込みは無料です。人の選択・利用確認・実費は保存された申告で、新しい確認や評価には数えません。編集途中の写真下書きとAPIキーは含みません。');
@@ -28,7 +30,7 @@ export function createCompleteGallery({root,document=globalThis.document,storage
  const note=el('p','点数はまだ付けていません。「全部使わない」も記録できます。選択は生成AIや採点モデルへ自動送信されません。');
  form.append(reviewerLabel,sourceLabel,titlePermissionLabel,photoPermissionLabel,decisionLabel,reasonLabel,el('p','気になる点（任意）'),issues,save,qualityFeedback,note);
  const actions=el('div');actions.className='save-actions';const exportButton=el('button','写真・完成画像・比較記録のJSONを保存'),remove=el('button','この組を比較一覧から削除');exportButton.type=remove.type='button';actions.append(exportButton,remove);
- root.replaceChildren(heading,intro,feedback,summary,exportAll,importLabel,importStatus,importNote,label,refresh,toolbar,info,source,images,form,actions);
+ root.replaceChildren(heading,intro,feedback,summary,exportZip,shareNote,exportAll,importLabel,importStatus,importNote,label,refresh,toolbar,info,source,images,form,actions);
  function current(){return state.groups.find(x=>x.id===selected);}
  function outputs(){return state.images.filter(x=>x.groupId===selected).sort((a,b)=>Date.parse(a.capturedAt)-Date.parse(b.capturedAt)||a.id.localeCompare(b.id));}
  function renderImages(){
@@ -50,6 +52,7 @@ export function createCompleteGallery({root,document=globalThis.document,storage
   const report=gallerySummary(state),seconds=value=>value===null?'不明':`${(value/1000).toFixed(1)}秒`;
   summary.textContent=`保存中：${report.images}枚 / ${report.groups}組\n選択記録：2枚以上の比較 ${report.comparedGroups}組 / 1枚の確認 ${report.singleImageReviews}組 / 案追加後の再確認待ち ${report.staleReviews}組\n20件の収集：保存中の人の比較 ${report.collection.humanComparisons}組 / 出典・利用確認済み実タイトルの比較 ${report.collection.authorizedRealComparisons}組\n生成時間：中央値 ${seconds(report.generationTime.medianMs)} / p95 ${seconds(report.generationTime.p95Ms)}（時間不明 ${report.generationTime.unknown}枚）\n確認済み実費：${report.cost.confirmedTotalUsd===null?'未確認':`${report.cost.confirmedTotalUsd} USD`}（実費不明 ${report.cost.unknownImages}枚）\nPNG保存：確認できた ${report.pngSave.saved}枚 / できなかった ${report.pngSave.failed}枚 / 未確認 ${report.pngSave.unknown}枚\n現在残っている成功画像だけの集計です。削除・失敗分は含みません。`;
   exportAll.disabled=!state.images.length;
+  exportZip.disabled=sharing||!state.images.length;
  }
  function render(){
   qualityFeedback.textContent='';
@@ -84,9 +87,22 @@ export function createCompleteGallery({root,document=globalThis.document,storage
   form.addEventListener('submit',async event=>{event.preventDefault();if(save.disabled)return;save.disabled=true;try{const group=current();if(!group)throw new Error('比較する組がありません。');const review={version:1,groupId:group.id,recordedAt:new Date().toISOString(),decision:decision.value==='none'?'none_acceptable':'selected',imageId:decision.value==='none'?null:decision.value,reason:reason.value,issues:issueInputs.filter(x=>x.checked).map(x=>x.value),context:{version:1,reviewerId:reviewer.value.trim(),titleSource:titleSource.value,titlePermissionConfirmed:titlePermission.checked,photoPermissionConfirmed:photoPermission.checked},displayWidths:[...images.querySelectorAll('img')].map(x=>({imageId:x.dataset.imageId,width:x.getBoundingClientRect().width}))};validateQualityReview(review,group,state.images);state=await storage.review(review);render();qualityFeedback.textContent=feedback.textContent='この組の選択と理由をブラウザ内に保存しました。API送信・追加料金はありません。';}catch(error){qualityFeedback.textContent=feedback.textContent=error.message;}finally{save.disabled=false;}});
  exportButton.addEventListener('click',()=>{try{download(`${selected}.json`,JSON.stringify(comparisonBundle(state,selected),null,2),'application/json');feedback.textContent='写真・完成PNG・比較記録のJSONを出力しました。非公開で扱ってください。';}catch(error){feedback.textContent=error.message;}});
  exportAll.addEventListener('click',()=>{try{download('complete-comparison-report.json',JSON.stringify(comparisonReport(state),null,2),'application/json');feedback.textContent='全組の写真・完成PNG・記録・集計を出力しました。非公開で扱ってください。';}catch(error){feedback.textContent=error.message;}});
+ exportZip.addEventListener('click',async()=>{
+  if(exportZip.disabled||sharing)return;sharing=true;renderSummary();feedback.textContent='写真と記録を確認し、共有用ZIPを作っています…';
+  try{
+   const result=await share(comparisonReport(state)),link=download('complete-comparison-share.zip',result.blob,'application/zip');
+   feedback.textContent=`共有用ZIPを作成しました：${(result.zipBytes/1e6).toFixed(1)}MB（通常JSON ${(result.originalBytes/1e6).toFixed(1)}MB）。${result.images}枚・${result.groups}組、重複を除いた写真と完成PNG ${result.assets}枚。相手にはZIPをすべて展開してpreview.htmlを開くよう伝えてください。送信はまだ行っていません。`;
+   if(link&&typeof link==='object'&&typeof link.click==='function'){link.textContent='ZIPをもう一度保存';feedback.append(link);}
+  }catch(error){feedback.textContent=`共有用ZIPを作れません：${error.message} 保存済みの画像と比較記録は保持しています。通常のJSON保存も利用できます。`;}
+  finally{sharing=false;renderSummary();}
+ });
  remove.addEventListener('click',async()=>{if(!confirm('この組を比較一覧から削除しますか？ 必要なPNGとJSONは先に保存してください。編集下書きの最後の完成PNGは別に残ります。'))return;remove.disabled=true;try{state=await storage.remove(selected);selected='';render();}catch(error){feedback.textContent=error.message;}finally{remove.disabled=false;}});
  render();feedback.textContent='完成画像の比較一覧を読み込んでいます…';
  const ready=reload().catch(error=>{feedback.textContent=`比較保存を読み込めません：${error.message} 完成PNGはファイルにも保存してください。`;});
  return {ready,async remember(payload,data,options){await ready;const entry=await createEntry(payload,data,options);state=await storage.add(entry);selected=entry.group.id;render();return state.added;},async rememberLegacy(data){await ready;const entry=await createLegacyEntry(data);state=await storage.add(entry);if(state.groups.some(x=>x.id===entry.group.id))selected=entry.group.id;render();},async clear(){await ready;state=await storage.clear();selected='';render();}};
 }
-function downloadFile(name,body,type){const url=URL.createObjectURL(new Blob([body],{type})),link=document.createElement('a');link.href=url;link.download=name;link.click();setTimeout(()=>URL.revokeObjectURL(url),10000);}
+function downloadFile(name,body,type){
+ const blob=new Blob([body],{type}),link=document.createElement('a');let url=null,timer;
+ function prepare(){if(!url){url=URL.createObjectURL(blob);link.href=url;}clearTimeout(timer);timer=setTimeout(()=>{URL.revokeObjectURL(url);url=null;},60000);}
+ link.download=name;link.textContent='ファイルを保存';link.addEventListener('click',prepare);prepare();link.click();return link;
+}
