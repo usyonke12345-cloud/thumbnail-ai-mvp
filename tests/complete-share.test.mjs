@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {mkdtemp,mkdir,writeFile,readFile,rm,access} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
-import {join,dirname} from 'node:path';
+import {join,dirname,basename,resolve} from 'node:path';
 import {execFile} from 'node:child_process';
 import {promisify} from 'node:util';
 import {createHash} from 'node:crypto';
@@ -12,6 +12,7 @@ import {bundle,png,dataUrl} from './helpers/complete-png.mjs';
 
 const hash=bytes=>createHash('sha256').update(bytes).digest('hex');
 const run=promisify(execFile);
+const tempRoot=resolve(tmpdir());
 function filesFromZip(bytes){
  const end=bytes.length-22;assert.equal(bytes.readUInt32LE(end),0x06054b50);assert.equal(bytes.readUInt16LE(end+20),0);
  let cursor=bytes.readUInt32LE(end+16);const files=new Map(),count=bytes.readUInt16LE(end+10);
@@ -33,9 +34,14 @@ async function reportFixture(){
  return comparisonReport(state,{exportedAt:'2026-10-11T00:00:00.000Z'});
 }
 async function extract(files){
- const directory=await mkdtemp(join(tmpdir(),'thumbnail-share-'));
+ const directory=await mkdtemp(join(tempRoot,'thumbnail-share-'));
  for(const [name,bytes] of files){const path=join(directory,name);await mkdir(dirname(path),{recursive:true});await writeFile(path,bytes);}
  return directory;
+}
+async function cleanup(directory){
+ const target=resolve(directory);
+ assert.equal(dirname(target).toLowerCase(),tempRoot.toLowerCase());assert.ok(basename(target).startsWith('thumbnail-share-'));
+ await rm(target,{recursive:true,force:true});
 }
 test('share ZIP deduplicates PNG bytes while preserving all group identities, reviews and an exact restorable report',async()=>{
  const report=await reportFixture(),before=structuredClone(report),result=await createCompleteShareZip(report),files=filesFromZip(Buffer.from(await result.blob.arrayBuffer()));
@@ -51,7 +57,7 @@ test('share ZIP deduplicates PNG bytes while preserving all group identities, re
   const restored=await readFile(join(directory,'complete-comparison-report.restored.json'));
   assert.equal(restored.toString('utf8'),JSON.stringify(report,null,2));assert.equal(hash(restored),manifest.sourceReport.sha256);await validateCompleteImport(JSON.parse(restored));
   await run(process.execPath,[join(directory,'restore-report.mjs')]); // identical existing output is safe
- }finally{await rm(directory,{recursive:true,force:true});}
+ }finally{await cleanup(directory);}
 });
 test('title-only and image-only legacy records survive sharing; preview escapes user content and makes no requests',async()=>{
  let state={groups:[],images:[],reviews:[]};
@@ -81,6 +87,6 @@ test('restoration refuses corrupted PNGs, corrupted records, traversal paths and
    await assert.rejects(()=>run(process.execPath,[join(directory,'restore-report.mjs')]));
    if(change==='existing')assert.equal(await readFile(join(directory,'complete-comparison-report.restored.json'),'utf8'),'keep this file');
    else await assert.rejects(()=>access(join(directory,'complete-comparison-report.restored.json')));
-  }finally{await rm(directory,{recursive:true,force:true});}
+  }finally{await cleanup(directory);}
  }
 });
