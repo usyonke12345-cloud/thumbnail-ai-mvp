@@ -1,6 +1,6 @@
 # イメージだけ指定し、使える構成を増やす
 
-生成版ai-complete-0.4.1。利用者は写真・動画タイトル・内容と、希望するイメージを入力する。見出し、字体、文字サイズ、配置はAIに任せられる。イメージは自由文300文字以内で、8つの雰囲気の例は入力の補助であり、完成サムネや字体の指定ではない。詳細指定は任意とし、雰囲気の例を選ぶとdesign/compositionをautoへ戻す。
+生成版ai-complete-0.4.2。利用者は写真と動画タイトルを入力する。内容の補足と、希望するイメージは任意。通常の画面では手入力の見出しを隠し、詳細指定を選んだ場合だけ表示する。見出し、字体、文字サイズ、配置はAIに任せられる。イメージは自由文300文字以内で、8つの雰囲気の例は入力の補助であり、完成サムネや字体の指定ではない。詳細指定は任意とし、雰囲気の例を選ぶとdesign/compositionをautoへ戻す。
 
 ## 生成の組み合わせ候補
 
@@ -41,6 +41,6 @@ shared/complete-designs.mjsのCOMPLETE_PATTERN_SEEDSに追加していく。初�
 
 APIに任意のvisualIntentを追加する。省略・空欄では動画内容からAIに任せる。design/compositionの明示指定があれば優先する。画像編集APIの同じ1回で判断し、分析用の追加APIを呼ばない。元写真、モデルgpt-image-2.5-flare、medium、1536×864、1回1枚は維持する。
 
-イメージを入れた比較JSONはcomplete-comparison-1.4.0、分析用analysis.jsonはcomplete-evaluation-dataset-1.2.0。イメージが違う入力は別の組にし、空欄では従来の組ID・形式を維持する。旧1.0.0〜1.3.0も読める。画像資産image-assets-1.0.0とCandidate/Assessmentは変更しない。採点担当は最新のコードを取り込んでから新形式のJSONを読む。相互レビュー対象はOpenAPIの任意入力、共有カタログ、比較・分析形式で、評価の点数や重みは変えていない。
+補足なしの比較JSONはcomplete-comparison-1.5.0、分析用analysis.jsonはcomplete-evaluation-dataset-1.3.0。補足ありでイメージを入れた比較JSONは1.4.0、分析datasetは1.2.0。briefは空文字として保存し、未入力の動画内容を埋めない。イメージが違う入力は別の組にし、空欄では従来の組ID・形式を維持する。旧1.0.0〜1.4.0も読める。画像資産image-assets-1.0.0とCandidate/Assessmentは変更しない。採点担当は最新のコードを取り込んでから新形式のJSONを読む。相互レビュー対象はOpenAPIの任意入力、共有カタログ、比較・分析形式で、評価の点数や重みは変えていない。
 
 指示の参考：[OpenAI Docsの画像プロンプトガイド](https://developers.openai.com/api/docs/guides/image-prompting)。仕上がり・字体・配置の希望と、人物や環境を保持する条件を分けて書き、実画像で結果を確かめる。

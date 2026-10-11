@@ -5,6 +5,11 @@ export function normalizeVisualIntent(value){
  if(typeof value!=='string'||[...value].length>MAX_VISUAL_INTENT_LENGTH||/[\u0000-\u0009\u000b-\u001f\u007f]/u.test(value))throw new Error('仕上がりのイメージは300文字以内の文章で指定してください。');
  return value.trim();
 }
+export function normalizeVideoBrief(value){
+ if(value===undefined)return '';
+ if(typeof value!=='string'||[...value].length>1000||/[\u0000-\u0009\u000b-\u001f\u007f]/u.test(value))throw new Error('動画内容の補足は1000文字以内の文章で指定してください。');
+ return value.trim()?value:'';
+}
 export const COMPLETE_MOOD_EXAMPLES=Object.freeze([
  {label:'落ち着いた旅',text:'ゆっくりした旅の雰囲気。写真を自然に見せ、文字も穏やかに。'},
  {label:'明るい日常',text:'明るく爽やかな日常。親しみやすく、飾りすぎない感じ。'},

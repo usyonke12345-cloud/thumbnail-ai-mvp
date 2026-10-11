@@ -9,6 +9,12 @@ function showCompleted(data){completedResult=data;const image=document.createEle
 const canvas=document.querySelector('#preview'),ctx=canvas.getContext('2d'),status=document.querySelector('#editor-status');
 const photos=[null,null],versions=[0,0],settings=[{zoom:1,x:.5,y:.5},{zoom:1,x:.5,y:.5}],cards=[];
 const layout=document.querySelector('#layout'),headline=document.querySelector('#headline'),accent=document.querySelector('#accent');
+function updateHeadlineControls(){
+ const manual=document.querySelector('#ai-headline-mode').value==='manual';
+ document.querySelector('#manual-headline-control').hidden=!manual;headline.disabled=!manual;
+ if(manual)document.querySelector('#ai-advanced-headline').open=true;
+ document.querySelector('#headline-mode-description').textContent=manual?'入力した見出しを使います。AI生成では80文字以内で指定してください。':'見出しの入力は不要です。AIが動画タイトルから短い文言を考えます。';
+}
 const designGuide=createEditorDesignGuide({root:document.querySelector('#ai-design-guide'),designControl:document.querySelector('#ai-design'),compositionControl:document.querySelector('#ai-composition'),intentControl:document.querySelector('#ai-visual-intent'),onSelect:()=>scheduleDraft()});
 const aiStatus=document.createElement('p');aiStatus.setAttribute('role','status');aiStatus.setAttribute('aria-live','polite');document.querySelector('#ai-complete').after(aiStatus);
 async function checkAIStatus(){
@@ -57,6 +63,7 @@ function draw(){
  else if(compare){photo(photos[0],{x:0,y:0,width:340,height:720},settings[0]);photo(photos[1],{x:940,y:0,width:340,height:720},settings[1]);}
  else photo(photos[1],{x:650,y:0,width:630,height:720},settings[1]);
  const box=single?{x:position==='left'?55:position==='right'?675:365,y:120,width:550,height:480}:compare?{x:370,y:120,width:540,height:480}:{x:55,y:120,width:550,height:480};
+ if(!headline.value.trim()){status.textContent='写真だけの無料プレビューです。AI完成画像では動画タイトルから見出しを考えます。';document.querySelector('#save-editor').disabled=!photos.some(Boolean);return;}
  try{
   const fitted=fitHeadline(headline.value,(text,size)=>{ctx.font=`900 ${size}px Arial, sans-serif`;return ctx.measureText(text).width;},box.width,box.height);
   ctx.font=`900 ${fitted.size}px Arial, sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.lineJoin='round';ctx.lineWidth=5;ctx.strokeStyle='#0b1018';
@@ -93,7 +100,7 @@ document.querySelector('#ai-complete').addEventListener('click',async event=>{
  if(layout.value!=='single'||!photos[0]){aiStatus.textContent='「1枚の写真を全面に使う」を選び、「使う写真」から写真を読み込んでください。';return;}
  if(!document.querySelector('#ai-consent').checked){aiStatus.textContent='ボタンの上にある「写真・タイトル・動画内容・見出しをOpenAIへ送り…」の確認にチェックしてください。';return;}
  const headlineMode=document.querySelector('#ai-headline-mode').value;
- if(!document.querySelector('#ai-title').value.trim()||!document.querySelector('#ai-brief').value.trim()||(headlineMode==='manual'&&(!headline.value.trim()||[...headline.value].length>80))){aiStatus.textContent='動画タイトル・内容を入力してください。手入力を選んだ場合は、80文字以内の見出しも必要です。';return;}
+ if(!document.querySelector('#ai-title').value.trim()||(headlineMode==='manual'&&(!headline.value.trim()||[...headline.value].length>80))){aiStatus.textContent='動画タイトルを入力してください。手入力を選んだ場合は、80文字以内の見出しも必要です。';return;}
  const source=document.createElement('canvas');source.width=1280;source.height=720;const c=source.getContext('2d'),p=cropPlacement(photos[0].naturalWidth,photos[0].naturalHeight,{x:0,y:0,width:1280,height:720},settings[0].zoom,settings[0].x,settings[0].y);c.drawImage(photos[0],p.x,p.y,p.width,p.height);
  const payload={title:document.querySelector('#ai-title').value,brief:document.querySelector('#ai-brief').value,headline:headlineMode==='auto'?null:headline.value,headlineMode,design:document.querySelector('#ai-design').value,visualIntent:document.querySelector('#ai-visual-intent').value,composition:document.querySelector('#ai-composition').value,imageDataUrl:source.toDataURL('image/png'),consent:true};
  if(payload.imageDataUrl.length>3*1024*1024){aiStatus.textContent='写真が大きすぎます。より小さな写真を選んでください。';return;}
@@ -114,7 +121,8 @@ document.querySelector('#ai-complete').addEventListener('click',async event=>{
 });
 
 // Draft lifecycle: restoring never sends images or resumes a paid request.
-for(const selector of ['#ai-composition','#ai-design','#ai-headline-mode'])document.querySelector(selector).addEventListener('change',scheduleDraft);
+for(const selector of ['#ai-composition','#ai-design'])document.querySelector(selector).addEventListener('change',scheduleDraft);
+document.querySelector('#ai-headline-mode').addEventListener('change',()=>{updateHeadlineControls();scheduleDraft();});
 for(const selector of ['#ai-title','#ai-brief','#ai-visual-intent'])document.querySelector(selector).addEventListener('input',scheduleDraft);
 async function restoreDraft(){
  try{const saved=await loadDraft();if(saved){const draft=validateDraft(saved);layout.value=draft.layout;headline.value=draft.headline;accent.value=draft.accent;document.querySelector('#ai-composition').value=draft.composition;document.querySelector('#ai-design').value=draft.design;document.querySelector('#ai-visual-intent').value=draft.visualIntent;document.querySelector('#ai-headline-mode').value=draft.headlineMode;document.querySelector('#ai-title').value=draft.title;document.querySelector('#ai-brief').value=draft.brief;document.querySelector('#text-position').value=draft.position;document.querySelector('#protect-subject').value=draft.protect;document.querySelector('#shade').value=draft.shade;
@@ -122,14 +130,14 @@ async function restoreDraft(){
   if(draft.result)showCompleted(draft.result);draw();document.querySelector('#draft-status').textContent='写真・入力内容・完成画像の下書きを復元しました。API送信の確認は毎回チェックしてください。';
  }else document.querySelector('#draft-status').textContent='変更した内容は、このブラウザに自動保存します。';}
  catch{document.querySelector('#draft-status').textContent='下書きを読み込めませんでした。ブラウザの保存設定を確認してください。通常編集は使えます。';}
- finally{restoring=false;designGuide.render();document.querySelector('#editor-workspace').disabled=false;document.querySelector('#ai-consent').checked=false;}
+ finally{restoring=false;updateHeadlineControls();designGuide.render();document.querySelector('#manual-editor-options').open=layout.value!=='single';document.querySelector('#ai-content-notes').open=!!document.querySelector('#ai-brief').value.trim();document.querySelector('#editor-workspace').disabled=false;document.querySelector('#ai-consent').checked=false;}
 }
 document.querySelector('#clear-draft').addEventListener('click',async()=>{
  if(!window.confirm('このブラウザの写真下書き・入力内容・完成画像・比較履歴を消しますか？ 必要なPNGは先にファイルへ保存してください。'))return;
  restoring=true;clearTimeout(saveTimer);document.querySelector('#editor-workspace').disabled=true;
  try{await saveQueue.catch(()=>{});await completeGallery.clear();await deleteDraft();for(let i=0;i<2;i++){storedFiles[i]=null;photos[i]=null;versions[i]++;cards[i].querySelector('input[type="file"]').value='';}completedResult=null;document.querySelector('#ai-composition').value='auto';document.querySelector('#ai-design').value='auto';document.querySelector('#ai-visual-intent').value='';document.querySelector('#ai-headline-mode').value='auto';document.querySelector('#ai-result').replaceChildren();document.querySelector('#ai-source').replaceChildren();document.querySelector('#auto-candidates').replaceChildren();headline.value='';document.querySelector('#ai-title').value='';document.querySelector('#ai-brief').value='';document.querySelector('#ai-consent').checked=false;draw();document.querySelector('#draft-status').textContent='このブラウザの下書きと完成画像の比較履歴を消しました。';}
  catch{document.querySelector('#draft-status').textContent='下書きを消せませんでした。ブラウザの保存設定を確認してください。';}
- finally{restoring=false;designGuide.render();document.querySelector('#editor-workspace').disabled=false;}
+ finally{restoring=false;updateHeadlineControls();designGuide.render();document.querySelector('#ai-advanced-headline').open=false;document.querySelector('#ai-content-notes').open=false;document.querySelector('#editor-workspace').disabled=false;}
 });
 restoreDraft();
 

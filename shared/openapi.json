@@ -261,7 +261,6 @@
                 "additionalProperties": false,
                 "required": [
                   "title",
-                  "brief",
                   "imageDataUrl",
                   "consent"
                 ],
@@ -273,8 +272,9 @@
                   },
                   "brief": {
                     "type": "string",
-                    "minLength": 1,
-                    "maxLength": 1000
+                    "maxLength": 1000,
+                    "default": "",
+                    "description": "Optional video content notes. Omitted, empty or whitespace-only normalizes to an empty string; title and photograph are enough in automatic-headline mode. No missing video facts should be invented."
                   },
                   "headline": {
                     "type": ["string", "null"],
@@ -285,7 +285,7 @@
                     "type": "string",
                     "enum": ["auto", "manual"],
                     "default": "manual",
-                    "description": "Omitted retains the existing manual-headline API behavior. Auto asks the image model to choose a short headline from title and brief in the same paid image-edit call."
+                    "description": "Omitted retains the existing manual-headline API behavior. Auto asks the image model to choose a short headline from the video title and optional brief in the same paid image-edit call."
                   },
                   "design": {
                     "type": "string",

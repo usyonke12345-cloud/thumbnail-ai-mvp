@@ -113,6 +113,11 @@ test('automatic headlines ignore the unused manual text and one manual click mak
  const independent=paidFixture();independent.nodes['#ai-composition'].value='auto';independent.scope.completeGallery.nextDesign=async()=>{throw new Error('history must not select the layout');};await independent.run();assert.equal(independent.calls(),1);assert.equal(independent.remembered().p.design,'auto');assert.equal(independent.remembered().p.composition,'auto');assert.equal(independent.sent().design,'auto');assert.equal(independent.sent().composition,'auto');assert.equal(independent.sent().imageDataUrl,payload.imageDataUrl);
  const mood=paidFixture();mood.nodes['#ai-visual-intent'].value='落ち着いた旅、文字も穏やかに';await mood.run();assert.equal(mood.calls(),1);assert.equal(mood.sent().visualIntent,'落ち着いた旅、文字も穏やかに');assert.equal(mood.remembered().p.visualIntent,mood.sent().visualIntent);
 });
+test('the paid button accepts title and photo without content notes and ignores old manual wording in automatic mode',async()=>{
+ const app=paidFixture();app.nodes['#ai-headline-mode'].value='auto';app.nodes['#ai-brief'].value='';app.nodes['#ai-visual-intent'].value='';app.scope.headline.value='UNUSED OLD MANUAL TEXT';await app.run();
+ assert.equal(app.calls(),1);assert.equal(app.sent().brief,'');assert.equal(app.sent().headline,null);assert.equal(app.remembered().p.title,payload.title);assert.equal(app.remembered().p.brief,'');assert.equal(app.nodes['#ai-consent'].checked,false);
+ const missing=paidFixture();missing.nodes['#ai-title'].value='';await missing.run();assert.equal(missing.calls(),0);assert.match(missing.scope.aiStatus.textContent,/動画タイトルを入力/);
+});
 
 test('automatic headline stays separate from manual text; automatic design intent and old fixed design records coexist',async()=>{
  const auto={...payload,headline:null,headlineMode:'auto'},manual=await createEntry(payload,result),automatic=await createEntry(auto,result);assert.notEqual(manual.group.id,automatic.group.id);assert.equal(automatic.group.input.headline,null);
