@@ -17,8 +17,8 @@ const analysis=createCompleteReviewAnalysis({async onAsset(asset,bytes){if(writt
 for(const input of args){
  const path=resolve(input),handle=await open(path,'r');let report;
  try{const stat=await handle.stat();if(!stat.isFile()||stat.size>70*1024*1024)throw new Error('比較JSONは1ファイル70MiB以下にしてください。');report=JSON.parse(await handle.readFile({encoding:'utf8'}));}finally{await handle.close();}
- const sets=report.kind==='human_quality_review'?[report]:report.version==='complete-comparison-report-1.0.0'&&report.kind==='human_quality_report'&&report.assessment===null&&Array.isArray(report.sets)?report.sets:null;
- if(!sets||sets.length<1||sets.length>6)throw new Error('完成PNGの比較JSONが必要です（1ファイル最大6組）。');
+ const sets=report.kind==='human_quality_review'?[report]:['complete-comparison-report-1.0.0','complete-comparison-report-1.1.0'].includes(report.version)&&report.kind==='human_quality_report'&&report.assessment===null&&Array.isArray(report.sets)?report.sets:null;
+ if(!sets||sets.length<1||sets.length>60)throw new Error('完成PNGの比較JSONが必要です（1ファイル最大60組）。');
  for(const bundle of sets)await analysis.consume(bundle);
 }
 const result=analysis.finish();

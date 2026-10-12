@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Thumbnail AI MVP",
-    "version": "0.3.1",
+    "version": "0.3.2",
     "description": "Local SVG layout heuristics, opt-in paid complete PNG generation, and local PNG diagnostics. Complete PNG diagnostics are not a quality or CTR score."
   },
   "servers": [
@@ -277,19 +277,30 @@
                     "description": "Optional video content notes. Omitted, empty or whitespace-only normalizes to an empty string; title and photograph are enough in automatic-headline mode. No missing video facts should be invented."
                   },
                   "headline": {
-                    "type": ["string", "null"],
+                    "type": [
+                      "string",
+                      "null"
+                    ],
                     "maxLength": 80,
                     "description": "Required nonempty text in manual mode. In auto mode omit this field or send null/empty; actual rendered wording is not extracted."
                   },
                   "headlineMode": {
                     "type": "string",
-                    "enum": ["auto", "manual"],
+                    "enum": [
+                      "auto",
+                      "manual"
+                    ],
                     "default": "manual",
                     "description": "Omitted retains the existing manual-headline API behavior. Auto asks the image model to choose a short headline from the video title and optional brief in the same paid image-edit call."
                   },
                   "design": {
                     "type": "string",
-                    "enum": ["auto", "photo_focus", "editorial", "impact"],
+                    "enum": [
+                      "auto",
+                      "photo_focus",
+                      "editorial",
+                      "impact"
+                    ],
                     "default": "auto",
                     "description": "Art-direction intent. photo_focus requests a lower caption in upright humanist sans-serif over the full photo; editorial requests an upper headline in upright serif/Mincho; impact requests a large side headline in condensed bold sans-serif. Explicit composition overrides the default headline zone. Auto is passed unchanged to the image model, which chooses typography and layout from the photograph, available space and video context in the same image edit; it is not a preset rotation. These are requests, not verified fonts or layouts; results require visual checking."
                   },
@@ -317,13 +328,70 @@
                     ],
                     "default": "auto",
                     "description": "Optional composition intent for the photo edit. Omitted means photo-aware automatic composition. Preservation and exact layout still require visual checking."
+                  },
+                  "revision": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "instruction",
+                      "imageDataUrl",
+                      "parentImageId"
+                    ],
+                    "description": "Optional revision: original photograph stays authoritative; previous completed PNG is a typography/layout reference. One paid edit produces one new PNG.",
+                    "properties": {
+                      "instruction": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 300
+                      },
+                      "imageDataUrl": {
+                        "type": "string",
+                        "maxLength": 25165824,
+                        "pattern": "^data:image/png;base64,"
+                      },
+                      "parentImageId": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 200
+                      }
+                    }
                   }
                 },
-                "allOf": [{
-                  "if": {"required": ["headlineMode"], "properties": {"headlineMode": {"const": "auto"}}},
-                  "then": {"properties": {"headline": {"enum": [null, ""]}}},
-                  "else": {"required": ["headline"], "properties": {"headline": {"type": "string", "minLength": 1}}}
-                }]
+                "allOf": [
+                  {
+                    "if": {
+                      "required": [
+                        "headlineMode"
+                      ],
+                      "properties": {
+                        "headlineMode": {
+                          "const": "auto"
+                        }
+                      }
+                    },
+                    "then": {
+                      "properties": {
+                        "headline": {
+                          "enum": [
+                            null,
+                            ""
+                          ]
+                        }
+                      }
+                    },
+                    "else": {
+                      "required": [
+                        "headline"
+                      ],
+                      "properties": {
+                        "headline": {
+                          "type": "string",
+                          "minLength": 1
+                        }
+                      }
+                    }
+                  }
+                ]
               }
             }
           }

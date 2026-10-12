@@ -10,6 +10,7 @@ import {generateBackground} from './generation/openai.mjs';
 import {analyzePngAssets,MAX_JSON_BYTES} from './analysis/complete-png.mjs';
 const assets=new Map([['/complete-gallery.js',['complete-gallery.js','text/javascript; charset=utf-8']],['/complete-gallery-model.js',['complete-gallery-model.js','text/javascript; charset=utf-8']],['/complete-gallery-store.js',['complete-gallery-store.js','text/javascript; charset=utf-8']],['/review', ['review.html','text/html; charset=utf-8']],['/review.js',['review.js','text/javascript; charset=utf-8']],['/comparison-model.js',['comparison-model.js','text/javascript; charset=utf-8']],['/comparison-store.js',['comparison-store.js','text/javascript; charset=utf-8']],["/editor-draft.js",["editor-draft.js","text/javascript; charset=utf-8"]],['/editor',['editor.html','text/html; charset=utf-8']],['/editor.js',['editor.js','text/javascript; charset=utf-8']],['/editor-layout.js',['editor-layout.js','text/javascript; charset=utf-8']],['/', ['index.html','text/html; charset=utf-8']],['/app.js',['app.js','text/javascript; charset=utf-8']],['/style.css',['style.css','text/css; charset=utf-8']],['/references',['references.html','text/html; charset=utf-8']],['/references.js',['references.js','text/javascript; charset=utf-8']]]);
 assets.set('/complete-png-transfer.js',['complete-png-transfer.js','text/javascript; charset=utf-8']);
+for(const file of ['local-archive.js','editor-tools.js','attempt-history.js','editor-backup.js','image-save.js'])assets.set('/'+file,[file,'text/javascript; charset=utf-8']);
 assets.set('/editor-design-guide.js',['editor-design-guide.js','text/javascript; charset=utf-8']);
 assets.set('/shared/complete-designs.mjs',['../shared/complete-designs.mjs','text/javascript; charset=utf-8']);
 export function makeServer() {
@@ -26,7 +27,7 @@ export function makeServer() {
       if(req.method!=='POST') {res.setHeader('Allow','POST');return send(405,{error:{code:'METHOD_NOT_ALLOWED',message:'POSTを使用してください。'}});}
       if(req.headers['content-type']?.split(';')[0].trim()!=='application/json') throw new ApiError(415,'UNSUPPORTED_MEDIA_TYPE','application/jsonを指定してください。');
       let size=0;const chunks=[];
-      for await (const chunk of req) {size+=chunk.length;if(size>(path==='/api/v1/complete-diagnostics'?MAX_JSON_BYTES:path==='/api/v1/complete-thumbnail'?4*1024*1024:16384)) throw new ApiError(413,'BODY_TOO_LARGE','入力が大きすぎます。');chunks.push(chunk);}
+      for await (const chunk of req) {size+=chunk.length;if(size>(path==='/api/v1/complete-diagnostics'?MAX_JSON_BYTES:path==='/api/v1/complete-thumbnail'?28*1024*1024:16384)) throw new ApiError(413,'BODY_TOO_LARGE','入力が大きすぎます。');chunks.push(chunk);}
       let body;try {body=JSON.parse(Buffer.concat(chunks).toString('utf8'));}catch {throw new ApiError(400,'INVALID_JSON','JSONが不正です。');}
       send(200,path==='/api/v1/complete-diagnostics'?analyzePngAssets(body):path==='/api/v1/complete-thumbnail'?await generateComplete(body):await runPipeline(body));
     } catch(error) {

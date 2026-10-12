@@ -1,5 +1,7 @@
 # v1 API / 生成と評価の境界
 
+2026-10-12：共有ZIPのブラウザ直接読み込み、案件別の履歴（全体60枚・案件24枚・組12枚、重複を除いた192MiB）、元写真を含む下書きZIP、PNG/JPEG保存、生成試行の履歴、完成PNGからの修正、動画の場面取り出し、起動診断を追加。案件名・修正参照・7枚以上の組は比較1.6.0、拡張reportは1.1.0、解析datasetは新しいメタデータがあれば1.4.0。旧形式と固定入力の組IDは維持する。詳細は[写真エディターの作業手順](EDITOR-WORKFLOW.md)。
+
 正本は `shared/openapi.json`。破壊的変更は2人で合意してから行い、呼び出し側とfixtureを同じPRで更新します。
 
 共有ZIPはブラウザ内で作成し、新しいHTTP API・OpenAPIスキーマ・生成/採点版を追加しません。`private-comparison-transfer-1.0.0`のmanifestとPNG資産を同梱し、Nodeで元の比較JSONをSHA-256検証付きで復元します。既存のcomplete-comparison各版を保持し、転送用の参照JSONはAPI入力には使いません。詳細はdocs/COMPLETE-COMPARISON.md。受け渡し方法は採点担当のレビュー対象です。
@@ -8,9 +10,9 @@
 
 Day5の `/review`・`/review.js`・`/comparison-model.js`・`/comparison-store.js` は静的な比較画面とブラウザ保存のための配信ルートです。画像・人の評価はIndexedDBに保存し、この画面からAPIへ送信しません。Candidate/Assessmentの契約は変更しません。採点担当のCSV書き出し・ローカル分析はdocs/DAY5.mdを参照してください。
 
-完成PNGの比較JSONは、各組または全組reportを`/editor`から読み込めます。SHA-256と固定した入力・画像の参照を再検証し、最大6画像・保存済みとの合計64MiBの暫定上限内で一括保存します。JSONファイルは70MiBまで。読み込みはブラウザ内だけで、新しいHTTP APIやCandidate/Assessmentの変更はありません。補足なしの比較JSONはcomplete-comparison-1.5.0、補足ありでイメージを指定したものは1.4.0です。旧1.0.0〜1.4.0も読めます。人の記録・利用確認・実費は保存された申告として復元し、新しい評価や許諾確認として扱いません。書き出し形式の版も維持します。
+完成PNGの比較JSONは、各組または全組reportを`/editor`から読み込めます。SHA-256と固定した入力・画像の参照を再検証し、最大60画像・保存済みとの重複を除いた合計192MiBの暫定上限内で一括保存します。JSONファイルは70MiBまで。読み込みはブラウザ内だけで、新しいHTTP APIやCandidate/Assessmentの変更はありません。補足なしの比較JSONはcomplete-comparison-1.5.0、補足ありでイメージを指定したものは1.4.0です。旧1.0.0〜1.4.0も読めます。人の記録・利用確認・実費は保存された申告として復元し、新しい評価や許諾確認として扱いません。書き出し形式の版も維持します。
 
-写真の `/api/v1/complete-thumbnail` は任意の `composition`・`headlineMode`・`design` を受け付けます。生成版はai-complete-0.4.2。briefを任意にし、自動見出しモードなら写真と動画タイトルだけで生成できる。APIの見出しモード省略時は従来のmanualを維持する。既存の見出し指定入力はそのまま使え、Candidate/Assessmentには影響しません。完成PNGは未採点、1回1枚、手動同意・期限・起動内回数制限は維持します。この共有入力と書き出し形式の追加は相互レビュー対象です。人工fixtureはdocs/fixtures/complete-generation-options.json、OpenAPIとの照合テストはtests/complete-generation-contract.test.mjsです。
+写真の `/api/v1/complete-thumbnail` は任意の `composition`・`headlineMode`・`design` を受け付けます。生成版はai-complete-0.5.0。briefを任意にし、自動見出しモードなら写真と動画タイトルだけで生成できる。APIの見出しモード省略時は従来のmanualを維持する。既存の見出し指定入力はそのまま使え、Candidate/Assessmentには影響しません。完成PNGは未採点、1回1枚、手動同意・期限・起動内回数制限は維持します。この共有入力と書き出し形式の追加は相互レビュー対象です。人工fixtureはdocs/fixtures/complete-generation-options.json、OpenAPIとの照合テストはtests/complete-generation-contract.test.mjsです。
 
 ## POST /api/v1/thumbnails
 
@@ -151,3 +153,5 @@ image-assets-1.0.0のassetsとimagesを受け取り、image_diagnosticsを返す
 
 OpenAPIのCompleteDiagnosticRequest/Response、人工例docs/fixtures/complete-diagnostics.json、受け渡し手順docs/COMPLETE-PNG-ANALYSIS.mdを参照。共有APIの追加と画像資産の仕様は相互レビュー対象。
 
+
+修正生成の任意revisionと本文上限28MiBをOpenAPIへ追加。instructionは300文字以内、親の内部画像IDと1536×864の前の完成PNGを受け取り、元写真と合わせて1回の画像編集に送る。モデル・quality・枚数は維持する。新しい静的ファイル5つをserverの配信許可リストへ追加する。共有API、比較の新しい版、保存庫の移行、package.jsonの起動コマンドは相互レビュー対象。依存パッケージの追加はない。Candidate/Assessmentと画像資産の診断契約は変更しない。

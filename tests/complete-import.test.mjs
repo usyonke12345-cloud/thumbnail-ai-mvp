@@ -1,10 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {bundle,png,dataUrl} from './helpers/complete-png.mjs';
-import {validateCompleteImport,MAX_IMPORT_BYTES} from '../frontend/complete-png-transfer.js';
+import {validateCompleteImport,MAX_IMPORT_BYTES,createCompleteShareZip} from '../frontend/complete-png-transfer.js';
 import {mergeCompleteImport,comparisonReport,gallerySummary,createEntry} from '../frontend/complete-gallery-model.js';
 import {createCompleteGallery} from '../frontend/complete-gallery.js';
-import {galleryStorage} from '../frontend/complete-gallery-store.js';
+import {galleryStorage,unpackGallery} from '../frontend/complete-gallery-store.js';
 const empty=()=>({groups:[],images:[],reviews:[]});
 
 test('one-group and report backups restore exact images and historical records, deduplicate and preserve null costs',async()=>{
@@ -56,7 +56,8 @@ test('changed hashes, duplicate references, conflicting identity and full capaci
  const many=await Promise.all(['a','b','c'].map(title=>bundle({title,review:false})));
  const six=mergeCompleteImport(empty(),await validateCompleteImport({version:'complete-comparison-report-1.0.0',kind:'human_quality_report',assessment:null,sets:many}));
  const seventh=await validateCompleteImport(await bundle({title:'seventh',count:1,review:false}));
- assert.throws(()=>mergeCompleteImport(six,seventh),/いっぱい/);assert.equal(six.images.length,6);
+ assert.equal(mergeCompleteImport(six,seventh).images.length,7);assert.equal(six.images.length,6);
+ const full=mergeCompleteImport(empty(),await validateCompleteImport({version:'complete-comparison-report-1.0.0',kind:'human_quality_report',assessment:null,sets:await Promise.all(Array.from({length:30},(_,i)=>bundle({title:'capacity-'+i,review:false})))}));assert.equal(full.images.length,60);assert.throws(()=>mergeCompleteImport(full,seventh),/いっぱい/);
  assert.deepEqual(state,snapshot);
 });
 
@@ -88,6 +89,7 @@ test('file picker restores and re-displays backups without diagnostics or genera
  await select(b);assert.equal(state.images.length,2);assert.equal(writes,1);assert.equal(requests,0);
  assert.equal(dom.root.querySelectorAll('img').length,3);assert.equal(dom.find(x=>x.textContent==='この入力写真を保存').href,b.group.sourceImageDataUrl);
  await select(b);assert.equal(state.images.length,2);assert.equal(gallerySummary(state).collection.humanComparisons,1);
+ const zipped=await createCompleteShareZip(comparisonReport(state));file.files=[zipped.blob];await file.events.change();assert.equal(state.images.length,2);assert.equal(requests,0);
  const other=await bundle({title:'Other'});fail=true;await select(other);
  assert.equal(state.images.length,2);assert.ok(dom.root.querySelectorAll('p').some(x=>x.textContent.includes('容量不足')));assert.equal(file.disabled,false);
  fail=false;const before=writes;file.files=[{size:MAX_IMPORT_BYTES+1,text(){throw new Error('must not read');}}];await file.events.change();assert.equal(writes,before);
@@ -99,13 +101,13 @@ test('file picker restores and re-displays backups without diagnostics or genera
 
 // A small transaction double models commit-on-complete and discard-on-abort.
 function indexedDbFixture(initial,failWriteAt){
- let saved=structuredClone(initial);
+ let saved={...structuredClone(initial),assets:[]};
  const api={open(){const request={};queueMicrotask(()=>{request.result={close(){},transaction(){
   const draft=structuredClone(saved);let reads=0,writes=0,aborted=false;
-  const tx={error:null,abort(){if(aborted)return;aborted=true;queueMicrotask(()=>tx.onabort?.());},objectStore(name){return {getAll(){const r={};queueMicrotask(()=>{r.result=structuredClone(draft[name]);r.onsuccess?.();if(++reads===3)queueMicrotask(()=>{if(!aborted){saved=draft;tx.oncomplete?.();}});});return r;},put(item){if(++writes===failWriteAt)throw new Error('Simulated quota failure');const key=name==='reviews'?'groupId':'id';draft[name]=draft[name].filter(x=>x[key]!==item[key]);draft[name].push(structuredClone(item));}};}};
+  const tx={error:null,abort(){if(aborted)return;aborted=true;queueMicrotask(()=>tx.onabort?.());},objectStore(name){return {getAll(){const r={};queueMicrotask(()=>{r.result=structuredClone(draft[name]);r.onsuccess?.();if(++reads===4)queueMicrotask(()=>{if(!aborted){saved=draft;tx.oncomplete?.();}});});return r;},put(item){if(++writes===failWriteAt)throw new Error('Simulated quota failure');const key=name==='reviews'?'groupId':'id';draft[name]=draft[name].filter(x=>x[key]!==item[key]);draft[name].push(structuredClone(item));},delete(id){const key=name==='reviews'?'groupId':'id';draft[name]=draft[name].filter(x=>x[key]!==id);}};}};
   return tx;
  }};request.onsuccess?.();});return request;}};
- return {api,get state(){return saved;}};
+ return {api,get state(){return unpackGallery(saved);}};
 }
 test('gallery import transaction rolls back all writes on failure and commits a complete batch on success',async()=>{
  const sets=await validateCompleteImport(await bundle()),original=globalThis.indexedDB;

@@ -1,4 +1,5 @@
-import {createEntry,createLegacyEntry,comparisonBundle,validateQualityReview,validateObservation,validateReviewContext} from './complete-gallery-model.js';
+import {createEntry,createLegacyEntry,comparisonBundle,validateQualityReview,validateObservation,validateReviewContext,MAX_IMAGES,MAX_GROUP_IMAGES,projectName} from './complete-gallery-model.js';
+import {writeZip} from './local-archive.js';
 const sha=async bytes=>[...new Uint8Array(await crypto.subtle.digest('SHA-256',bytes))].map(x=>x.toString(16).padStart(2,'0')).join('');
 const bytes=url=>Uint8Array.from(atob(url.split(',')[1]),c=>c.charCodeAt(0));
 const fail=message=>{throw new Error(message);};
@@ -7,14 +8,16 @@ export const MAX_IMPORT_BYTES=70*1024*1024;
 
 // Verify frozen identities again; exported summaries and imported diagnostics are not trusted.
 export async function validateCompleteBundle(value){
- if(!value||!['complete-comparison-1.0.0','complete-comparison-1.1.0','complete-comparison-1.2.0','complete-comparison-1.3.0','complete-comparison-1.4.0','complete-comparison-1.5.0'].includes(value.version)||value.kind!=='human_quality_review'||value.assessment!==null||!value.group||!Array.isArray(value.images)||!value.images.length||value.images.length>6)fail('完成PNGの比較JSONの版・件数が不正です。');
+ if(!value||!['complete-comparison-1.0.0','complete-comparison-1.1.0','complete-comparison-1.2.0','complete-comparison-1.3.0','complete-comparison-1.4.0','complete-comparison-1.5.0','complete-comparison-1.6.0'].includes(value.version)||value.kind!=='human_quality_review'||value.assessment!==null||!value.group||!Array.isArray(value.images)||!value.images.length||value.images.length>MAX_GROUP_IMAGES)fail('完成PNGの比較JSONの版・件数が不正です。');
  const group=value.group,images=[];let normalizedInput=null;
- if(!['complete-comparison-1.3.0','complete-comparison-1.4.0','complete-comparison-1.5.0'].includes(value.version)&&(group.input?.headlineMode!==undefined||value.images.some(x=>x.design!==undefined)))fail('自動見出しとデザイン指定には比較形式1.3.0以上が必要です。');
- if(group.input?.visualIntent!==undefined&&!['complete-comparison-1.4.0','complete-comparison-1.5.0'].includes(value.version))fail('仕上がりのイメージには比較形式1.4.0以上が必要です。');
- if(group.input?.brief===''&&value.version!=='complete-comparison-1.5.0')fail('補足なしの入力には比較形式1.5.0が必要です。');
+ if(value.images.length>6&&value.version!=='complete-comparison-1.6.0')fail('7枚以上の組には比較形式1.6.0が必要です。');if(group.input===null&&value.images.some(x=>x.revision))fail('入力写真が不明な画像の修正元は復元できません。');
+ if((group.projectName!==undefined||value.images.some(x=>x.revision))&&value.version!=='complete-comparison-1.6.0')fail('案件名と修正の参照には比較形式1.6.0が必要です。');
+ if(!['complete-comparison-1.3.0','complete-comparison-1.4.0','complete-comparison-1.5.0','complete-comparison-1.6.0'].includes(value.version)&&(group.input?.headlineMode!==undefined||value.images.some(x=>x.design!==undefined)))fail('自動見出しとデザイン指定には比較形式1.3.0以上が必要です。');
+ if(group.input?.visualIntent!==undefined&&!['complete-comparison-1.4.0','complete-comparison-1.5.0','complete-comparison-1.6.0'].includes(value.version))fail('仕上がりのイメージには比較形式1.4.0以上が必要です。');
+ if(group.input?.brief===''&&!['complete-comparison-1.5.0','complete-comparison-1.6.0'].includes(value.version))fail('補足なしの入力には比較形式1.5.0が必要です。');
  for(const image of value.images){
   if(images.some(x=>x.id===image.id))fail('完成画像IDが重複しています。');
-  const options={id:image.id,capturedAt:image.capturedAt,elapsedMs:image.elapsedMs};
+  const options={id:image.id,capturedAt:image.capturedAt,elapsedMs:image.elapsedMs,...(image.revision?{revision:image.revision}:{})};
   const entry=group.input===null?await createLegacyEntry(image.result,options):await createEntry({...group.input,imageDataUrl:group.sourceImageDataUrl,composition:image.composition,...(image.design!==undefined?{design:image.design}:{})},image.result,options);
   if(entry.group.id!==group.id||entry.group.sourceImageDataUrl!==group.sourceImageDataUrl||entry.image.groupId!==image.groupId||entry.image.imageSha256!==image.imageSha256||!sameInput(entry.group.input,group.input)||entry.image.composition!==image.composition||entry.image.design!==image.design||entry.image.elapsedMs!==image.elapsedMs||image.version!==1)fail('画像・入力条件・組ID・SHA-256が一致しません。');
   normalizedInput=entry.group.input;
@@ -24,18 +27,20 @@ export async function validateCompleteBundle(value){
  if(group.version!==1||typeof group.capturedAt!=='string'||!Number.isFinite(Date.parse(group.capturedAt)))fail('比較組の保存時刻が不正です。');
  let review=value.review??null;
  if(review){const covered=images.filter(x=>review.displayWidths?.some(w=>w.imageId===x.id));if(!covered.length)fail('比較記録の画像参照が不正です。');validateQualityReview(review,group,covered);review={version:1,groupId:review.groupId,recordedAt:review.recordedAt,decision:review.decision,imageId:review.imageId,reason:review.reason,issues:[...review.issues],displayWidths:review.displayWidths.map(({imageId,width})=>({imageId,width})),...(review.context?{context:validateReviewContext(review.context)}:{})};}
- return comparisonBundle({groups:[{version:1,id:group.id,capturedAt:group.capturedAt,input:normalizedInput,sourceImageDataUrl:group.sourceImageDataUrl}],images,reviews:review?[review]:[]},group.id);
+ if(group.projectName!==undefined&&(projectName(group.projectName)!==group.projectName||!Number.isFinite(Date.parse(group.projectUpdatedAt))))fail('案件名の記録が不正です。');
+ for(const image of images)if(image.revision){const parent=images.find(x=>x.id===image.revision.parentImageId);if(parent&&(parent.id===image.id||parent.imageSha256!==image.revision.parentImageSha256))fail('修正元の画像参照が一致しません。');}
+ return comparisonBundle({groups:[{version:1,id:group.id,capturedAt:group.capturedAt,input:normalizedInput,sourceImageDataUrl:group.sourceImageDataUrl,...(group.projectName?{projectName:group.projectName,projectUpdatedAt:group.projectUpdatedAt}:{})}],images,reviews:review?[review]:[]},group.id);
 }
 export async function validateCompleteImport(value){
- const sets=value?.kind==='human_quality_review'?[value]:value?.version==='complete-comparison-report-1.0.0'&&value.kind==='human_quality_report'&&value.assessment===null&&Array.isArray(value.sets)?value.sets:null;
- if(!sets||!sets.length||sets.length>6)fail('完成PNGの比較JSONが必要です（最大6組）。');
+ const sets=value?.kind==='human_quality_review'?[value]:['complete-comparison-report-1.0.0','complete-comparison-report-1.1.0'].includes(value?.version)&&value.kind==='human_quality_report'&&value.assessment===null&&Array.isArray(value.sets)?value.sets:null;
+ if(!sets||!sets.length||sets.length>MAX_IMAGES)fail('完成PNGの比較JSONが必要です（最大60組）。');
  const normalized=[],groupIds=new Set(),imageIds=new Set();let totalImages=0;
  for(const set of sets){
   const bundle=await validateCompleteBundle(set);
   if(groupIds.has(bundle.group.id))fail('同じファイルに比較組が重複しています。');
   groupIds.add(bundle.group.id);
   for(const image of bundle.images){if(imageIds.has(image.id))fail('同じファイルに完成画像IDが重複しています。');imageIds.add(image.id);}
-  totalImages+=bundle.images.length;if(totalImages>6)fail('1回に読み込める完成PNGは6枚までです。');
+  totalImages+=bundle.images.length;if(totalImages>MAX_IMAGES)fail('1回に読み込める完成PNGは60枚までです。');
   normalized.push(bundle);
  }
  return normalized;
@@ -61,23 +66,6 @@ export function diagnosticText(result,imageId){
 
 const utf8=value=>new TextEncoder().encode(value);
 const tick=()=>new Promise(resolve=>setTimeout(resolve,0));
-const crcTable=Array.from({length:256},(_,n)=>{let c=n;for(let i=0;i<8;i++)c=c&1?0xedb88320^(c>>>1):c>>>1;return c>>>0;});
-function crc32(data){let c=0xffffffff;for(const byte of data)c=crcTable[(c^byte)&255]^(c>>>8);return (c^0xffffffff)>>>0;}
-// PNG is already compressed. ZIP STORE avoids a second codec or an external service.
-async function storedZip(entries){
- const parts=[],central=[];let offset=0,centralBytes=0;
- for(const {name,data} of entries){
-  const filename=utf8(name),crc=crc32(data),local=new Uint8Array(30+filename.length),v=new DataView(local.buffer);
-  v.setUint32(0,0x04034b50,true);v.setUint16(4,20,true);v.setUint16(6,0x800,true);v.setUint16(12,33,true);
-  v.setUint32(14,crc,true);v.setUint32(18,data.length,true);v.setUint32(22,data.length,true);v.setUint16(26,filename.length,true);local.set(filename,30);
-  const header=new Uint8Array(46+filename.length),h=new DataView(header.buffer);
-  h.setUint32(0,0x02014b50,true);h.setUint16(4,20,true);h.setUint16(6,20,true);h.setUint16(8,0x800,true);h.setUint16(14,33,true);
-  h.setUint32(16,crc,true);h.setUint32(20,data.length,true);h.setUint32(24,data.length,true);h.setUint16(28,filename.length,true);h.setUint32(42,offset,true);header.set(filename,46);
-  parts.push(local,data);central.push(header);offset+=local.length+data.length;centralBytes+=header.length;await tick();
- }
- const end=new Uint8Array(22),e=new DataView(end.buffer);e.setUint32(0,0x06054b50,true);e.setUint16(8,entries.length,true);e.setUint16(10,entries.length,true);e.setUint32(12,centralBytes,true);e.setUint32(16,offset,true);
- return new Blob([...parts,...central,end],{type:'application/zip'});
-}
 const escapeHtml=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function sharePreview(report){
  const picture=(hash,alt)=>`<img src="assets/${hash}.png" alt="${escapeHtml(alt)}" loading="lazy">`;
@@ -147,6 +135,6 @@ export async function createCompleteShareZip(value){
   'README.txt':'完成PNGの共有ZIP\n\nZIPをすべて展開してpreview.htmlを開くと、入力写真・完成PNG・保存された人の記録を確認できます。画像の画質と記録は変更していません。同じPNGはassets/へ1枚ずつ保存しました。\n\n元の比較JSONが必要な場合、展開したフォルダーで「node restore-report.mjs」を実行してください。Node標準機能だけを使い、元のJSONのSHA-256とバイト数の一致も検証します。complete-comparison-report.restored.jsonをWebへ読み込むか、既存のscripts/analyze-complete-comparisons.mjsへ渡してください。report-with-asset-references.jsonは転送専用で、直接取り込みできません。\n\nsummary.jsonは現在保存中の成功画像の集計、human-reviews.jsonlは保存された人の記録です。1枚の確認・再確認待ち・未確認の利用確認を20件完了として扱いません。完成PNGの品質点数と採点との順位一致は未実装です。このZIP作成ではPNG診断を追加実行していません。\n\nこのZIPはブラウザ内で作成し、写真を送信・生成しません。共有は本人が行ってください。写真と記録を含むため非公開で渡し、Gitに入れないでください。\n'
  };
  for(const [name,text]of Object.entries(textFiles))entries.push({name,data:utf8(text)});
- const blob=await storedZip(entries);
+ const blob=await writeZip(entries);
  return {blob,originalBytes:originalBytes.length,zipBytes:blob.size,assets:assets.size,groups:report.sets.length,images:report.sets.reduce((sum,set)=>sum+set.images.length,0)};
 }

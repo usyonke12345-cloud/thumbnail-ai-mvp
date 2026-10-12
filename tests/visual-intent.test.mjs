@@ -59,6 +59,6 @@ test('versioned mood records survive import and private analysis without fabrica
 });
 
 test('editor offers atmosphere before optional manual design controls and persists it through the paid handler',async()=>{
- const html=await readFile(new URL('../frontend/editor.html',import.meta.url),'utf8'),editor=await readFile(new URL('../frontend/editor.js',import.meta.url),'utf8');assert.ok(html.indexOf('id="ai-visual-intent"')<html.indexOf('id="ai-advanced-design"'));assert.match(html,/<details id="ai-advanced-design"><summary>/);assert.match(html,/仕上がりのイメージ・見出しの指定をOpenAI/);
- assert.match(editor,/visualIntent:document\.querySelector\('#ai-visual-intent'\)\.value/);assert.match(editor,/value=draft\.visualIntent/);assert.ok(editor.includes("['#ai-title','#ai-brief','#ai-visual-intent']"));
+ const html=await readFile(new URL('../frontend/editor.html',import.meta.url),'utf8'),editor=await readFile(new URL('../frontend/editor.js',import.meta.url),'utf8');assert.ok(html.indexOf('id="ai-visual-intent"')<html.indexOf('id="ai-advanced-design"'));assert.match(html,/<details id="ai-advanced-design"><summary>/);assert.match(html,/仕上がりのイメージ・見出しの指定・修正元の完成画像をOpenAI/);
+ assert.match(editor,/visualIntent:document\.querySelector\('#ai-visual-intent'\)\.value/);assert.match(editor,/value=draft\.visualIntent/);assert.ok(editor.includes("['#ai-title','#ai-brief','#ai-visual-intent',"));
 });
