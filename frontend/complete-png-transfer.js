@@ -1,3 +1,4 @@
+import {validateSubjectRegions,subjectRegionsText} from './subject-regions.js';
 import {createEntry,createLegacyEntry,comparisonBundle,validateQualityReview,validateObservation,validateReviewContext,MAX_IMAGES,MAX_GROUP_IMAGES,projectName,revisionChecks} from './complete-gallery-model.js';
 import {writeZip} from './local-archive.js';
 const sha=async bytes=>[...new Uint8Array(await crypto.subtle.digest('SHA-256',bytes))].map(x=>x.toString(16).padStart(2,'0')).join('');
@@ -8,13 +9,14 @@ export const MAX_IMPORT_BYTES=70*1024*1024;
 
 // Verify frozen identities again; exported summaries and imported diagnostics are not trusted.
 export async function validateCompleteBundle(value){
- if(!value||!['complete-comparison-1.0.0','complete-comparison-1.1.0','complete-comparison-1.2.0','complete-comparison-1.3.0','complete-comparison-1.4.0','complete-comparison-1.5.0','complete-comparison-1.6.0'].includes(value.version)||value.kind!=='human_quality_review'||value.assessment!==null||!value.group||!Array.isArray(value.images)||!value.images.length||value.images.length>MAX_GROUP_IMAGES)fail('完成PNGの比較JSONの版・件数が不正です。');
+ if(!value||!['complete-comparison-1.0.0','complete-comparison-1.1.0','complete-comparison-1.2.0','complete-comparison-1.3.0','complete-comparison-1.4.0','complete-comparison-1.5.0','complete-comparison-1.6.0','complete-comparison-1.7.0'].includes(value.version)||value.kind!=='human_quality_review'||value.assessment!==null||!value.group||!Array.isArray(value.images)||!value.images.length||value.images.length>MAX_GROUP_IMAGES)fail('完成PNGの比較JSONの版・件数が不正です。');
  const group=value.group,images=[];let normalizedInput=null;
- if(value.images.length>6&&value.version!=='complete-comparison-1.6.0')fail('7枚以上の組には比較形式1.6.0が必要です。');if(group.input===null&&value.images.some(x=>x.revision))fail('入力写真が不明な画像の修正元は復元できません。');
- if((group.projectName!==undefined||value.images.some(x=>x.revision||x.result?.revision))&&value.version!=='complete-comparison-1.6.0')fail('案件名と修正の参照には比較形式1.6.0が必要です。');
- if(!['complete-comparison-1.3.0','complete-comparison-1.4.0','complete-comparison-1.5.0','complete-comparison-1.6.0'].includes(value.version)&&(group.input?.headlineMode!==undefined||value.images.some(x=>x.design!==undefined)))fail('自動見出しとデザイン指定には比較形式1.3.0以上が必要です。');
- if(group.input?.visualIntent!==undefined&&!['complete-comparison-1.4.0','complete-comparison-1.5.0','complete-comparison-1.6.0'].includes(value.version))fail('仕上がりのイメージには比較形式1.4.0以上が必要です。');
- if(group.input?.brief===''&&!['complete-comparison-1.5.0','complete-comparison-1.6.0'].includes(value.version))fail('補足なしの入力には比較形式1.5.0が必要です。');
+ if(value.images.some(x=>x.subjectRegions!==undefined)&&value.version!=='complete-comparison-1.7.0')fail('人物範囲の記録には比較形式1.7.0が必要です。');
+ if(value.images.length>6&&!['complete-comparison-1.6.0','complete-comparison-1.7.0'].includes(value.version))fail('7枚以上の組には比較形式1.6.0が必要です。');if(group.input===null&&value.images.some(x=>x.revision))fail('入力写真が不明な画像の修正元は復元できません。');
+ if((group.projectName!==undefined||value.images.some(x=>x.revision||x.result?.revision))&&!['complete-comparison-1.6.0','complete-comparison-1.7.0'].includes(value.version))fail('案件名と修正の参照には比較形式1.6.0が必要です。');
+ if(!['complete-comparison-1.3.0','complete-comparison-1.4.0','complete-comparison-1.5.0','complete-comparison-1.6.0','complete-comparison-1.7.0'].includes(value.version)&&(group.input?.headlineMode!==undefined||value.images.some(x=>x.design!==undefined)))fail('自動見出しとデザイン指定には比較形式1.3.0以上が必要です。');
+ if(group.input?.visualIntent!==undefined&&!['complete-comparison-1.4.0','complete-comparison-1.5.0','complete-comparison-1.6.0','complete-comparison-1.7.0'].includes(value.version))fail('仕上がりのイメージには比較形式1.4.0以上が必要です。');
+ if(group.input?.brief===''&&!['complete-comparison-1.5.0','complete-comparison-1.6.0','complete-comparison-1.7.0'].includes(value.version))fail('補足なしの入力には比較形式1.5.0が必要です。');
  for(const image of value.images){
   if(images.some(x=>x.id===image.id))fail('完成画像IDが重複しています。');
   const options={id:image.id,capturedAt:image.capturedAt,elapsedMs:image.elapsedMs,...(image.revision?{revision:image.revision}:{})};
@@ -22,7 +24,7 @@ export async function validateCompleteBundle(value){
   if(entry.group.id!==group.id||entry.group.sourceImageDataUrl!==group.sourceImageDataUrl||entry.image.groupId!==image.groupId||entry.image.imageSha256!==image.imageSha256||!sameInput(entry.group.input,group.input)||entry.image.composition!==image.composition||entry.image.design!==image.design||entry.image.elapsedMs!==image.elapsedMs||image.version!==1)fail('画像・入力条件・組ID・SHA-256が一致しません。');
   normalizedInput=entry.group.input;
   if(image.result.width!==entry.image.result.width||image.result.height!==entry.image.result.height)fail('宣言寸法とPNGの寸法が一致しません。');
-  images.push({...entry.image,...(image.observation?{observation:validateObservation(image.observation)}:{})});
+  images.push({...entry.image,...(image.subjectRegions!==undefined?{subjectRegions:validateSubjectRegions(image.subjectRegions,entry.group,entry.image)}:{}),...(image.observation?{observation:validateObservation(image.observation)}:{})});
  }
  if(group.version!==1||typeof group.capturedAt!=='string'||!Number.isFinite(Date.parse(group.capturedAt)))fail('比較組の保存時刻が不正です。');
  let review=value.review??null;
@@ -76,6 +78,7 @@ function sharePreview(report){
   <p>動画内容の補足：${escapeHtml(input?.brief||'補足なし')}<br>仕上がりのイメージ：${escapeHtml(input?.visualIntent??'未指定')}</p>
   ${input?`<details><summary>入力写真</summary>${picture(input.sourceSha256,'入力写真')}</details>`:''}
   <div class="images">${set.images.map((image,i)=>`<article><h3>完成案 ${i+1}</h3>${picture(image.imageSha256,`完成案 ${i+1}`)}<p>${escapeHtml(image.result.generation_version??'生成版不明')}・未採点<br>確認済み実費：${escapeHtml(image.observation?.costUsd??'未確認')} USD<br>PNG保存：${escapeHtml(({saved:'確認できた',failed:'できなかった',unknown:'未確認'})[image.observation?.pngSave]??'未確認')}</p></article>`).join('')}</div>
+  ${set.images.filter(image=>image.subjectRegions).map(image=>`<p>完成画像 ${escapeHtml(image.id)}：${escapeHtml(subjectRegionsText(image.subjectRegions))}</p>`).join('')}
   ${checks.map(check=>`<p>修正画像 ${escapeHtml(check.imageId)}：${escapeHtml(check.reason)}<br>修正元ID：${escapeHtml(check.parentImageId)}<br>修正元SHA-256：${escapeHtml(check.parentImageSha256)}</p>`).join('')}
   <p>保存された選択：${escapeHtml(selected)}${review&&!set.reviewCoversAllImages?'（新しい案の再確認待ち）':''}<br>理由：${escapeHtml(review?.reason??'未記録')}<br>気になる点：${escapeHtml(review?.issues.join(' / ')??'未記録')}</p></section>`;
  }).join('');
