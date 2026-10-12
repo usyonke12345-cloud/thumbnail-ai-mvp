@@ -156,3 +156,30 @@ test('tRNS: gray/RGB colour key becomes transparent; tRNS or PLTE that do not fi
   assert.throws(() => decodePng(assemble(ihdrRaw(1, 1, { colorType: 0 }), chunk('PLTE', Buffer.from([0, 0, 0])), idatOf(Buffer.from([0, 9])))), /PLTEが不正/, 'グレーにPLTE');
   assert.throws(() => decodePng(assemble(ihdrRaw(1, 1, { colorType: 3 }), chunk('PLTE', Buffer.from([0, 0])), idatOf(Buffer.from([0, 0])))), /PLTEが不正/, 'PLTEの長さが3の倍数でない');
 });
+
+// 彩度・色の分布（診断情報。点数にはしない）
+import { saturationStats, colorHistogram, histogramIntersection } from '../backend/scoring/image-stats.mjs';
+const solid = (w, h, [r, g, b]) => ({ width: w, height: h, rgba: Uint8Array.from({ length: w * h * 4 }, (_, i) => [r, g, b, 255][i % 4]) });
+const halves = (w, h, left, right) => { const img = solid(w, h, left); for (let y = 0; y < h; y++) for (let x = w / 2; x < w; x++) img.rgba.set([...right, 255], (y * w + x) * 4); return img; };
+
+test('saturation statistics: gray is 0, pure colour is 1, colourfulness orders gray < pastel < vivid', () => {
+  const gray = saturationStats(solid(4, 4, [128, 128, 128]), undefined, { step: 1 });
+  assert.equal(gray.saturation.mean, 0); assert.equal(gray.highSaturationShare, 0); assert.equal(gray.colorfulness, 0);
+  const red = saturationStats(solid(4, 4, [255, 0, 0]), undefined, { step: 1 });
+  assert.equal(red.saturation.p50, 1); assert.equal(red.highSaturationShare, 1);
+  const pastel = saturationStats(halves(4, 2, [230, 200, 200], [200, 210, 230]), undefined, { step: 1 });
+  const vivid = saturationStats(halves(4, 2, [255, 30, 0], [0, 80, 255]), undefined, { step: 1 });
+  assert.ok(gray.colorfulness < pastel.colorfulness && pastel.colorfulness < vivid.colorfulness);
+  assert.ok(Math.abs(pastel.saturation.mean - ((30 / 230 + 30 / 230) / 2)) < 1e-9);
+  assert.equal(saturationStats(solid(2, 2, [1, 2, 3]), { x: 9, y: 9, width: 1, height: 1 }), null);
+  assert.throws(() => saturationStats(solid(2, 2, [1, 2, 3]), undefined, { step: 0 }), RangeError);
+});
+
+test('colour-distribution overlap does not depend on position and separates different colours', () => {
+  const a = halves(8, 4, [255, 0, 0], [0, 0, 255]), swapped = halves(8, 4, [0, 0, 255], [255, 0, 0]); // 左右を入れ替え＝位置だけ違う
+  assert.equal(histogramIntersection(colorHistogram(a, undefined, { step: 1 }), colorHistogram(swapped, undefined, { step: 1 })), 1);
+  assert.equal(histogramIntersection(colorHistogram(solid(4, 4, [255, 0, 0]), undefined, { step: 1 }), colorHistogram(solid(4, 4, [0, 255, 0]), undefined, { step: 1 })), 0);
+  assert.equal(histogramIntersection(colorHistogram(a, undefined, { step: 1 }), colorHistogram(solid(4, 4, [255, 0, 0]), undefined, { step: 1 })), 0.5);
+  assert.throws(() => colorHistogram(a, undefined, { bins: 1 }), RangeError);
+  assert.throws(() => histogramIntersection(colorHistogram(a, undefined, { bins: 4 }), colorHistogram(a, undefined, { bins: 8 })), RangeError);
+});
