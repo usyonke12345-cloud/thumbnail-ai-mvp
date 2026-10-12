@@ -3,7 +3,7 @@ import {decodePng, MAX_INPUT_BYTES} from '../scoring/png.mjs';
 import {regionStats, isNearlyUniform} from '../scoring/image-stats.mjs';
 import {ApiError} from '../../shared/contracts.mjs';
 
-export const ANALYSIS_VERSION='complete-png-diagnostics-0.1.0';
+export const ANALYSIS_VERSION='complete-png-diagnostics-0.1.1';
 export const MAX_ASSETS=4, MAX_ASSET_BYTES=32*1024*1024, MAX_JSON_BYTES=45*1024*1024;
 export const UNEVALUATED=['rendered_text','readability','text_fit','text_contrast','subject_preservation','composition_quality'];
 const invalid=message=>{throw new ApiError(400,'INVALID_DIAGNOSTIC_INPUT',message);};
@@ -11,21 +11,6 @@ const object=value=>!!value&&typeof value==='object'&&!Array.isArray(value);
 const keys=(value,allowed)=>object(value)&&Object.keys(value).every(key=>allowed.includes(key));
 const id=value=>typeof value==='string'&&/^[a-zA-Z0-9_-]{1,200}$/.test(value);
 const nullableText=(value,max)=>value===null||typeof value==='string'&&[...value].length<=max;
-
-// Restrict formats the partner decoder can interpret without guessing transparency.
-function supportedEncoding(bytes){
- if(bytes.length<33)return;
- if(bytes.readUInt32BE(16)>4096||bytes.readUInt32BE(20)>4096)throw new Error('実寸法が対応範囲外です。');
- if(bytes[26]!==0||bytes[27]!==0)throw new Error('PNGの圧縮・フィルタ方式に未対応です。');
- let pos=8;
- while(pos+12<=bytes.length){
-  const length=bytes.readUInt32BE(pos),type=bytes.toString('latin1',pos+4,pos+8);
-  if(pos+12+length>bytes.length)return; // The decoder supplies the corruption reason.
-  if(type==='tRNS'&&[0,2].includes(bytes[25]))throw new Error('グレースケール・RGBのtRNS透明色に未対応です。');
-  if(type[0]===type[0]?.toUpperCase()&&!['IHDR','PLTE','IDAT','IEND'].includes(type))throw new Error('未対応の必須PNGチャンクがあります。');
-  pos+=12+length;
- }
-}
 
 // Local diagnostics only. Images are never passed to generation or external services.
 export function analyzePngAssets(body,{decode=decodePng,stats=regionStats,cache=new Map()}={}){
@@ -49,7 +34,7 @@ export function analyzePngAssets(body,{decode=decodePng,stats=regionStats,cache=
   if(!cache.has(asset.sha256)){
    let value;
    try{
-    supportedEncoding(bytes);const decoded=decode(bytes);decodedImages++;
+    const decoded=decode(bytes);decodedImages++;
     // The decoder's pixel limit is complemented by a per-axis check.
     if(decoded.width>4096||decoded.height>4096)throw new Error('実寸法が対応範囲外です。');
     const sampleStep=Math.max(2,Math.ceil(Math.sqrt(decoded.width*decoded.height/200000))),luminance=stats(decoded,undefined,{step:sampleStep});

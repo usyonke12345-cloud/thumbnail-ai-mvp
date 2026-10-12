@@ -1,4 +1,5 @@
 import {normalizeVisualIntent,normalizeVideoBrief} from '../shared/complete-designs.mjs';
+import {isCompletePngDataUrl,MAX_COMPLETE_PNG_DATA_URL_LENGTH,revisionParent} from '../shared/complete-images.mjs';
 export const COMPOSITIONS={auto:'写真に合わせて自動',text_left:'文字を左・主役を右',text_right:'文字を右・主役を左',text_top:'見出しを上・主役を大きく'};
 export const DESIGNS={auto:'写真と内容に合わせて自動',photo_focus:'写真を主役にする',editorial:'落ち着いた誌面風',impact:'文字を大きく見せる'};
 export const MAX_IMAGES=60, MAX_GROUP_IMAGES=12, MAX_PROJECT_IMAGES=24, MAX_STORED_CHARS=192*1024*1024;
@@ -16,8 +17,9 @@ function png(value,max){
 async function hashBytes(bytes){return [...new Uint8Array(await crypto.subtle.digest('SHA-256',bytes))].map(x=>x.toString(16).padStart(2,'0')).join('');}
 const hashPng=value=>hashBytes(Uint8Array.from(atob(value.split(',')[1]),c=>c.charCodeAt(0)));
 function result(value){
- const size=png(value?.imageDataUrl,24*1024*1024);if(size.width!==1536||size.height!==864)fail('完成PNGは1536×864の画像が必要です。');
- return {apiVersion:'1',mode:'ai_complete',...size,imageDataUrl:value.imageDataUrl,generation_version:typeof value.generation_version==='string'?value.generation_version:null,limitations:Array.isArray(value.limitations)?value.limitations.filter(x=>typeof x==='string').map(x=>x.slice(0,2000)).slice(0,20):['入力条件が不明な以前の完成画像です。未採点です。']};
+ if(!isCompletePngDataUrl(value?.imageDataUrl))fail('完成PNGは16MiB以下で保存してください。');
+ const size=png(value.imageDataUrl,MAX_COMPLETE_PNG_DATA_URL_LENGTH);if(size.width!==1536||size.height!==864)fail('完成PNGは1536×864の画像が必要です。');
+ return {apiVersion:'1',mode:'ai_complete',...size,imageDataUrl:value.imageDataUrl,generation_version:typeof value.generation_version==='string'?value.generation_version:null,...(value.revision!==undefined?{revision:revisionParent(value.revision)}:{}),limitations:Array.isArray(value.limitations)?value.limitations.filter(x=>typeof x==='string').map(x=>x.slice(0,2000)).slice(0,20):['入力条件が不明な以前の完成画像です。未採点です。']};
 }
 function headlineInput(payload){
  const mode=payload?.headlineMode??'manual';if(!['auto','manual'].includes(mode))fail('見出しの作り方が不正です。');
@@ -33,7 +35,15 @@ async function comparisonInput(payload){
 }
 export function projectName(value){if(value===undefined||value==='')return undefined;if(typeof value!=='string'||[...value].length>80||/[\u0000-\u001f\u007f]/u.test(value))fail('案件名は80文字以内で指定してください。');return value.trim()||undefined;}
 export const projectOf=group=>group.projectName??group.input?.title??'入力条件不明';
-export function validateRevision(value){if(!value||typeof value.instruction!=='string'||!value.instruction.trim()||[...value.instruction].length>300||/[\u0000-\u001f\u007f]/u.test(value.instruction)||!text(value.parentImageId,200)||!shaPattern.test(value.parentImageSha256))fail('修正指示と元画像の参照が不正です。');return {instruction:value.instruction,parentImageId:value.parentImageId,parentImageSha256:value.parentImageSha256};}
+export function validateRevision(value){if(!value||typeof value.instruction!=='string'||!value.instruction.trim()||[...value.instruction].length>300||/[\u0000-\u001f\u007f]/u.test(value.instruction))fail('修正指示と元画像の参照が不正です。');return {instruction:value.instruction,...revisionParent(value)};}
+// Derived from verified image identities in this scope, never copied from imported claims.
+export function revisionChecks(images,scope='comparison_bundle'){
+ return images.filter(image=>image.revision||image.result?.revision).map(image=>{
+  const reference=revisionParent(image.revision??image.result.revision),parent=images.find(x=>x.id===reference.parentImageId);
+  if(reference.parentImageId===image.id||parent&&parent.imageSha256!==reference.parentImageSha256)fail('修正元の画像参照が一致しません。');
+  return {imageId:image.id,...reference,scope,status:parent?'verified':'unverified',reason:parent?'修正元のIDとSHA-256を確認しました。':'修正元は未確認（照合範囲に元画像が含まれていません）。'};
+ });
+}
 export async function checkGenerationCapacity(state,payload,name){const {input,groupId}=await comparisonInput(payload),existing=state.groups.find(g=>g.id===groupId),project=projectName(name)??(existing?projectOf(existing):input.title);if(state.images.length>=MAX_IMAGES)fail('比較履歴が60枚に達しています。必要な記録を保存してから不要な案件を削除してください。');if(state.images.filter(x=>x.groupId===groupId).length>=MAX_GROUP_IMAGES)fail('この組は12枚に達しています。生成前に整理してください。');const ids=new Set(state.groups.filter(g=>g.id===groupId||projectOf(g)===project).map(g=>g.id));if(state.images.filter(x=>ids.has(x.groupId)).length>=MAX_PROJECT_IMAGES)fail('この案件は24枚に達しています。生成前に整理してください。');}
 export async function createEntry(payload,value,{id=crypto.randomUUID(),capturedAt=new Date().toISOString(),elapsedMs=null,projectName:name,revision}={}){
  const {input,groupId}=await comparisonInput(payload);
@@ -54,6 +64,7 @@ export async function createLegacyEntry(value,{id=crypto.randomUUID(),capturedAt
 export function validateEntry({group,image}={}){
  if(!group||group.version!==1||!date(group.capturedAt)||!/^((complete|legacy)-[a-f0-9]{64})$/.test(group.id)||!image||image.version!==1||image.groupId!==group.id||!text(image.id,200)||!date(image.capturedAt)||!shaPattern.test(image.imageSha256))fail('完成画像の比較記録が不正です。');
  if(group.projectName!==undefined&&(projectName(group.projectName)!==group.projectName||!date(group.projectUpdatedAt)))fail('案件名の記録が不正です。');if(image.revision)validateRevision(image.revision);
+ if(image.revision&&image.result?.revision&&(image.revision.parentImageId!==image.result.revision.parentImageId||image.revision.parentImageSha256!==image.result.revision.parentImageSha256))fail('生成応答と保存記録の修正元が一致しません。');
  if(group.input===null){if(!group.id.startsWith('legacy-')||group.sourceImageDataUrl!==null||image.composition!==null)fail('以前の画像に入力条件を推測で付けられません。');}
  else {if(!group.id.startsWith('complete-')||!shaPattern.test(group.input.sourceSha256)||!Object.hasOwn(COMPOSITIONS,image.composition))fail('入力写真・構図の記録が不正です。');if(!text(group.input.title,120)||typeof group.input.brief!=='string'||normalizeVideoBrief(group.input.brief)!==group.input.brief)fail('入力内容が不正です。');headlineInput(group.input);normalizeVisualIntent(group.input.visualIntent);if(image.design!==undefined&&!Object.hasOwn(DESIGNS,image.design))fail('デザインの希望が不正です。');const size=png(group.sourceImageDataUrl,3*1024*1024);if(size.width!==1280||size.height!==720)fail('入力写真の寸法が不正です。');}
  result(image.result);if(!(image.elapsedMs===null||Number.isInteger(image.elapsedMs)&&image.elapsedMs>=0))fail('生成時間が不正です。');return {group,image};
@@ -90,7 +101,8 @@ export function validateReviewContext(value){
 export function comparisonBundle(state,groupId){
  const group=state.groups.find(x=>x.id===groupId);if(!group)fail('比較する組がありません。');
  const images=state.images.filter(x=>x.groupId===groupId),review=state.reviews.find(x=>x.groupId===groupId)??null;
- return {version:group.projectName||images.some(x=>x.revision)||images.length>6?'complete-comparison-1.6.0':group.input?.brief===''?'complete-comparison-1.5.0':group.input?.visualIntent?'complete-comparison-1.4.0':group.input?.headlineMode==='auto'||images.some(x=>x.design!==undefined)?'complete-comparison-1.3.0':'complete-comparison-1.2.0',kind:'human_quality_review',assessment:null,group,images,review,reviewCoversAllImages:!!review&&images.length===review.displayWidths.length&&images.every(x=>review.displayWidths.some(w=>w.imageId===x.id)),note:'完成PNGは未採点です。人の選択は自動学習やCTR予測ではありません。写真・完成画像を含む非公開の比較記録です。'};
+ const checks=revisionChecks(images);
+ return {version:group.projectName||checks.length||images.length>6?'complete-comparison-1.6.0':group.input?.brief===''?'complete-comparison-1.5.0':group.input?.visualIntent?'complete-comparison-1.4.0':group.input?.headlineMode==='auto'||images.some(x=>x.design!==undefined)?'complete-comparison-1.3.0':'complete-comparison-1.2.0',kind:'human_quality_review',assessment:null,group,images,review,...(checks.length?{revisionChecks:checks}:{}),reviewCoversAllImages:!!review&&images.length===review.displayWidths.length&&images.every(x=>review.displayWidths.some(w=>w.imageId===x.id)),note:'完成PNGは未採点です。人の選択は自動学習やCTR予測ではありません。写真・完成画像を含む非公開の比較記録です。'};
 }
 export function parseCostUsd(value){
  if(typeof value!=='string')fail('実費はUSDの金額で入力してください。');

@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Thumbnail AI MVP",
-    "version": "0.3.2",
+    "version": "0.3.3",
     "description": "Local SVG layout heuristics, opt-in paid complete PNG generation, and local PNG diagnostics. Complete PNG diagnostics are not a quality or CTR score."
   },
   "servers": [
@@ -346,8 +346,9 @@
                       },
                       "imageDataUrl": {
                         "type": "string",
-                        "maxLength": 25165824,
-                        "pattern": "^data:image/png;base64,"
+                        "maxLength": 22369646,
+                        "pattern": "^data:image/png;base64,",
+                        "description": "1536x864 PNG; binary at most 16MiB, data URL at most 22,369,646 characters. Decoded byte length is also validated."
                       },
                       "parentImageId": {
                         "type": "string",
@@ -435,6 +436,26 @@
                       "type": "array",
                       "items": {
                         "type": "string"
+                      }
+                    },
+                    "revision": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "parentImageId",
+                        "parentImageSha256"
+                      ],
+                      "description": "Present only for a revision. ID echoed from the request and SHA-256 calculated over the previous PNG bytes; matching against a stored parent image is a separate check.",
+                      "properties": {
+                        "parentImageId": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 200
+                        },
+                        "parentImageSha256": {
+                          "type": "string",
+                          "pattern": "^[a-f0-9]{64}$"
+                        }
                       }
                     }
                   }
@@ -1520,7 +1541,7 @@
         ],
         "properties": {
           "analysisVersion": {
-            "const": "complete-png-diagnostics-0.1.0"
+            "const": "complete-png-diagnostics-0.1.1"
           },
           "kind": {
             "const": "image_diagnostics"

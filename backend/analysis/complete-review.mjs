@@ -1,5 +1,5 @@
 import {validateCompleteBundle,diagnosticRequest} from '../../frontend/complete-png-transfer.js';
-import {gallerySummary} from '../../frontend/complete-gallery-model.js';
+import {gallerySummary,revisionChecks} from '../../frontend/complete-gallery-model.js';
 import {analyzePngAssets,ANALYSIS_VERSION} from './complete-png.mjs';
 
 const fail=message=>{throw new Error(message);};
@@ -53,8 +53,8 @@ export function createCompleteReviewAnalysis({onAsset=async()=>{},decode}={}){
   }
   const authorized=eligible.filter(x=>['original','external'].includes(x.review.context.titleSource)&&x.review.context.titlePermissionConfirmed&&x.review.context.photoPermissionConfirmed),issues={text:0,subject:0,composition:0,other:0};
   for(const {review}of eligible)for(const issue of review.issues)issues[issue]++;
-  const newOptions=state.groups.some(x=>x.input?.headlineMode==='auto')||state.images.some(x=>x.design!==undefined);
-  return {version:state.groups.some(x=>x.projectName)||state.images.some(x=>x.revision)?'complete-evaluation-dataset-1.4.0':state.groups.some(x=>x.input?.brief==='')?'complete-evaluation-dataset-1.3.0':state.groups.some(x=>x.input?.visualIntent)?'complete-evaluation-dataset-1.2.0':newOptions?'complete-evaluation-dataset-1.1.0':'complete-evaluation-dataset-1.0.0',analysisVersion:ANALYSIS_VERSION,assessment:null,assets:[...assets.values()],groups:state.groups,images:state.images,reviews:state.reviews,summary:gallerySummary(state),progress:{target:20,completedHumanComparisons:eligible.length,authorizedRealComparisons:authorized.length,byReviewer,pending},humanOutcomes:{selected:eligible.filter(x=>x.review.decision==='selected').length,allRejected:eligible.filter(x=>x.review.decision==='none_acceptable').length,issues},scoringAgreement:null,limitations:['寸法・破損・相対輝度の診断だけです。完成PNGの文字・人物保持・構図の品質スコアは未実装です。','採点との順位一致は未算出です。人の記録や出典・許諾を自動で補いません。','費用と時間は書き出された画像の分だけです。失敗したAPI試行を含む成功率・累計支出ではありません。',...(state.groups.some(x=>x.input?.headlineMode==='auto')?['自動見出しの実際の文言は未取得です。同じ入力・見出し作成方針でも文言が変わるため、構図だけの比較とは扱いません。']:[])]};
+  const newOptions=state.groups.some(x=>x.input?.headlineMode==='auto')||state.images.some(x=>x.design!==undefined),checks=revisionChecks(state.images,'analysis_dataset');
+  return {version:state.groups.some(x=>x.projectName)||checks.length?'complete-evaluation-dataset-1.4.0':state.groups.some(x=>x.input?.brief==='')?'complete-evaluation-dataset-1.3.0':state.groups.some(x=>x.input?.visualIntent)?'complete-evaluation-dataset-1.2.0':newOptions?'complete-evaluation-dataset-1.1.0':'complete-evaluation-dataset-1.0.0',analysisVersion:ANALYSIS_VERSION,assessment:null,assets:[...assets.values()],groups:state.groups,images:state.images,reviews:state.reviews,...(checks.length?{revisionChecks:checks}:{}),summary:gallerySummary(state),progress:{target:20,completedHumanComparisons:eligible.length,authorizedRealComparisons:authorized.length,byReviewer,pending},humanOutcomes:{selected:eligible.filter(x=>x.review.decision==='selected').length,allRejected:eligible.filter(x=>x.review.decision==='none_acceptable').length,issues},scoringAgreement:null,limitations:['寸法・破損・相対輝度の診断だけです。完成PNGの文字・人物保持・構図の品質スコアは未実装です。','採点との順位一致は未算出です。人の記録や出典・許諾を自動で補いません。','費用と時間は書き出された画像の分だけです。失敗したAPI試行を含む成功率・累計支出ではありません。',...(checks.some(x=>x.status==='unverified')?['修正元は未確認の画像があります。元画像が解析データにないため、IDとSHA-256の照合は完了していません。']:[]),...(state.groups.some(x=>x.input?.headlineMode==='auto')?['自動見出しの実際の文言は未取得です。同じ入力・見出し作成方針でも文言が変わるため、構図だけの比較とは扱いません。']:[])]};
  }
  return {consume,finish};
 }

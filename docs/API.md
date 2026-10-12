@@ -12,7 +12,7 @@ Day5の `/review`・`/review.js`・`/comparison-model.js`・`/comparison-store.j
 
 完成PNGの比較JSONは、各組または全組reportを`/editor`から読み込めます。SHA-256と固定した入力・画像の参照を再検証し、最大60画像・保存済みとの重複を除いた合計192MiBの暫定上限内で一括保存します。JSONファイルは70MiBまで。読み込みはブラウザ内だけで、新しいHTTP APIやCandidate/Assessmentの変更はありません。補足なしの比較JSONはcomplete-comparison-1.5.0、補足ありでイメージを指定したものは1.4.0です。旧1.0.0〜1.4.0も読めます。人の記録・利用確認・実費は保存された申告として復元し、新しい評価や許諾確認として扱いません。書き出し形式の版も維持します。
 
-写真の `/api/v1/complete-thumbnail` は任意の `composition`・`headlineMode`・`design` を受け付けます。生成版はai-complete-0.5.0。briefを任意にし、自動見出しモードなら写真と動画タイトルだけで生成できる。APIの見出しモード省略時は従来のmanualを維持する。既存の見出し指定入力はそのまま使え、Candidate/Assessmentには影響しません。完成PNGは未採点、1回1枚、手動同意・期限・起動内回数制限は維持します。この共有入力と書き出し形式の追加は相互レビュー対象です。人工fixtureはdocs/fixtures/complete-generation-options.json、OpenAPIとの照合テストはtests/complete-generation-contract.test.mjsです。
+写真の `/api/v1/complete-thumbnail` は任意の `composition`・`headlineMode`・`design` を受け付けます。生成版はai-complete-0.5.1。briefを任意にし、自動見出しモードなら写真と動画タイトルだけで生成できる。APIの見出しモード省略時は従来のmanualを維持する。既存の見出し指定入力はそのまま使え、Candidate/Assessmentには影響しません。完成PNGは未採点、1回1枚、手動同意・期限・起動内回数制限は維持します。この共有入力と書き出し形式の追加は相互レビュー対象です。人工fixtureはdocs/fixtures/complete-generation-options.json、OpenAPIとの照合テストはtests/complete-generation-contract.test.mjsです。
 
 ## POST /api/v1/thumbnails
 
@@ -125,7 +125,7 @@ Day 3: SVG内の文字は同梱フォントから生成したpathです。PNGは
 
 ## POST /api/v1/complete-thumbnail（実験・有料）
 
-写真1枚からAIが文字と構図まで仕上げる。title（1〜120文字）、imageDataUrl（1280×720 PNG、3MB以内）、consent:true が必須。briefは任意の文字列（0〜1000文字）で、省略・空文字・空白だけの場合は空文字へ正規化する。autoなら写真とタイトルだけで使える。入力JSON上限4MB。1536×864 PNG1枚と生成版・未評価事項を返す。Candidate/Assessmentは返さず採点pipelineを通さない。画像はサーバーで保存せずOpenAIへ送信する。文字・人物保持と品質の目視確認が必要。
+写真1枚からAIが文字と構図まで仕上げる。title（1〜120文字）、imageDataUrl（1280×720 PNG、3MB以内）、consent:true が必須。briefは任意の文字列（0〜1000文字）で、省略・空文字・空白だけの場合は空文字へ正規化する。autoなら写真とタイトルだけで使える。入力JSON上限28MiB。1536×864 PNG1枚と生成版・未評価事項を返す。Candidate/Assessmentは返さず採点pipelineを通さない。画像はサーバーで保存せずOpenAIへ送信する。文字・人物保持と品質の目視確認が必要。
 
 - brief: 動画内容の任意の補足。未入力の内容・活動・結果などを推測して書き足さない。補足なしの比較JSONではbrief:""を固定し、書き出しは1.5.0、分析datasetは1.3.0。従来の補足ありの入力と組IDは維持する。
 - headlineMode: manual / auto。APIで省略するとmanual（既存の呼び出しとの互換）。画面の初期値はauto。
@@ -134,6 +134,8 @@ Day 3: SVG内の文字は同梱フォントから生成したpathです。PNGは
 - design: auto / photo_focus / editorial / impact。省略時auto。写真全面＋下部のサンセリフ、上部のセリフ／明朝、横の細長い太字見出し、の方向を指定する。特定のdesignを固定すると同じレシピを繰り返す。autoはそのままAPIへ送り、写真の主役・余白・動画内容から画像モデルが字体・大きさ・配置を判断する。3つの手動レシピだけに限定せず、履歴による順番切り替えは行わない。同じ写真・内容では似た構成になる場合もある。保存するdesign=autoは希望で、モデルが使った実字体・位置・判断理由ではない。字体と座標は生成への希望で、実測情報ではない。[定義と確認手順](COMPLETE-DESIGN-RECIPES.md)。
 - visualIntent: 任意の文字列、300 Unicodeコードポイント以内。省略・空欄なら動画内容から推測する。雰囲気を希望として伝え、構成・字体・大きさは同じ画像編集APIでAIが選ぶ。明示したdesign/compositionは優先する。イメージを指定した比較は別の組IDに固定し、補足ありでは書き出し1.4.0・分析dataset1.2.0、補足なしでは書き出し1.5.0・分析dataset1.3.0に保存する。空欄では旧組IDと形式を維持する。実フォント・文字座標・選択理由は未取得。[検証しながら増やす手順](STYLE-PATTERN-GROWTH.md)。
 - composition: auto / text_left / text_right / text_top。省略時auto。明示した配置はデザインの既定の見出し領域を置き換え、字体は維持する。既定配置と指定配置を同時に送らない。写真の保持を優先し、人物の切り抜き移動は許さず、写真全体の切り取りと拡縮だけを指示する。
+- revision: 任意の修正指示。instruction（1〜300文字）、parentImageId（1〜200文字）、imageDataUrl（1536×864 PNG）が必須。PNG本体は16MiB、data URLは22,369,646文字まで。Base64の文字数だけでなく、復号後のバイト数も確認する。元写真と前の完成PNGを1回の画像編集へ送る。
+- 修正成功時だけ、応答にrevision: {parentImageId, parentImageSha256}を追加する。SHA-256は受け取った前のPNG本体からサーバーが計算する。APIは保存庫の元画像を参照しないため、この応答だけで修正元との照合完了とは扱わない。通常生成ではrevisionを返さない。生成版はai-complete-0.5.1。
 
 見出しと構図は同じ画像編集API呼び出しで作る。見出し用の追加リクエストは行わず、既存と同じ1回1枚。料金は実際の利用履歴で確認する。構図の違い・人物保持・適切な見出しは新しい指示でも実画像の確認が必要。
 
@@ -148,6 +150,10 @@ health に completeGeneration（enabled、keyConfigured、busy、calls、maxCall
 image-assets-1.0.0のassetsとimagesを受け取り、image_diagnosticsを返す。PNGを外部APIへ送信せず、有料生成回数も消費しない。assetsは入力写真source_photoと完成画像complete_thumbnailだけで、SHA-256・寸法・バイト数・PNG data URLを持つ。imagesは資産を参照する。文字なし背景はnull、生成時の見出しは指示として保持し、renderedTextVerified:false・textRegions:nullとする。
 
 最大4資産、1PNG16MiB、合計32MiB、JSON45MiB、各辺4096pxまで。全資産が参照されること、役割・バイト数・SHA-256・base64形式を検証する。入力不正は400 INVALID_DIAGNOSTIC_INPUT。破損・未対応PNGや宣言寸法との不一致は200のstatus:unavailableと理由で返す。PNG展開の上限・CRC・IENDを確認し、同じhashは1回だけ展開する。
+
+診断版complete-png-diagnostics-0.1.1は採点担当のPNG読み込み（PR #6、8e1aa70）を使う。圧縮・フィルタ方式、未知の必須チャンク、チャンク順序、PLTE/tRNSの整合、1辺の上限はpng.mjsが検証する。生成側のsupportedEncoding事前チェックは削除し、資産の宣言寸法と実寸法の照合を維持する。グレー/RGBの有効なtRNSは指定色を透明として解析する。従来の有効な不透明PNGでは輝度統計は変わらない。Candidate/Assessmentは変更しない。
+
+比較1.6.0と解析dataset1.4.0の任意revisionChecksは照合結果を記録する。imageId、parentImageId、parentImageSha256、scope、status、reasonを持つ。statusはverifiedまたはunverified。scope=comparison_bundleはその比較組内、scope=analysis_datasetは解析へ取り込んだ全画像で照合する。修正元が無い場合はunverifiedと「修正元は未確認」を記録する。元画像を後から追加した場合は再計算する。存在する元画像のハッシュ不一致・自分自身への参照は拒否する。取り込みファイルが宣言した照合結果は信頼せず再計算し、保存庫の固定画像情報を変更しない。
 
 結果は実寸法、sRGBと仮定した相対輝度の間引き統計、ほぼ単色の兆候だけ。色プロファイル変換はしない。assessment、qualityScore、renderedTextはnullで、文字・読みやすさ・収まり・文字コントラスト・人物保持・構図品質をunevaluatedに明示する。Candidate/Assessmentのkind・指標・重みは変えない。入力写真を文字なし背景として扱わない。
 

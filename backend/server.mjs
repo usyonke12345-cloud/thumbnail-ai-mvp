@@ -13,6 +13,7 @@ assets.set('/complete-png-transfer.js',['complete-png-transfer.js','text/javascr
 for(const file of ['local-archive.js','editor-tools.js','attempt-history.js','editor-backup.js','image-save.js'])assets.set('/'+file,[file,'text/javascript; charset=utf-8']);
 assets.set('/editor-design-guide.js',['editor-design-guide.js','text/javascript; charset=utf-8']);
 assets.set('/shared/complete-designs.mjs',['../shared/complete-designs.mjs','text/javascript; charset=utf-8']);
+assets.set('/shared/complete-images.mjs',['../shared/complete-images.mjs','text/javascript; charset=utf-8']);
 export function makeServer() {
   const server=createServer(async(req,res)=> {
     const send=(status,value)=>{res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'});res.end(JSON.stringify(value));};

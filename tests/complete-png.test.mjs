@@ -51,10 +51,11 @@ test('asset integrity and roles are checked before decoding',()=>{
  assert.throws(()=>analyzePngAssets(request([a,{...a,assetId:'unused'}])));
  assert.throws(()=>analyzePngAssets(request(Array.from({length:5},(_,i)=>({...a,assetId:`a${i}`})))));
 });
-test('corruption, unsupported transparency/method and actual dimension mismatch are unavailable rather than scores',()=>{
- const broken=png().subarray(0,-12),cases=[asset(broken),asset(png(1536,864,[0,0,0,255],{method:1})),asset(png(1536,864,[0,0,0,255],{transparency:true})),asset(png(),{width:1535})];
+test('corruption, unsupported method and actual dimension mismatch are unavailable rather than scores',()=>{
+ const broken=png().subarray(0,-12),cases=[asset(broken),asset(png(1536,864,[0,0,0,255],{method:1})),asset(png(),{width:1535})];
  for(const a of cases){const result=analyzePngAssets(request([a]));assert.equal(result.assets[0].status,'unavailable');assert.equal(result.assets[0].luminance,null);assert.equal(result.images[0].qualityScore,null);assert.ok(result.assets[0].reasons.length);}
  const transparent=analyzePngAssets(request([asset(png(1536,864,[0,0,0,0]))]));assert.equal(transparent.assets[0].status,'analyzed');assert.equal(transparent.assets[0].luminance,null);assert.equal(transparent.assets[0].nearlyUniform,null);
+ const colorKey=analyzePngAssets(request([asset(png(1536,864,[0,0,0,255],{transparency:true}))]));assert.equal(colorKey.assets[0].status,'analyzed');assert.equal(colorKey.assets[0].luminance,null);assert.equal(colorKey.assets[0].nearlyUniform,null);assert.equal(colorKey.images[0].qualityScore,null);
 });
 test('comparison import checks frozen identities, supports older records, and rejects changed source, title and image',async()=>{
  const b=await bundle(),checked=await validateCompleteBundle(b);assert.equal(checked.assessment,null);

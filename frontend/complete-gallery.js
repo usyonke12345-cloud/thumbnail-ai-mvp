@@ -1,4 +1,4 @@
-import {COMPOSITIONS,DESIGNS,MAX_IMAGES,createEntry,createLegacyEntry,comparisonBundle,validateQualityReview,parseCostUsd,gallerySummary,comparisonReport,projectOf,checkGenerationCapacity} from './complete-gallery-model.js';
+import {COMPOSITIONS,DESIGNS,MAX_IMAGES,createEntry,createLegacyEntry,comparisonBundle,validateQualityReview,parseCostUsd,gallerySummary,comparisonReport,projectOf,checkGenerationCapacity,revisionChecks} from './complete-gallery-model.js';
 import {readComparisonFile} from './local-archive.js';
 import {createImageSaveControls} from './image-save.js';
 import {galleryStorage} from './complete-gallery-store.js';
@@ -39,11 +39,12 @@ export function createCompleteGallery({root,document=globalThis.document,storage
  function current(){return state.groups.find(x=>x.id===selected);}
  function outputs(){return state.images.filter(x=>x.groupId===selected).sort((a,b)=>Date.parse(a.capturedAt)-Date.parse(b.capturedAt)||a.id.localeCompare(b.id));}
  function renderImages(){
-  images.replaceChildren();outputs().forEach((image,i)=>{
+  const candidates=outputs(),checks=revisionChecks(candidates);images.replaceChildren();candidates.forEach((image,i)=>{
    const name=`案${String.fromCharCode(65+i)}`,card=el('article'),title=el('h3',`${name}：${COMPOSITIONS[image.composition]??'以前の完成画像'}`),preview=el('img'),details=el('p'),link=el('a','この完成PNGを保存');
    preview.src=image.result.imageDataUrl;preview.alt=`AI完成画像の${name}`;preview.style.width=`min(100%,${width}px)`;preview.style.height='auto';preview.dataset.imageId=image.id;link.href=image.result.imageDataUrl;link.download=`ai-complete-${image.id}.png`;
    details.textContent=`${image.result.generation_version??'生成版不明'}・${image.elapsedMs===null?'生成時間不明':`${(image.elapsedMs/1000).toFixed(1)}秒`}・${image.design?`希望：${DESIGNS[image.design]}・`:''}未採点`;
    if(image.revision)details.textContent+=`\n修正指示：${image.revision.instruction}`;
+   const check=checks.find(x=>x.imageId===image.id);if(check)details.textContent+=`\n${check.reason}\n修正元ID：${check.parentImageId}`;
    const revisionInput=el('textarea'),revise=el('button','この画像から修正を始める');revisionInput.rows=2;revisionInput.maxLength=300;revisionInput.placeholder='例：文字を穏やかに、主役を隠さない';revisionInput.setAttribute('aria-label',`${name}への修正指示`);revise.type='button';revise.disabled=!current()?.input;
    const revisionStatus=el('p');revise.addEventListener('click',async()=>{if(revise.disabled)return;revise.disabled=true;try{if(!revisionInput.value.trim())throw new Error('修正したい点を入力してください。');await onRevise({group:structuredClone(current()),image:structuredClone(image),instruction:revisionInput.value});revisionStatus.textContent='修正の入力を準備しました。上の生成ボタンで送信と課金を確認してから作成してください。まだAPIは呼んでいません。';}catch(error){revisionStatus.textContent=error.message;}finally{revise.disabled=!current()?.input;}});
    const record=el('form'),cost=el('input'),costLabel=el('label','この画像の実費（USD・任意）'),pngSave=el('select'),saveLabel=el('label','PNG保存を確認した結果'),button=el('button','実費と保存結果を記録'),status=el('p');
