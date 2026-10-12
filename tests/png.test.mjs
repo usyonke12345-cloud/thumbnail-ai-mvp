@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { deflateSync } from 'node:zlib';
-import { decodePng, PngError, MAX_PIXELS } from '../backend/scoring/png.mjs';
+import { decodePng, PngError } from '../backend/scoring/png.mjs';
 import { regionStats, worstContrastAgainst, isNearlyUniform } from '../backend/scoring/image-stats.mjs';
 
 // テスト用の最小PNG書き出し（人工画像のみ）。各行にフィルタ0〜4を順に使い、展開の正しさを確かめる。
@@ -62,11 +62,11 @@ test('unsupported or broken PNGs throw PngError instead of guessing', () => {
     notPng: Buffer.from('not a png'),
     truncated: ok.subarray(0, ok.length - 20),
     interlaced: encode({ width: 2, height: 2, colorType: 2, bytes: pseudo(12), interlace: 1 }),
-    depth16: (() => { const b = Buffer.from(ok); b[24] = 16; return b; })(),
+    depth16: Buffer.concat([SIG, chunk('IHDR', ihdrOf(2, 2, 2, 16)), chunk('IDAT', deflateSync(Buffer.alloc(2 * (1 + 12)))), chunk('IEND', Buffer.alloc(0))]), // CRCは正しく、ビット深度の理由で拒否
     badFilter: (() => { const ihdr = Buffer.alloc(13); ihdr.writeUInt32BE(1, 0); ihdr.writeUInt32BE(1, 4); ihdr[8] = 8; ihdr[9] = 0;
       return Buffer.concat([ok.subarray(0, 8), chunk('IHDR', ihdr), chunk('IDAT', deflateSync(Buffer.from([9, 0]))), chunk('IEND', Buffer.alloc(0))]); })(),
     paletteOutOfRange: encode({ width: 1, height: 1, colorType: 3, bytes: Buffer.from([5]), palette: Buffer.from([0, 0, 0]) }),
-    tooLarge: (() => { const b = Buffer.from(ok); b.writeUInt32BE(MAX_PIXELS, 16); b.writeUInt32BE(2, 20); return b; })(),
+    tooLarge: Buffer.concat([SIG, chunk('IHDR', ihdrOf(4096, 4097, 2)), chunk('IDAT', deflateSync(Buffer.alloc(1))), chunk('IEND', Buffer.alloc(0))]), // 画素数の上限超え（CRCは正しい）
   };
   for (const [name, buf] of Object.entries(cases)) assert.throws(() => decodePng(buf), PngError, name);
 });
@@ -110,4 +110,49 @@ test('regionStats rejects step that is not a positive integer and non-finite rec
   for (const step of [0, -1, 1.5, NaN, Infinity, '2']) assert.throws(() => regionStats(img, undefined, { step }), RangeError, String(step));
   assert.throws(() => regionStats(img, { x: 0, y: 0, width: NaN, height: 1 }), RangeError);
   assert.equal(regionStats(img, undefined, { step: 1 }).samples, 2);
+});
+
+// 形式の検証（生成側 supportedEncoding の事前チェックを読み込み処理へ移したもの）。CRCは正しく作り、意図した理由で拒否されることを確認する。
+const ihdrRaw = (w, h, { colorType = 6, depth = 8, compression = 0, filterMethod = 0, interlace = 0 } = {}) => {
+  const d = Buffer.alloc(13); d.writeUInt32BE(w, 0); d.writeUInt32BE(h, 4); d[8] = depth; d[9] = colorType; d[10] = compression; d[11] = filterMethod; d[12] = interlace; return chunk('IHDR', d);
+};
+const assemble = (...chunks) => Buffer.concat([SIG, ...chunks, chunk('IEND', Buffer.alloc(0))]);
+const idatOf = raw => chunk('IDAT', deflateSync(raw));
+
+test('compression method, filter method and per-axis size are validated', () => {
+  const rgba1 = idatOf(Buffer.from([0, 1, 2, 3, 255]));
+  assert.throws(() => decodePng(assemble(ihdrRaw(1, 1, { compression: 1 }), rgba1)), /圧縮方式/);
+  assert.throws(() => decodePng(assemble(ihdrRaw(1, 1, { filterMethod: 1 }), rgba1)), /フィルタ方式/);
+  assert.throws(() => decodePng(assemble(ihdrRaw(5000, 1), idatOf(Buffer.alloc(1 + 5000 * 4)))), /対応範囲外/, '1辺が4096を超える');
+});
+
+test('unknown critical chunks are rejected, unknown ancillary chunks are skipped', () => {
+  const ok = [ihdrRaw(1, 1), idatOf(Buffer.from([0, 1, 2, 3, 255]))];
+  assert.throws(() => decodePng(assemble(ok[0], chunk('ABCD', Buffer.alloc(1)), ok[1])), /未対応の必須チャンク ABCD/);
+  assert.deepEqual([...decodePng(assemble(ok[0], chunk('tEXt', Buffer.from('Comment\0x')), ok[1])).rgba], [1, 2, 3, 255]);
+  assert.throws(() => decodePng(assemble(ok[0], chunk('1234', Buffer.alloc(0)), ok[1])), /種類名/);
+});
+
+test('chunk order and duplicates: PLTE/tRNS before IDAT, IDAT consecutive, no duplicate PLTE/tRNS', () => {
+  const plte = chunk('PLTE', Buffer.from([255, 0, 0, 0, 0, 255])), pal = ihdrRaw(2, 1, { colorType: 3 }), px = Buffer.from([0, 0, 1]);
+  assert.deepEqual([...decodePng(assemble(pal, plte, idatOf(px))).rgba], [255, 0, 0, 255, 0, 0, 255, 255]);
+  assert.throws(() => decodePng(assemble(pal, idatOf(px), plte)), /PLTE はIDATより前/);
+  assert.throws(() => decodePng(assemble(pal, plte, plte, idatOf(px))), /PLTEが複数/);
+  const z = deflateSync(px), half = [chunk('IDAT', z.subarray(0, 4)), chunk('IDAT', z.subarray(4))];
+  assert.deepEqual(decodePng(assemble(pal, plte, ...half)).width, 2, 'IDATを分割しても連続していれば読める');
+  assert.throws(() => decodePng(assemble(pal, plte, half[0], chunk('tEXt', Buffer.from('a\0b')), half[1])), /連続していません/);
+});
+
+test('tRNS: gray/RGB colour key becomes transparent; tRNS or PLTE that do not fit the colour type are rejected', () => {
+  const grayKey = chunk('tRNS', Buffer.from([0, 0x80]));
+  const gray = decodePng(assemble(ihdrRaw(2, 1, { colorType: 0 }), grayKey, idatOf(Buffer.from([0, 0x80, 0x10]))));
+  assert.deepEqual([...gray.rgba], [0x80, 0x80, 0x80, 0, 0x10, 0x10, 0x10, 255]);
+  const rgbKey = chunk('tRNS', Buffer.from([0, 1, 0, 2, 0, 3]));
+  const rgb = decodePng(assemble(ihdrRaw(2, 1, { colorType: 2 }), rgbKey, idatOf(Buffer.from([0, 1, 2, 3, 1, 2, 4]))));
+  assert.deepEqual([...rgb.rgba], [1, 2, 3, 0, 1, 2, 4, 255]);
+  const rgba1 = idatOf(Buffer.from([0, 1, 2, 3, 255]));
+  assert.throws(() => decodePng(assemble(ihdrRaw(1, 1), chunk('tRNS', Buffer.from([0, 0])), rgba1)), /tRNSが色の形式と合いません/, 'アルファ付きの形式にtRNS');
+  assert.throws(() => decodePng(assemble(ihdrRaw(1, 1, { colorType: 0 }), chunk('tRNS', Buffer.from([0, 0, 0])), idatOf(Buffer.from([0, 9])))), /tRNS/, 'グレーのtRNSは2バイト');
+  assert.throws(() => decodePng(assemble(ihdrRaw(1, 1, { colorType: 0 }), chunk('PLTE', Buffer.from([0, 0, 0])), idatOf(Buffer.from([0, 9])))), /PLTEが不正/, 'グレーにPLTE');
+  assert.throws(() => decodePng(assemble(ihdrRaw(1, 1, { colorType: 3 }), chunk('PLTE', Buffer.from([0, 0])), idatOf(Buffer.from([0, 0])))), /PLTEが不正/, 'PLTEの長さが3の倍数でない');
 });

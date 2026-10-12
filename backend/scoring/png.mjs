@@ -4,6 +4,8 @@ import { inflateSync } from 'node:zlib';
 const SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 export const MAX_INPUT_BYTES = 16 * 1024 * 1024; // 圧縮されたPNG本体の上限（画像資産の案：1画像16MB以下）
 export const MAX_PIXELS = 4096 * 4096;           // 展開後の画素数の上限（RGBAで最大64MB）
+export const MAX_SIDE = 4096;                    // 1辺の上限（画像資産の案：4096×4096以下）
+const KNOWN_CRITICAL = new Set(['IHDR', 'PLTE', 'IDAT', 'IEND']);
 const CHANNELS = { 0: 1, 2: 3, 3: 1, 4: 2, 6: 4 };
 
 export class PngError extends Error {}
@@ -12,29 +14,37 @@ const CRC_TABLE = Array.from({ length: 256 }, (_, n) => { let c = n; for (let k 
 function crc32(buf) { let c = 0xffffffff; for (const b of buf) c = CRC_TABLE[(c ^ b) & 0xff] ^ (c >>> 8); return (c ^ 0xffffffff) >>> 0; }
 
 /**
- * PNGをRGBA（各8bit）に展開する。対応：ビット深度8（パレットは1/2/4/8）、インターレースなし。
+ * PNGをRGBA（各8bit）に展開する。対応：ビット深度8（パレットは1/2/4/8）、インターレースなし、
+ * 透過はアルファチャンネル・パレットのtRNS・グレー/RGBのtRNS（指定色を透明にする）。
  * 次の場合は PngError を投げる（呼び出し側は推測せず未評価として扱う）：
  * 署名・CRCの不一致、IHDRが先頭にない、IENDが無い・IENDの後にデータがある、チャンクの途中切れ、
- * 入力や画素数が上限超え、展開後のデータが寸法から計算した長さと一致しない（不足・余分）、対応外の形式。
+ * 入力・1辺・画素数が上限超え、展開後のデータが寸法から計算した長さと一致しない（不足・余分）、
+ * 圧縮方式・フィルタ方式が0以外、未知の必須チャンク、チャンクの順序・重複の誤り、色の形式と合わないPLTE・tRNS、対応外の形式。
  * @returns {{ width: number, height: number, rgba: Uint8Array }}
  */
 export function decodePng(buf) {
   if (!Buffer.isBuffer(buf) || buf.length < 8 || !buf.subarray(0, 8).equals(SIGNATURE)) throw new PngError('PNGの署名がありません');
   if (buf.length > MAX_INPUT_BYTES) throw new PngError(`PNGが大きすぎます（${buf.length}バイト、上限${MAX_INPUT_BYTES}）`);
-  let pos = 8, ihdr = null, palette = null, trns = null, ended = false; const idat = [];
+  let pos = 8, ihdr = null, palette = null, trns = null, ended = false, idatEnded = false; const idat = [];
   while (pos < buf.length) {
     if (pos + 12 > buf.length) throw new PngError('チャンクの見出しが途中で切れています');
     const len = buf.readUInt32BE(pos), type = buf.toString('latin1', pos + 4, pos + 8);
     if (pos + 12 + len > buf.length) throw new PngError(`チャンク ${type} が途中で切れています`);
     const data = buf.subarray(pos + 8, pos + 8 + len);
     if (crc32(buf.subarray(pos + 4, pos + 8 + len)) !== buf.readUInt32BE(pos + 8 + len)) throw new PngError(`チャンク ${type} のCRCが一致しません`);
+    if (!/^[A-Za-z]{4}$/.test(type)) throw new PngError('チャンクの種類名が不正です');
     if (!ihdr && type !== 'IHDR') throw new PngError('IHDRが先頭にありません');
+    // 1文字目が大文字＝必須チャンク。知らない必須チャンクは意味を解釈できないので推測せず拒否する（小文字の補助チャンクは読み飛ばす）
+    if (type[0] <= 'Z' && !KNOWN_CRITICAL.has(type)) throw new PngError(`未対応の必須チャンク ${type} があります`);
+    if (type !== 'IDAT' && idat.length) idatEnded = true;
+    if (type === 'IDAT' && idatEnded) throw new PngError('IDATが連続していません');
+    if ((type === 'PLTE' || type === 'tRNS') && idat.length) throw new PngError(`${type} はIDATより前に置く必要があります`);
     if (type === 'IHDR') {
       if (ihdr) throw new PngError('IHDRが複数あります');
       if (len !== 13) throw new PngError('IHDRの長さが不正です');
-      ihdr = { width: data.readUInt32BE(0), height: data.readUInt32BE(4), depth: data[8], colorType: data[9], interlace: data[12] };
-    } else if (type === 'PLTE') palette = data;
-    else if (type === 'tRNS') trns = data;
+      ihdr = { width: data.readUInt32BE(0), height: data.readUInt32BE(4), depth: data[8], colorType: data[9], compression: data[10], filterMethod: data[11], interlace: data[12] };
+    } else if (type === 'PLTE') { if (palette) throw new PngError('PLTEが複数あります'); palette = data; }
+    else if (type === 'tRNS') { if (trns) throw new PngError('tRNSが複数あります'); trns = data; }
     else if (type === 'IDAT') idat.push(data);
     pos += 12 + len;
     if (type === 'IEND') { ended = true; break; }
@@ -42,12 +52,17 @@ export function decodePng(buf) {
   if (!ihdr) throw new PngError('IHDRがありません');
   if (!ended) throw new PngError('IENDがありません');
   if (pos !== buf.length) throw new PngError(`IENDの後に余分なデータがあります（${buf.length - pos}バイト）`);
-  const { width, height, depth, colorType, interlace } = ihdr;
-  if (!width || !height || width * height > MAX_PIXELS) throw new PngError(`画像サイズが対応範囲外です（${width}×${height}）`);
+  const { width, height, depth, colorType, compression, filterMethod, interlace } = ihdr;
+  if (!width || !height || width > MAX_SIDE || height > MAX_SIDE || width * height > MAX_PIXELS) throw new PngError(`画像サイズが対応範囲外です（${width}×${height}）`);
   if (!(colorType in CHANNELS)) throw new PngError(`色の形式 ${colorType} は不正です`);
+  if (compression !== 0 || filterMethod !== 0) throw new PngError(`圧縮方式 ${compression}・フィルタ方式 ${filterMethod} には未対応です（どちらも0のみ）`);
   if (interlace !== 0) throw new PngError('インターレースPNGには未対応です');
   if (colorType === 3 ? ![1, 2, 4, 8].includes(depth) : depth !== 8) throw new PngError(`ビット深度 ${depth}（色の形式 ${colorType}）には未対応です`);
   if (colorType === 3 && !palette) throw new PngError('パレット（PLTE）がありません');
+  if (palette && ((colorType !== 2 && colorType !== 3 && colorType !== 6) || palette.length % 3 || palette.length > 768 || !palette.length)) throw new PngError('PLTEが不正です（色の形式と合わない、または長さが不正）');
+  // tRNS：パレットは各色の透明度、グレーは2バイト・RGBは6バイトの「透明にする色」。アルファ付きの形式には置けない
+  if (trns && (colorType === 4 || colorType === 6 || (colorType === 0 && trns.length !== 2) || (colorType === 2 && trns.length !== 6) || (colorType === 3 && trns.length > palette.length / 3))) throw new PngError('tRNSが色の形式と合いません');
+  const key = trns && (colorType === 0 || colorType === 2) ? Array.from({ length: trns.length / 2 }, (_, k) => trns.readUInt16BE(k * 2)) : null;
   if (!idat.length) throw new PngError('画像データ（IDAT）がありません');
 
   const channels = CHANNELS[colorType];
@@ -90,8 +105,8 @@ export function decodePng(buf) {
       continue;
     }
     const i = row + x * channels;
-    if (colorType === 0 || colorType === 4) { rgba[o] = rgba[o + 1] = rgba[o + 2] = px[i]; rgba[o + 3] = colorType === 4 ? px[i + 1] : 255; }
-    else { rgba[o] = px[i]; rgba[o + 1] = px[i + 1]; rgba[o + 2] = px[i + 2]; rgba[o + 3] = colorType === 6 ? px[i + 3] : 255; }
+    if (colorType === 0 || colorType === 4) { rgba[o] = rgba[o + 1] = rgba[o + 2] = px[i]; rgba[o + 3] = colorType === 4 ? px[i + 1] : key && px[i] === key[0] ? 0 : 255; }
+    else { rgba[o] = px[i]; rgba[o + 1] = px[i + 1]; rgba[o + 2] = px[i + 2]; rgba[o + 3] = colorType === 6 ? px[i + 3] : key && px[i] === key[0] && px[i + 1] === key[1] && px[i + 2] === key[2] ? 0 : 255; }
   }
   return { width, height, rgba };
 }
