@@ -10,11 +10,13 @@ const fixture=JSON.parse(await readFile(new URL('../docs/fixtures/complete-gener
 
 // Checks only keywords used by this request schema; conditional branches are essential here.
 function matches(value,s){
+ if(s.$ref)s=spec.components.schemas[s.$ref.split('/').at(-1)];
  if(s.type&&!([s.type].flat().includes(value===null?'null':Array.isArray(value)?'array':typeof value)))return false;
  if('const'in s&&value!==s.const||s.enum&&!s.enum.includes(value))return false;
  if(typeof value==='string'&&(s.minLength!==undefined&&[...value].length<s.minLength||s.maxLength!==undefined&&[...value].length>s.maxLength))return false;
  if(typeof value==='string'&&s.pattern&&!new RegExp(s.pattern).test(value))return false;
  if(Array.isArray(value)&&s.items&&!value.every(item=>matches(item,s.items)))return false;
+ if(Array.isArray(value)&&(s.minItems!==undefined&&value.length<s.minItems||s.maxItems!==undefined&&value.length>s.maxItems||s.uniqueItems&&new Set(value.map(x=>JSON.stringify(x))).size!==value.length))return false;
  if(value&&typeof value==='object'&&!Array.isArray(value)){
   if((s.required??[]).some(k=>!Object.hasOwn(value,k)))return false;
   if(Object.keys(value).some(k=>s.properties?.[k]?!matches(value[k],s.properties[k]):s.additionalProperties===false))return false;
@@ -48,4 +50,10 @@ test('complete response contract includes parent identity only for revisions and
  const generate=async()=>dataUrl(png()),normal=await generateComplete(input,{generate});assert.ok(matches(normal,responseSchema));assert.equal(normal.revision,undefined);
  const revision={instruction:'穏やかな文字へ',parentImageId:parent.images[0].id,imageDataUrl:parent.images[0].result.imageDataUrl},response=await generateComplete({...input,revision},{generate});assert.ok(matches(response,responseSchema));assert.ok(matches({...input,revision},schema));assert.equal(response.revision.parentImageSha256,parent.images[0].imageSha256);
  for(const ref of [{...response.revision,parentImageSha256:'wrong'},{parentImageId:revision.parentImageId},{...response.revision,extra:true}])assert.equal(matches({...response,revision:ref},responseSchema),false);
+});
+test('optional historical feedback agrees with request and response schemas and rejects malformed snapshots',async()=>{
+ const fixture=JSON.parse(await readFile(new URL('../docs/fixtures/generation-feedback.json',import.meta.url),'utf8')),feedback=fixture.feedback,parent=await bundle({count:1,review:false}),input={title:'Synthetic feedback',headlineMode:'auto',imageDataUrl:parent.group.sourceImageDataUrl,consent:true,feedback},responseSchema=spec.paths['/api/v1/complete-thumbnail'].post.responses['200'].content['application/json'].schema;
+ assert.ok(matches(input,schema));validateComplete(input);const response=await generateComplete(input,{generate:async()=>dataUrl(png())});assert.ok(matches(response,responseSchema));assert.deepEqual(response.feedbackApplied,feedback);
+ for(const change of [{version:'unknown'},{scope:'all'},{records:[]},{records:Array(7).fill(feedback.records[0])},{reviewerId:''},{extra:true}]){const invalid={...feedback,...change};assert.equal(matches({...input,feedback:invalid},schema),false);assert.equal(matches({...response,feedbackApplied:invalid},responseSchema),false);assert.throws(()=>validateComplete({...input,feedback:invalid}));}
+ for(const change of [{reason:'x'.repeat(501)},{reason:'\u0000bad'},{selectedImageId:'not-null'},{issues:['text','text']},{images:[]}]){const invalid={...feedback,records:[{...feedback.records[0],...change}]};assert.equal(matches({...input,feedback:invalid},schema),false);assert.throws(()=>validateComplete({...input,feedback:invalid}));}
 });

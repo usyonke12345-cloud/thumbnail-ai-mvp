@@ -10,13 +10,13 @@ export function packGallery(state){
  const images=state.images.map(image=>{const {imageDataUrl,...result}=image.result;assets.set(image.imageSha256,{id:image.imageSha256,dataUrl:imageDataUrl});return {...image,assetId:image.imageSha256,result};});return {groups,images,reviews:state.reviews,assets:[...assets.values()]};
 }
 async function database(){return new Promise((resolve,reject)=>{const r=indexedDB.open('thumbnail-complete-gallery',2);r.onupgradeneeded=()=>{for(const name of ['groups','images','reviews','assets'])if(!r.result.objectStoreNames.contains(name))r.result.createObjectStore(name,{keyPath:name==='reviews'?'groupId':'id'});};r.onsuccess=()=>{r.result.onversionchange=()=>r.result.close();resolve(r.result);};r.onerror=()=>reject(r.error);r.onblocked=()=>reject(new Error('別の編集タブを閉じて再度お試しください。'));});}
-async function operate(mode,change){
+async function operate(mode,change,metadataOnly=false){
  const db=await database();
  try{return await new Promise((resolve,reject)=>{
-  const tx=db.transaction(['groups','images','reviews','assets'],mode),raw={};let pending=4,value,failure;
+  const names=metadataOnly?['groups','images','reviews']:['groups','images','reviews','assets'],tx=db.transaction(names,mode),raw={};let pending=names.length,value,failure;
   tx.oncomplete=()=>resolve(value);tx.onabort=()=>reject(failure??tx.error??new Error('比較記録を保存できませんでした。'));tx.onerror=()=>{};
-  for(const name of ['groups','images','reviews','assets']){const request=tx.objectStore(name).getAll();request.onsuccess=()=>{raw[name]=request.result;if(--pending===0){try{
-   const state=unpackGallery(raw);value=change?.(state)??state;
+  for(const name of names){const request=tx.objectStore(name).getAll();request.onsuccess=()=>{raw[name]=request.result;if(--pending===0){try{
+   const state=metadataOnly?{groups:raw.groups.map(({sourceImageDataUrl,...group})=>group),images:raw.images.map(({result,...image})=>{const {imageDataUrl,...properties}=result;return {...image,result:properties};}),reviews:raw.reviews}:unpackGallery(raw);value=change?.(state)??state;
    if(mode==='readwrite'){
     const packed=packGallery(value);
     for(const name of ['groups','images','reviews','assets']){
@@ -29,6 +29,7 @@ async function operate(mode,change){
  });}finally{db.close();}
 }
 export const galleryStorage={
+ loadFeedback:()=>operate('readonly',undefined,true),
  load:()=>operate('readwrite'),
  add:entry=>operate('readwrite',state=>addToGallery(state,entry)),
  review:review=>operate('readwrite',state=>{const group=state.groups.find(x=>x.id===review.groupId);if(!group)throw new Error('比較する組がありません。');validateQualityReview(review,group,state.images);return {...state,reviews:[...state.reviews.filter(x=>x.groupId!==review.groupId),review]};}),

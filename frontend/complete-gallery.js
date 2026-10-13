@@ -1,10 +1,11 @@
+import {feedbackText} from './feedback-memory.js';
 import {COMPOSITIONS,DESIGNS,MAX_IMAGES,createEntry,createLegacyEntry,comparisonBundle,validateQualityReview,parseCostUsd,gallerySummary,comparisonReport,projectOf,checkGenerationCapacity,revisionChecks} from './complete-gallery-model.js';
 import {readComparisonFile} from './local-archive.js';
 import {createImageSaveControls} from './image-save.js';
 import {createSubjectRegionControls} from './subject-regions.js';
 import {galleryStorage} from './complete-gallery-store.js';
 import {diagnoseComplete,diagnosticText,validateCompleteImport,MAX_IMPORT_BYTES,createCompleteShareZip} from './complete-png-transfer.js';
-export function createCompleteGallery({root,document=globalThis.document,storage=galleryStorage,download=downloadFile,confirm=message=>window.confirm(message),diagnose=diagnoseComplete,share=createCompleteShareZip,onRevise=()=>{},imageSaveControls=createImageSaveControls}={}){
+export function createCompleteGallery({root,document=globalThis.document,storage=galleryStorage,download=downloadFile,confirm=message=>window.confirm(message),diagnose=diagnoseComplete,share=createCompleteShareZip,onRevise=()=>{},onRecordsChanged=()=>{},imageSaveControls=createImageSaveControls}={}){
  let state={groups:[],images:[],reviews:[]},selected='',width=360,sharing=false,project='',regionDisposers=[];
  const el=(tag,text='')=>{const node=document.createElement(tag);node.textContent=text;return node;};
  const heading=el('h2','AI完成画像を見比べる'),intro=el('p','実際に生成した完成PNGを、同じ入力写真・タイトル・内容・見出しの作り方ごとに保存します。構図やデザインを変えて1枚ずつ作った結果を見比べられます。生成・自動学習はこの比較操作では行いません。'),feedback=el('p');feedback.setAttribute('role','status');feedback.setAttribute('aria-live','polite');
@@ -31,7 +32,7 @@ export function createCompleteGallery({root,document=globalThis.document,storage
  for(const [value,name]of [['text','文字'],['subject','人物・素材の保持'],['composition','構図'],['other','その他']]){const input=el('input'),wrap=el('label',name);input.type='checkbox';input.value=value;wrap.prepend(input);issues.append(wrap);issueInputs.push(input);}
  const save=el('button','この組の選択と理由を保存');save.type='submit';
  const qualityFeedback=el('p');qualityFeedback.setAttribute('role','status');qualityFeedback.setAttribute('aria-live','polite');
- const note=el('p','点数はまだ付けていません。「全部使わない」も記録できます。選択は生成AIや採点モデルへ自動送信されません。');
+ const note=el('p','点数はまだ付けていません。「全部使わない」も記録できます。保存時にはAPI送信しません。上の評価メモが有効な場合、次に有料生成するときに自分の理由を参考情報として送ります。');
  form.append(reviewerLabel,sourceLabel,titlePermissionLabel,photoPermissionLabel,decisionLabel,reasonLabel,el('p','気になる点（任意）'),issues,save,qualityFeedback,note);
  const actions=el('div');actions.className='save-actions';const exportButton=el('button','写真・完成画像・比較記録のJSONを保存'),remove=el('button','この組を比較一覧から削除');exportButton.type=remove.type='button';actions.append(exportButton,remove);
  const name=el('input'),rename=el('button','この組の案件名を変更'),nameLabel=el('label','案件名');name.maxLength=80;nameLabel.append(name);rename.type='button';actions.append(nameLabel,rename);
@@ -44,6 +45,7 @@ export function createCompleteGallery({root,document=globalThis.document,storage
    const name=`案${String.fromCharCode(65+i)}`,card=el('article'),title=el('h3',`${name}：${COMPOSITIONS[image.composition]??'以前の完成画像'}`),preview=el('img'),details=el('p'),link=el('a','この完成PNGを保存');
    preview.src=image.result.imageDataUrl;preview.alt=`AI完成画像の${name}`;preview.style.width=`min(100%,${width}px)`;preview.style.height='auto';preview.dataset.imageId=image.id;link.href=image.result.imageDataUrl;link.download=`ai-complete-${image.id}.png`;
    details.textContent=`${image.result.generation_version??'生成版不明'}・${image.elapsedMs===null?'生成時間不明':`${(image.elapsedMs/1000).toFixed(1)}秒`}・${image.design?`希望：${DESIGNS[image.design]}・`:''}未採点`;
+   if(image.feedbackContext||image.result.feedbackApplied)details.textContent+='\n'+feedbackText(image.feedbackContext??image.result.feedbackApplied);
    if(image.revision)details.textContent+=`\n修正指示：${image.revision.instruction}`;
    const check=checks.find(x=>x.imageId===image.id);if(check)details.textContent+=`\n${check.reason}\n修正元ID：${check.parentImageId}`;
    const revisionInput=el('textarea'),revise=el('button','この画像から修正を始める');revisionInput.rows=2;revisionInput.maxLength=300;revisionInput.placeholder='例：文字を穏やかに、主役を隠さない';revisionInput.setAttribute('aria-label',`${name}への修正指示`);revise.type='button';revise.disabled=!current()?.input;
@@ -68,6 +70,7 @@ export function createCompleteGallery({root,document=globalThis.document,storage
   summary.textContent+=`\n絞り込み：${project||'全案件'} / 重複を除いた保存容量 ${(gallerySummary(state).storage.characters/1024/1024).toFixed(1)} / 192MiB（全体60枚・1案件24枚・1組12枚まで）`;
  }
  function render(){
+  onRecordsChanged();
   qualityFeedback.textContent='';
   renderSummary();
   const names=[...new Set(state.groups.map(projectOf))];if(project&&!names.includes(project))project='';projects.replaceChildren();const all=el('option','全案件');all.value='';projects.append(all);for(const value of names){const option=el('option',value);option.value=value;projects.append(option);}projects.value=project;
@@ -116,7 +119,7 @@ export function createCompleteGallery({root,document=globalThis.document,storage
  remove.addEventListener('click',async()=>{if(!confirm('この組を比較一覧から削除しますか？ 必要なPNGとJSONは先に保存してください。編集下書きの最後の完成PNGは別に残ります。'))return;remove.disabled=true;try{state=await storage.remove(selected);selected='';render();}catch(error){feedback.textContent=error.message;}finally{remove.disabled=false;}});
  render();feedback.textContent='完成画像の比較一覧を読み込んでいます…';
  const ready=reload().catch(error=>{feedback.textContent=`比較保存を読み込めません：${error.message} 完成PNGはファイルにも保存してください。`;});
- return {ready,async preflight(payload,name){await ready;state=await storage.load();await checkGenerationCapacity(state,payload,name);},async remember(payload,data,options){await ready;const entry=await createEntry(payload,data,options);state=await storage.add(entry);selected=entry.group.id;render();return state.added;},async rememberLegacy(data){await ready;const entry=await createLegacyEntry(data);state=await storage.add(entry);if(state.groups.some(x=>x.id===entry.group.id))selected=entry.group.id;render();},async clear(){await ready;state=await storage.clear();selected='';render();}};
+ return {ready,async readForFeedback(){await ready;return storage.loadFeedback?storage.loadFeedback():storage.load();},async preflight(payload,name){await ready;state=await storage.load();await checkGenerationCapacity(state,payload,name);},async remember(payload,data,options){await ready;const entry=await createEntry(payload,data,options);state=await storage.add(entry);selected=entry.group.id;render();return state.added;},async rememberLegacy(data){await ready;const entry=await createLegacyEntry(data);state=await storage.add(entry);if(state.groups.some(x=>x.id===entry.group.id))selected=entry.group.id;render();},async clear(){await ready;state=await storage.clear();selected='';render();}};
 }
 function downloadFile(name,body,type){
  const blob=new Blob([body],{type}),link=document.createElement('a');let url=null,timer;
