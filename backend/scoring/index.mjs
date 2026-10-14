@@ -1,7 +1,10 @@
 import { analyzeLayout, contrastRatio, parseSvg } from './layout.mjs';
 import { analyzeTextLayout, readTextLayout } from './metadata-layout.mjs';
 import { checkImage } from './image-check.mjs';
-const VERSION = '0.3.2';
+const VERSION = '0.4.0';
+// 重み（%、合計100）。仮説で未校正。METRIC_KEYS の順が unevaluated の並び順になる。
+export const WEIGHTS = { contrast: 50, brevity: 30, font: 10, fit: 10 };
+const METRIC_KEYS = ['contrast', 'brevity', 'font', 'fit'];
 const MIN_FONT = 48; // 仮説: 一覧で縮小表示されても読める目安。検証前の仮値で、実データで校正していない。
 
 /** 評価に使う文字の一覧を、metadata.textLayout（v1）か、無ければSVG解析から作る。 */
@@ -21,7 +24,7 @@ function textsFor(candidate, image) {
 
 /** Contract: score(candidate, input) => Promise<Assessment>. No network or generation imports. */
 export async function score(candidate, input) {
-  const m = candidate.metadata;
+  const m = candidate.metadata ?? {}; // metadataが無い候補も落とさず、各項目を未評価として返す
   const image = checkImage(candidate);
   const { method, label, texts } = textsFor(candidate, image);
   const title = texts.filter(t => t.role === 'title'), small = texts.filter(t => t.role === 'footer');
@@ -33,11 +36,11 @@ export async function score(candidate, input) {
   const invalid = texts.filter(t => t.invalid);
   if (invalid.length) limitations.push(`textLayoutの${invalid.length}要素に異常値（${[...new Set(invalid.flatMap(t => t.invalid))].join(', ')}）があるため、その要素は未評価です。SVG解析では補っていません。`);
 
-  // contrast: タイトルの全行の背面が単色と確認できた場合だけ評価する。
-  // 未評価のときは metadata の配色で代用せず 0 点として扱う（契約上 null にできないため）。総合点は最大50点になる。
+  // 各項目は評価できたときだけ数値、できなければ null（0点とは区別する）。重みと閾値は仮説で未校正。
+  // contrast: タイトルの全行が正常な値で、背面が単色と確認できた場合だけ評価する（metadataの配色では代用しない）
   const contrastEvaluated = title.length > 0 && title.every(t => !t.invalid && t.state === 'solid');
   const ratio = contrastEvaluated ? Math.min(...title.map(t => contrastRatio(t.fill, t.backdropFill))) : null;
-  const contrast = contrastEvaluated ? Math.min(100, Math.round(ratio / 7 * 100)) : 0;
+  const contrast = contrastEvaluated ? Math.min(100, Math.round(ratio / 7 * 100)) : null;
   const uncheckedWhy = method === 'unusable' ? '画像を使えない'
     : method === 'none' ? '文字の配置と背面を確認できない'
     : title.length === 0 ? 'タイトルの行が見つからない'
@@ -45,33 +48,42 @@ export async function score(candidate, input) {
     : title.some(t => t.state === 'over_image') ? 'タイトル文字の背面が画像で、単色と確認できない'
     : 'タイトル文字の背面を単色と確認できない';
 
-  const brevity = Math.max(0, 100 - Math.max(0, m.textLength - 15) * 2);
+  const brevity = Number.isFinite(m.textLength) ? Math.max(0, 100 - Math.max(0, m.textLength - 15) * 2) : null;
 
-  // font: 文字サイズ(48px以上で満点＝検証前の仮値)に、配置領域からの上下左右のはみ出し分を減点
-  const sizeScore = Math.min(100, Math.round(maxFs / MIN_FONT * 100));
-  const measured = title.filter(t => t.overflow !== null);
-  const overflow = measured.length ? Math.max(...measured.map(t => t.overflow)) : 0;
-  const fitPenalty = Math.min(100, Math.round(overflow / maxFs * 50));
-  const font = Math.max(0, sizeScore - fitPenalty);
-  const fitUnevaluated = method !== 'none' && method !== 'unusable' && (title.length === 0 || measured.length < title.length);
+  // font: 文字サイズのみ（48px以上で満点＝検証前の仮値）
+  const font = Number.isFinite(maxFs) && maxFs > 0 ? Math.min(100, Math.round(maxFs / MIN_FONT * 100)) : null;
+
+  // fit: タイトルの全行が測定済み（rendered/estimated、寸法あり、正常な値）のときだけ、配置領域からの上下左右のはみ出しで減点
+  const measured = title.filter(t => !t.invalid && t.overflow !== null);
+  const fitEvaluated = (method === 'metadata' || method === 'svg') && title.length > 0 && measured.length === title.length;
+  const overflow = fitEvaluated ? Math.max(...measured.map(t => t.overflow)) : 0;
+  const fit = fitEvaluated ? Math.max(0, 100 - Math.round(overflow / maxFs * 50)) : null;
   const estimated = measured.some(t => t.measurement === 'estimated');
 
-  const overall = Math.round(contrast * .5 + brevity * .3 + font * .2);
+  const metrics = { contrast, brevity, font, fit };
+  const unevaluated = METRIC_KEYS.filter(k => metrics[k] === null);
+  const lower = METRIC_KEYS.reduce((sum, k) => sum + (metrics[k] ?? 0) * WEIGHTS[k] / 100, 0);
+  const missing = unevaluated.reduce((sum, k) => sum + WEIGHTS[k], 0);
+  const overall = Math.round(lower), overallMax = Math.round(lower + missing), coverage = 100 - missing;
+
   if (contrastEvaluated) reasons.push(`配色のコントラスト比: ${ratio.toFixed(1)}（画像内の文字と背面の色）`);
   else {
-    reasons.push(`コントラスト: 未評価（${uncheckedWhy}ため）。未評価の項目は0点として扱い、総合点は最大50点です。`);
+    reasons.push(`コントラスト: 未評価（${uncheckedWhy}ため）。`);
     limitations.push('文字と背面のコントラストは未評価です。metadataの配色（foreground/background）では代用していません。');
   }
-  reasons.push(`タイトル ${m.textLength}文字・${m.lineCount}行`);
+  if (Number.isFinite(m.textLength)) reasons.push(`タイトル ${m.textLength}文字・${m.lineCount}行`);
+  else limitations.push('metadata.textLength が無いため、タイトルの短さは未評価です。');
+  if (font === null) limitations.push('文字サイズ（textLayout の fontSize・metadata.fontSize）が無いため、文字サイズは未評価です。');
   if (m.textLength > 30) reasons.push('文字を短くした案も比較してください。');
-  if (overflow > 0) reasons.push(`${estimated ? '推定で' : ''}タイトルが領域から約${Math.round(overflow)}px はみ出します。文字数や行数を見直してください。`);
-  else if (measured.length && !fitUnevaluated) reasons.push(`タイトルは${estimated ? '推定で' : ''}領域内に収まっています。`);
-  if (fitUnevaluated) limitations.push('文字の寸法が無い・不明な行があるため、その行の収まりは未評価です。');
+  if (fitEvaluated && overflow > 0) reasons.push(`${estimated ? '推定で' : ''}タイトルが領域から約${Math.round(overflow)}px はみ出します。文字数や行数を見直してください。`);
+  else if (fitEvaluated) reasons.push(`タイトルは${estimated ? '推定で' : ''}領域内に収まっています。`);
+  else if (method === 'metadata' || method === 'svg') limitations.push('文字の寸法が無い・不明な行があるため、タイトルの収まりは未評価です。');
+  if (unevaluated.length) reasons.push(`未評価: ${unevaluated.join(', ')}。総合点は評価できた項目からの暫定範囲（${overall}〜${overallMax}点、評価範囲${coverage}%）で、統計的な信頼区間やCTR予測ではありません。`);
   const lowSmall = small.filter(t => !t.invalid && t.state === 'solid' && contrastRatio(t.fill, t.backdropFill) < 4.5);
   if (lowSmall.length) reasons.push('小さな文字のコントラスト比が4.5未満です。');
   if (small.some(t => !t.invalid && t.state !== 'solid')) limitations.push('背景画像の上にある小さな文字（フッターなど）のコントラストは未評価です。');
   if (method === 'none') limitations.push(candidate.imageDataUrl?.startsWith('data:image/svg+xml') ? 'SVGの構造を解析できないか、文字がtext要素ではない（pathなど）ため、文字の収まりと背面は未評価です。' : 'SVG以外の画像は文字領域を分析していません。文字の収まりと背面は未評価です。');
   if (estimated) limitations.push(method === 'svg' ? '文字幅は文字種からの推定値で、実際の描画とは異なる場合があります。' : '文字範囲は生成側の推定値（measurement=estimated）で、実際の描画とは異なる場合があります。');
   limitations.push('画像内容・ジャンル適合は未評価。', '重みと閾値は仮説で、実データで校正していません。', 'CTR予測や効果保証ではありません。');
-  return { overall, kind: 'layout_heuristic', version: VERSION, metrics: { contrast, brevity, font }, reasons, limitations };
+  return { overall, overallMax, coverage, unevaluated, weights: { ...WEIGHTS }, kind: 'layout_heuristic', version: VERSION, metrics, reasons, limitations };
 }

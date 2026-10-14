@@ -6,6 +6,12 @@ const env={OPENAI_API_KEY:'test-secret-do-not-log',OPENAI_IMAGE_ENABLED:'true',O
 // Header fixture only: checks boundary validation, not rendering or image quality.
 const header=Buffer.alloc(24);Buffer.from([137,80,78,71,13,10,26,10]).copy(header);header.write('IHDR',12);header.writeUInt32BE(1536,16);header.writeUInt32BE(1024,20);
 const validResponse=()=>new Response(JSON.stringify({data:[{b64_json:header.toString('base64')}]}));
+test('unspecified call limit defaults to one attempt, including a network failure',async()=>{
+ const settings={...env};delete settings.OPENAI_MAX_CALLS;let calls=0;
+ const generate=createOpenAIBackgroundProvider({env:settings,fetchImpl:async()=>{calls++;throw new Error('offline');}});
+ await assert.rejects(generate({title:'動画',genre:'education'}),e=>e.code==='PROVIDER_NETWORK');
+ await assert.rejects(generate({title:'動画',genre:'education'}),e=>e.code==='GENERATION_LIMIT');assert.equal(calls,1);
+});
 test('one background call has bounded parameters and no key in payload',async()=> {
  let called=0;
  const generate=createOpenAIBackgroundProvider({env,fetchImpl:async(url,options)=>{

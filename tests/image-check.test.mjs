@@ -50,7 +50,7 @@ test('an unusable image is not scored from metadata or SVG: contrast 0, overall 
   assert.equal(good.metrics.contrast, 100);
   for (const c of [{}, { imageDataUrl: url('image/png', svg()) }, { imageDataUrl: url('image/svg+xml', svg()), mimeType: 'image/png' }]) {
     const a = await score({ ...c, width: 1280, height: 720, metadata: meta }, {});
-    assert.equal(a.metrics.contrast, 0); assert.ok(a.overall <= 50 && a.overall < good.overall);
+    assert.equal(a.metrics.contrast, null); assert.ok(a.overall <= 50 && a.overall < good.overall);
     assert.match(a.reasons[0], /画像を使えないため/); assert.match(all(a), /画像: /);
     assert.doesNotMatch(all(a), /収まっています|はみ出します|配色のコントラスト比/);
   }

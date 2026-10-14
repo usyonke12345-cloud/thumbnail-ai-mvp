@@ -4,14 +4,15 @@ import { score } from '../backend/scoring/index.mjs';
 
 /**
  * 保存したAPIレスポンス（POST /api/v1/thumbnails の成功時JSON）を今の採点versionで採点し直し、
- * scores.csv の行（candidate_id,style,overall,scoring_version）を返す。タイトルは出力しない。
+ * scores.csv の行（candidate_id,style,overall,scoring_version,unevaluated）を返す。タイトルは出力しない。
+ * unevaluated は採点0.4.0以降の未評価項目を | でつないだもの（0.3.x以前は空）。
  */
 export async function rescoreRows(candidateId, response) {
   if (!/^[^,"\r\n]+$/.test(candidateId ?? '')) throw new Error('candidate_id must be non-empty and contain no comma, quote or newline');
   const rows = [];
   for (const c of response.candidates ?? []) {
     const a = await score(c, response.input);
-    rows.push([candidateId, c.style, a.overall, a.version].join(','));
+    rows.push([candidateId, c.style, a.overall, a.version, (a.unevaluated ?? []).join('|')].join(','));
   }
   return rows;
 }

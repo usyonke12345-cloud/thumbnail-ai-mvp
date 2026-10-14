@@ -10,11 +10,11 @@ const run = async name => {
   return score({ imageDataUrl, metadata: { textLength: c.textLength, lineCount: c.lineCount, fontSize: c.fontSize, foreground: c.foreground, background: c.background } }, {});
 };
 const has = (a, s) => [...a.reasons, ...a.limitations].some(x => x.includes(s));
-test('version 0.3.2 stays within the v1 Assessment contract', async () => {
+test('version 0.4.0 returns the agreed Assessment shape', async () => {
   for (const c of cases) {
     const a = await run(c.name);
-    assert.equal(a.version, '0.3.2'); assert.equal(a.kind, 'layout_heuristic');
-    assert.deepEqual(Object.keys(a.metrics).sort(), ['brevity', 'contrast', 'font']);
+    assert.equal(a.version, '0.4.0'); assert.equal(a.kind, 'layout_heuristic');
+    assert.deepEqual(Object.keys(a.metrics).sort(), ['brevity', 'contrast', 'fit', 'font']);
     assert.ok(a.limitations.some(x => x.includes('CTR予測や効果保証ではありません')));
   }
 });
@@ -27,7 +27,7 @@ test('60-char title fits the panel; oversized lines are flagged', async () => {
   const fit = await run('ai-60-chars'), over = await run('ai-overflow-76px');
   assert.ok(has(fit, '領域内に収まっています'));
   assert.ok(has(over, 'はみ出します'));
-  assert.ok(over.metrics.font < fit.metrics.font);
+  assert.ok(over.metrics.fit < fit.metrics.fit);
 });
 test('text over a background image is reported as unevaluated, not guessed', async () => {
   assert.ok(has(await run('ai-20-chars'), '背景画像の上にある小さな文字'));
@@ -49,20 +49,20 @@ test('width estimate distinguishes full-width and ASCII characters', () => {
 test('overflow above the top edge is flagged (canvas and panel)', async () => {
   for (const name of ['top-overflow-canvas', 'top-overflow-panel']) {
     const a = await run(name);
-    assert.ok(has(a, 'はみ出します'), name); assert.ok(a.metrics.font < 100, name);
+    assert.ok(has(a, 'はみ出します'), name); assert.ok(a.metrics.fit < 100, name);
   }
 });
 test('text partly outside its panel is measured against the panel, not the canvas', async () => {
   const a = await run('partial-panel-overflow');
   assert.ok(has(a, 'はみ出します'));
   assert.ok(has(a, '背面を単色と確認できない'), 'パネルからはみ出した文字のコントラストは推定しない');
-  assert.ok(a.metrics.font < 50);
+  assert.ok(a.metrics.fit < 50);
 });
 // 境界ケース: 48pxの「動画」（推定幅96px、文字の箱は y=baseline-42.24、高さ51.84）。境界から1px内側は収まり、1px外側ははみ出し。
 const fitOf = async (body, panel = '') => {
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720"><rect width="1280" height="720" fill="#cbd5e1"/>${panel}<text ${body} font-size="48" fill="#ffffff">動画</text></svg>`;
   const a = await score({ imageDataUrl: `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`, metadata: { textLength: 2, lineCount: 1, fontSize: 48, foreground: '#ffffff', background: '#172554' } }, {});
-  return { fits: has(a, '領域内に収まっています'), over: has(a, 'はみ出します'), font: a.metrics.font };
+  return { fits: has(a, '領域内に収まっています'), over: has(a, 'はみ出します'), font: a.metrics.fit };
 };
 const expectFit = (r, msg) => { assert.ok(r.fits && !r.over && r.font === 100, `fit: ${msg}`); };
 const expectOver = (r, msg) => { assert.ok(r.over && !r.fits && r.font < 100, `overflow: ${msg}`); };

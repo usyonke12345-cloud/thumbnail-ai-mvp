@@ -63,6 +63,7 @@ Excelで保存したCSV（先頭にBOMが付く）もそのまま検証できる
    - `ranking` を記録した行があれば、3組の対の一致（`pairwise`）も出す。
    - 外れた例を分類する：`score_tie`（採点が同点）、`close_miss`（点差5未満・仮の目安）、`clear_miss`（点差5以上）。出力に `candidate_id` と点数は出るが、タイトルは出さない。
    - `source=synthetic` の行は既定で使わない（`--include-synthetic` で動作確認用に含められる）。
+   - `scores.csv` の任意の列 `unevaluated`（`rescore.mjs` が出力）に未評価項目があり、3案で組み合わせが違う組は順位を比較せず、`different_coverage` に件数だけ出す（採点0.4.0の合意：同じ評価範囲の中だけで比べる）。列が無い4列形式（生成側の書き出し）も読める。生成側の `scripts/analyze-comparisons.mjs` は、評価範囲の違う組をCSVに入れる前に除外している。
 4. holdoutの結果は重みや閾値の調整に使わない。20件程度なので一致率は参考値とし、CTRとは扱わない。
 
 注意：今の採点（0.3.1）は3案とも配色のコントラストが高く、総合点が同点（例：デモの3案はすべて100点）になりやすい。同点の組は1位の一致を判定できないため、`top1_tie` の件数も必ず報告する。
@@ -75,8 +76,11 @@ Excelで保存したCSV（先頭にBOMが付く）もそのまま検証できる
 - 同じPC・ブラウザ・ズーム100%で見比べ、`os`、`browser`、`rendered_font`（実際に表示されたフォント。Chromeなら開発者ツールの Computed →「Rendered Fonts」）を必ず書く。同じ評価者・組・表示幅の中で環境が違う行は不正行になる。
 - 最初の組は生成側の `synthetic-01`（`feature/generation-provider` の `docs/readability/`、`generation_version` は manifest の `readability-fixture-0.1.0`）。検証用の配置で、本番の文字パネルとは異なる。
 
-1. `data/templates/readability.template.csv` を `data/private/readability.csv` にコピーして記録する。
+1. 評価者ごとに記録シートを作って記録する（`synthetic-01` の文字サイズ×表示幅の9行。記入欄は空欄、同じ表示幅の中で見せる順は評価者ごとに入れ替わり、`note` に「表示順」が入る）：
+   `node data/readability-sheet.mjs r01 "Windows 11" "Chrome 141" "<実際のフォント>" > data/private/readability.csv`
+   （2人目以降は開始番号を指定して追記：`node data/readability-sheet.mjs r02 ... 10 | tail -n +2 >> data/private/readability.csv`）
+   空の記録表から手で書く場合は `data/templates/readability.template.csv` を `data/private/readability.csv` にコピーする。
 2. `node data/readability.mjs data/private/readability.csv` で検証・集計する。文字サイズ×表示幅ごとに、件数・正答率・秒数の中央値・平均順位・縮小後の文字の高さ（`scaled_px` ＝ 文字サイズ × 表示幅 ÷ 1280）を出す。
-3. 同じ評価者・組・表示幅の中で、順位や文字サイズが重なる行は不正行として報告される。
+3. 同じ評価者・組・表示幅の中で、文字サイズが重なる行と、枚数を超える順位の行は不正行として報告される。**差がない場合は同じ順位を付けてよい**（例：1位が1枚で残り2枚に差がなければ、2枚とも2）。
 
 評価者が少人数なので結果は参考値とし、これだけで重みや閾値を決めない。

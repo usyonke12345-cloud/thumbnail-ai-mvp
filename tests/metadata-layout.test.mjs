@@ -21,8 +21,8 @@ const all = a => [...a.reasons, ...a.limitations].join('\n');
 
 test('textLayout v1 is used and named as the evaluation method; contract keys stay the same', async () => {
   const a = await run(cand([el()]));
-  assert.equal(a.version, '0.3.2'); assert.equal(a.kind, 'layout_heuristic');
-  assert.deepEqual(Object.keys(a.metrics).sort(), ['brevity', 'contrast', 'font']);
+  assert.equal(a.version, '0.4.0'); assert.equal(a.kind, 'layout_heuristic');
+  assert.deepEqual(Object.keys(a.metrics).sort(), ['brevity', 'contrast', 'fit', 'font']);
   assert.match(a.reasons[0], /評価方法: metadataのtextLayout（v1\.0\.0）/);
   assert.match(all(a), /タイトルは領域内に収まっています/); assert.doesNotMatch(all(a), /推定/);
   assert.match(all(a), /画像内の文字と背面の色/); assert.equal(a.metrics.font, 100);
@@ -34,7 +34,7 @@ test('estimated measurements are labelled as estimates', async () => {
 test('overflow is judged on all four sides of textRegion', async () => {
   for (const [over, side] of [[{ topY: 130 }, 'top'], [{ topY: 520 }, 'bottom'], [{ x: 60 }, 'left'], [{ x: 870 }, 'right']]) {
     const a = await run(cand([el(over)]));
-    assert.match(all(a), /はみ出します/, side); assert.ok(a.metrics.font < 100, side);
+    assert.match(all(a), /はみ出します/, side); assert.ok(a.metrics.fit < 100, side);
   }
   const edge = await run(cand([el({ x: 64, topY: 136 })])); // 余白ちょうど
   assert.match(all(edge), /領域内に収まっています/);
@@ -53,7 +53,7 @@ test('invalid elements are unevaluated and NOT backfilled from SVG', async () =>
   }
   assert.deepEqual(elementProblems(el()), []);
 });
-test('contrast is unevaluated (0, overall <= 50) unless every title line has a solid backdrop', async () => {
+test('contrast is unevaluated (null, overall <= 50) unless every title line has a solid backdrop', async () => {
   const solid = await run(cand([el()]));
   const cases = {
     image: cand([el({ textBackdrop: { kind: 'image', color: null } })]),
@@ -63,7 +63,7 @@ test('contrast is unevaluated (0, overall <= 50) unless every title line has a s
   };
   for (const [name, c] of Object.entries(cases)) {
     const a = await run(c);
-    assert.equal(a.metrics.contrast, 0, name);
+    assert.equal(a.metrics.contrast, null, name); assert.ok(a.unevaluated.includes('contrast'), name);
     assert.ok(a.overall <= 50, `${name}: overall ${a.overall}`);
     assert.ok(a.overall < solid.overall, name);
     assert.match(all(a), /コントラスト: 未評価/, name); assert.match(all(a), /代用していません/, name);
@@ -83,7 +83,7 @@ test('legacy paths without a confirmed solid backdrop (image under title, PNG, u
   const meta = { textLength: 2, lineCount: 1, fontSize: 48, foreground: '#ffffff', background: '#000000' };
   for (const url of [`data:image/svg+xml;base64,${Buffer.from(over).toString('base64')}`, 'data:image/png;base64,iVBORw0KGgo=']) {
     const a = await run({ imageDataUrl: url, metadata: meta });
-    assert.equal(a.metrics.contrast, 0); assert.ok(a.overall <= 50);
+    assert.equal(a.metrics.contrast, null); assert.ok(a.overall <= 50);
   }
 });
 test('footer role is evaluated separately from the title', async () => {
@@ -115,12 +115,42 @@ test('generation-side fixture is scored via textLayout; fit/contrast states foll
     if (unmeasured) { assert.match(text, /収まりは未評価/, id); assert.doesNotMatch(text, /収まっています/, id); }
     if (title.some(e => e.measurement === 'estimated')) assert.match(text, /推定/, id);
     if (title.every(e => e.textBackdrop.kind === 'solid')) { assert.ok(a.metrics.contrast > 0, id); assert.match(text, /配色のコントラスト比/, id); }
-    else { assert.equal(a.metrics.contrast, 0, id); assert.match(text, /コントラスト: 未評価/, id); assert.ok(a.overall <= 50, id); }
+    else { assert.equal(a.metrics.contrast, null, id); assert.match(text, /コントラスト: 未評価/, id); assert.ok(a.overall <= 50, id); }
     // textLayoutを外した旧経路：SVGにtext要素があれば従来の解析と同じ指標、文字がpathだけなら未解析・コントラスト未評価
     const { textLayout, ...legacy } = c.metadata;
     const b = await score({ ...c, metadata: legacy }, s.input);
     const svg = Buffer.from(c.imageDataUrl.split(',')[1], 'base64').toString();
     if (!svg.includes('<path') && title.every(e => e.textBackdrop.kind === 'solid') && !unmeasured) assert.deepEqual(a.metrics, b.metrics, id);
-    if (!/<text\b/.test(svg)) { assert.equal(b.metrics.contrast, 0, id); assert.match(b.reasons[0], /文字配置は未解析/, id); }
+    if (!/<text\b/.test(svg)) { assert.equal(b.metrics.contrast, null, id); assert.match(b.reasons[0], /文字配置は未解析/, id); }
+  }
+});
+
+// 採点0.4.0の合意例（契約案の具体例の表）。重み: contrast 50 / brevity 30 / font 10 / fit 10
+test('0.4.0 agreed examples: overall (lower) / overallMax (upper) / coverage / unevaluated', async () => {
+  const image = { textBackdrop: { kind: 'image', color: null } }, unknownSize = { measurement: 'unknown', measurementVersion: null, width: null, height: null, topY: null };
+  const long = c => ({ ...c, metadata: { ...c.metadata, textLength: 60, lineCount: 4 } });
+  const examples = [
+    ['単色・短い', cand([el()]), [100, 100, 100, []], { contrast: 100, brevity: 100, font: 100, fit: 100 }],
+    ['単色・60文字', long(cand([el()])), [73, 73, 100, []], { contrast: 100, brevity: 10, font: 100, fit: 100 }],
+    ['単色・寸法unknown', cand([el(unknownSize)]), [90, 100, 90, ['fit']], { contrast: 100, brevity: 100, font: 100, fit: null }],
+    ['C3・推定', cand([el(image)]), [50, 100, 50, ['contrast']], { contrast: null, brevity: 100, font: 100, fit: 100 }],
+    ['C3・unknownと推定が混在', cand([el({ ...image, ...unknownSize }), el({ ...image, id: 'title-1', lineIndex: 1, topY: 320, baselineY: 362 })]), [40, 100, 40, ['contrast', 'fit']], { contrast: null, brevity: 100, font: 100, fit: null }],
+    ['単色・はみ出しで減点30', cand([el({ x: 892.8 })]), [97, 97, 100, []], { contrast: 100, brevity: 100, font: 100, fit: 70 }],
+  ];
+  for (const [name, c, [overall, overallMax, coverage, unevaluated], metrics] of examples) {
+    const a = await run(c);
+    assert.deepEqual({ overall: a.overall, overallMax: a.overallMax, coverage: a.coverage, unevaluated: a.unevaluated, metrics: a.metrics }, { overall, overallMax, coverage, unevaluated, metrics }, name);
+    if (unevaluated.length) assert.match(all(a), /暫定範囲/, name); else assert.doesNotMatch(all(a), /未評価: /, name);
+  }
+});
+test('0.4.0 invariants: overall <= overallMax, coverage matches unevaluated weights, null only for unevaluated', async () => {
+  const { WEIGHTS } = await import('../backend/scoring/index.mjs');
+  const variants = [{}, { textBackdrop: { kind: 'unknown', color: null } }, { width: null }, { width: -1 }, { x: 2000 }, { topY: 0 }];
+  for (const v of variants) {
+    const a = await run(cand([el(v)]));
+    assert.ok(a.overall <= a.overallMax, JSON.stringify(v));
+    assert.equal(a.coverage, 100 - a.unevaluated.reduce((s, k) => s + WEIGHTS[k], 0));
+    for (const [k, val] of Object.entries(a.metrics)) assert.equal(val === null, a.unevaluated.includes(k), `${k} ${JSON.stringify(v)}`);
+    assert.deepEqual(a.unevaluated, ['contrast', 'brevity', 'font', 'fit'].filter(k => a.unevaluated.includes(k)), '並び順');
   }
 });

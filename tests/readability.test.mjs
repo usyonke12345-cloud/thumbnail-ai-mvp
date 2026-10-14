@@ -25,19 +25,30 @@ test('readability summary groups by font size and display width', async () => {
   assert.match(s.note, /参考値/);
   assert.deepEqual(s.environments, ['Windows 11 / Chrome / Yu Gothic']);
 });
-test('readability rows reject real data, duplicate ranks and bad values', async () => {
+test('readability rows reject real data and bad values; equal ranks are accepted as ties', async () => {
   const schema = await loadReadabilitySchema();
   const head = (await read('../data/templates/readability.template.csv')).trim();
   const csv = [head,
     't001,set1,owner,mock-0.1,48,168,r01,yes,,1,,Windows 11,Chrome,Yu Gothic,', // 実データは入れない
     't002,set1,synthetic,mock-0.1,60,168,r01,yes,,2,,Windows 11,Chrome,Yu Gothic,',
-    't003,set1,synthetic,mock-0.1,76,168,r01,yes,,2,,Windows 11,Chrome,Yu Gothic,', // 順位の重複（後から出た行を報告）
+    't003,set1,synthetic,mock-0.1,76,168,r01,yes,,2,差なし,Windows 11,Chrome,Yu Gothic,', // 同順位（差なし）は認める
     't004,set1,synthetic,mock-0.1,76,168,山田,maybe,abc,1,,Windows 11,Chrome,Yu Gothic,',
   ].join('\n');
   const s = summarizeReadability(parseCsv(csv), schema);
-  assert.deepEqual(s.invalid.map(x => x.line), [2, 4, 5]);
-  assert.ok(s.invalid[1].errors.some(e => e.startsWith('duplicate rank')));
-  assert.equal(s.byCell.length, 1, '不正行を除いた t002 だけが集計される');
+  assert.deepEqual(s.invalid.map(x => x.line), [2, 5]);
+  assert.equal(s.byCell.length, 2, '不正行を除いた t002・t003 が集計される');
+  assert.deepEqual(s.byCell.map(c => c.mean_rank), [2, 2]);
+});
+test('a rank larger than the number of images in the group is rejected', async () => {
+  const schema = await loadReadabilitySchema();
+  const head = (await read('../data/templates/readability.template.csv')).trim();
+  const csv = [head,
+    't001,set1,synthetic,mock-0.1,48,168,r01,yes,,1,,Windows 11,Chrome,Yu Gothic,',
+    't002,set1,synthetic,mock-0.1,60,168,r01,yes,,3,,Windows 11,Chrome,Yu Gothic,', // 2枚しかないのに3位
+  ].join('\n');
+  const s = summarizeReadability(parseCsv(csv), schema);
+  assert.deepEqual(s.invalid.map(x => x.line), [3]);
+  assert.ok(s.invalid[0].errors.some(e => e.startsWith('rank exceeds')));
 });
 test('readability rows compared in different environments are rejected', async () => {
   const schema = await loadReadabilitySchema();

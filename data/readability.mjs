@@ -7,7 +7,7 @@ const median = xs => { if (!xs.length) return null; const s = [...xs].sort((a, b
 const round = (x, d = 2) => x === null ? null : Math.round(x * 10 ** d) / 10 ** d;
 /**
  * 縮小表示テストの検証と集計（文字サイズ×表示幅ごと）。少人数の参考値で、CTRではない。
- * 同じ評価者・画像の組・表示幅の中で、順位の重複と文字サイズの重複を不正として報告する。
+ * 同じ評価者・画像の組・表示幅の中で、文字サイズの重複と、枚数を超える順位を不正として報告する。同じ順位は「差なし（同順位）」として認める。
  */
 export function summarizeReadability(rows, schema) {
   const bad = new Map(); const flag = (i, e) => bad.set(i, [...(bad.get(i) ?? []), e]);
@@ -16,10 +16,10 @@ export function summarizeReadability(rows, schema) {
   rows.forEach((r, i) => { const k = `${r.reviewer_id}|${r.image_set_id}|${r.display_width}`; groups.set(k, [...(groups.get(k) ?? []), i]); });
   const env = r => `${r.os} / ${r.browser} / ${r.rendered_font}`;
   for (const idx of groups.values()) {
-    for (const key of ['rank', 'font_size']) {
-      const seen = new Set();
-      for (const i of idx) { if (seen.has(rows[i][key])) flag(i, `duplicate ${key} in the same reviewer/set/width`); seen.add(rows[i][key]); }
-    }
+    const seen = new Set();
+    for (const i of idx) { if (seen.has(rows[i].font_size)) flag(i, 'duplicate font_size in the same reviewer/set/width'); seen.add(rows[i].font_size); }
+    // 同じ順位は「差がない（同順位）」として認める。順位はその組の枚数以下
+    for (const i of idx) if (+rows[i].rank > idx.length) flag(i, `rank exceeds the number of images (${idx.length}) in the same reviewer/set/width`);
     // 同じPC・ブラウザ・フォントで見比べた組だけを比較に使う
     for (const i of idx.slice(1)) if (env(rows[i]) !== env(rows[idx[0]])) flag(i, 'os/browser/rendered_font differ within the same reviewer/set/width');
   }

@@ -1,0 +1,27 @@
+const key='thumbnail-reference-notes-v1',list=document.querySelector('#reference-list'),status=document.querySelector('#reference-status');
+const seeds=[['https://youtu.be/0dz-e5UtO5o','文字・色合い・構造がいい'],['https://youtu.be/Wzz2k56nhVg','構造・イラストがいい'],['https://youtu.be/BV9lS_cq_G8','構造がいい']].map(([url,reason],i)=>({id:`reference-${i+1}`,url,reason,layout:'',palette:'',decoration:'',rule:'',permission:'unknown'}));
+const additions=[['https://youtu.be/i72HxjCLlYY',''],['https://youtu.be/HBluLfX2F_k','構図・イラストの配置位置が好み']].map(([url,reason],i)=>({...seeds[0],id:`reference-${i+4}`,url,reason}));
+seeds.push(...additions);
+function videoId(value){const u=new URL(value);return u.hostname==='youtu.be'?u.pathname.slice(1):u.searchParams.get('v');}
+function mergeAdditions(records){const result=[...records];for(const row of additions){if(result.length<100&&!result.some(existing=>videoId(existing.url)===videoId(row.url)))result.push({...row});}return result;}
+function validUrl(value){try{const u=new URL(value);return value.length<=2048&&!u.username&&!u.password&&u.protocol==='https:'&&['youtu.be','www.youtube.com','youtube.com'].includes(u.hostname);}catch{return false;}}
+const fields=[['reason','好みの理由'],['layout','文字と主役の配置・余白'],['palette','配色・明暗'],['decoration','縁取り・影・透明度'],['rule','再利用したい作風ルール']];
+function validate(value){if(!Array.isArray(value)||value.length>100)throw new Error('記録は100件までです。');return value.map(r=>{if(!r||!validUrl(r.url))throw new Error('YouTubeのHTTPS URLを確認してください。');const out={id:crypto.randomUUID(),url:r.url,permission:'unknown'};for(const [field] of fields){if(r[field]!==undefined&&typeof r[field]!=='string')throw new Error('記録の形式を確認してください。');out[field]=(r[field]??'').slice(0,1000);}return out;});}
+let rows=seeds;
+try{const stored=localStorage.getItem(key);if(stored)rows=mergeAdditions(validate(JSON.parse(stored)));}catch{status.textContent='保存済みの記録を読み込めませんでした。元の5例を表示します。';}
+function persist(){try{localStorage.setItem(key,JSON.stringify(rows));status.textContent=`${rows.length}件の記録をこのブラウザに保存しました。`;}catch{status.textContent='ブラウザ内に保存できません。JSON保存で記録を残してください。';}}
+function render(){list.replaceChildren();rows.forEach((row,i)=>{const card=document.createElement('article'),heading=document.createElement('h2'),link=document.createElement('a'),note=document.createElement('p');heading.textContent=`参考例 ${i+1}`;link.href=row.url;link.target='_blank';link.rel='noopener noreferrer';link.textContent='動画を開いてサムネを確認';note.textContent='画像利用の許諾：未確認（この記録は学習用の許諾を示しません）';card.append(heading,link,note);for(const [field,label]of fields){const wrap=document.createElement('label'),input=document.createElement('textarea');wrap.textContent=label;input.value=row[field];input.maxLength=1000;input.rows=2;input.addEventListener('change',()=>{row[field]=input.value;persist();});wrap.append(input);card.append(wrap);}list.append(card);});}
+document.querySelector('#reference-form').addEventListener('submit',event=>{event.preventDefault();const url=document.querySelector('#reference-url').value.trim(),reason=document.querySelector('#reference-reason').value.trim();if(!validUrl(url)){status.textContent='YouTubeのHTTPS URLを入力してください。';return;}if(rows.length>=100){status.textContent='記録は100件までです。';return;}rows.push({...seeds[0],id:crypto.randomUUID(),url,reason,layout:'',palette:'',decoration:'',rule:''});persist();render();event.target.reset();});
+document.querySelector('#export-references').addEventListener('click',async()=>{try{const handle=typeof window.showSaveFilePicker==='function'?await window.showSaveFilePicker({suggestedName:'thumbnail-reference-notes.json',types:[{description:'JSON',accept:{'application/json':['.json']}}]}):null;const text=JSON.stringify({version:1,source:'user-notes',imagePermissionVerified:false,references:rows},null,2);if(handle){const writer=await handle.createWritable();await writer.write(text);await writer.close();status.textContent='記録をJSONファイルへ保存しました。';}else{const link=document.createElement('a');link.href=`data:application/json;charset=utf-8,${encodeURIComponent(text)}`;link.download='thumbnail-reference-notes.json';link.textContent='記録をダウンロード';status.replaceChildren(link);link.click();}}catch(error){status.textContent=error.name==='AbortError'?'保存をキャンセルしました。':`保存できませんでした：${error.message}`;}});
+document.querySelector('#import-references').addEventListener('change',async event=>{try{const file=event.target.files[0];if(!file)return;if(file.size>1024*1024)throw new Error('1MB以内の記録を選んでください。');const data=JSON.parse(await file.text());if(data.version!==1)throw new Error('記録の版が対応していません。');const imported=validate(data.references);rows=imported;persist();render();}catch(error){status.textContent=`読み込みできませんでした：${error.message}`;}finally{event.target.value='';}});
+function buildBrief(records){
+ const lines=['参考サムネからの作風ルール — 下書き','出典：ユーザーの記録。画像の自動分析・追加学習は未実施。','画像利用の許諾：未確認。',''];
+ let ruleCount=0;
+ records.forEach((row,i)=>{lines.push(`参考例 ${i+1}: ${row.url}`);for(const [field,label]of fields){const value=row[field]?.trim();if(value){lines.push(`${label}: ${value}`);if(field==='rule')ruleCount++;}}lines.push('');});
+ lines.push(`明示された作風ルール：${ruleCount}件。`);
+ if(!ruleCount)lines.push('作風ルールはまだ未記入です。参考画像を確認して記録してください。');
+ lines.push('比較手順：同じタイトルで案を作り、文字・配色・構図・縮小時の読みやすさを人が確認する。');
+ return lines.join('\n');
+}
+document.querySelector('#build-brief').addEventListener('click',()=>{document.querySelector('#style-brief').value=buildBrief(rows);status.textContent='記録した内容から下書きを作りました。内容を確認してコピーしてください。';});
+render();

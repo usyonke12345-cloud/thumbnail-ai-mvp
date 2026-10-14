@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="ja"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>写真とタイトルでサムネを作る</title><link rel="stylesheet" href="/style.css"><script type="module" src="/editor.js"></script>
+<main><fieldset id="editor-workspace" disabled style="border:0;padding:0;min-width:0">
+<h1>写真と動画タイトルで、<br>サムネを作る。</h1><p><a href="/">生成へ戻る</a> · <a href="/references">参考記録</a></p>
+<aside>写真・入力内容・完成画像の下書きを、このブラウザ内に自動保存します。AI完成画像ボタンを使う場合は、確認後に写真と入力内容をOpenAIへ送信し、API料金が発生します。利用できる写真を選んでください。共有PCでは保存済み素材に注意してください。</aside>
+<p id="draft-status" role="status">下書きを確認しています。</p><button id="clear-draft" type="button">写真下書き・完成画像の比較履歴を消す</button>
+<h2>使う写真</h2><p>写真を選び、必要なら切り取り位置を調整してください。</p><div id="photos"></div>
+<section id="editor-tools"></section>
+<h2>AIが完成画像を作る</h2>
+<label>動画タイトル<input id="ai-title" placeholder="例：バリで過ごす、ゆっくりした一日" maxlength="120"></label>
+<details><summary>案件名を付ける（任意）</summary><label>動画・案件名<input id="project-name" maxlength="80" placeholder="空欄なら動画タイトルで分類"></label></details>
+<p>サムネ内の短い見出し・字体・構成はAIが考えます。写真と動画タイトルだけで生成できます。</p>
+<details id="ai-content-notes"><summary>動画内容を補足する（任意）</summary><label>動画内容の補足<textarea id="ai-brief" maxlength="1000" placeholder="タイトルだけでは伝わらない内容があれば入力"></textarea></label></details>
+<label>仕上がりのイメージ（任意）<textarea id="ai-visual-intent" maxlength="300" rows="3" placeholder="例：落ち着いた旅の雰囲気。写真を自然に見せたい。文字は穏やかに、派手な装飾は避けたい。"></textarea></label>
+<p>希望する雰囲気を一言書くか、下の例を選べます。空欄なら動画タイトルからAIに任せます。</p>
+<details id="ai-advanced-headline"><summary>サムネ内の文字を自分で指定する（任意）</summary>
+<label>見出しの作り方<select id="ai-headline-mode"><option value="auto">AIに短い見出しを考えてもらう</option><option value="manual">自分の見出しを使う</option></select></label>
+<div id="manual-headline-control" hidden><label>サムネ内の見出し（改行できます）<textarea id="headline" rows="3" maxlength="100" disabled></textarea></label><p>AI生成では80文字以内。下の無料編集では100文字以内です。</p></div>
+<p id="headline-mode-description">見出しの入力は不要です。AIが動画タイトルから短い文言を考えます。</p>
+</details>
+<details id="ai-advanced-design"><summary>構成・字体の詳細指定（任意）</summary>
+<label>デザインの方向<select id="ai-design"><option value="auto">写真と内容からAIが決める</option><option value="photo_focus">写真を主役にする</option><option value="editorial">落ち着いた誌面風</option><option value="impact">文字を大きく見せる</option></select></label>
+<label>AI完成画像の構図<select id="ai-composition"><option value="auto">写真と内容に合わせてAIが決める</option><option value="text_left">文字を左・主役を右</option><option value="text_right">文字を右・主役を左</option><option value="text_top">見出しを上・主役を大きく</option></select></label>
+</details>
+<section id="ai-design-guide" aria-label="AI完成画像の字体と配置の指定"></section>
+<p>AIは写真の主役・余白と動画タイトルから構成を選びます。特定のデザインや構図を選ぶと、その指定を優先します。人物を切り抜いて移動せず、写真全体の切り取りと文字の配置で仕上げるよう指示します。完成画像で文字と写真の保持を確認してください。</p>
+<section id="revision-tools" hidden><h2>生成済み画像の修正</h2><div id="revision-preview"></div><label>修正する点<textarea id="revision-instruction" maxlength="300" rows="2"></textarea></label><button id="cancel-revision" type="button">修正元の指定を外す</button><p>元写真と前の完成PNGを参考に、1枚を作り直します。元画像は比較一覧に残ります。修正生成も有料で、画像入力が増えるため初回生成と実費が異なる場合があります。</p></section>
+<label><input id="ai-consent" type="checkbox"> 写真・タイトル・任意の動画内容・仕上がりのイメージ・見出しの指定・修正元の完成画像をOpenAIへ送り、有料で1枚生成することを確認しました</label>
+<button id="ai-complete" type="button">写真からAIで完成画像1枚を作る（有料）</button>
+<p>1枚写真モードの写真を使います。生成はmedium品質。文字・顔・髪型が正しく保たれたか確認してください。失敗や期限超過でも料金が発生する場合があります。</p>
+<section id="ai-source"></section><section id="ai-result"></section><section id="complete-comparison" aria-label="AI完成画像の比較"></section>
+<section id="attempt-history"></section>
+<details id="manual-editor-options"><summary>写真と文字を自分で編集する（無料）</summary>
+<p>ここでの配置・文字編集・PNG保存は無料です。AI生成時の構成・字体とは別に調整できます。文字を入れる場合は、上の「サムネ内の文字を自分で指定する」から見出しを入力してください。</p>
+<label>構図<select id="layout"><option value="single">1枚の写真を全面に使う</option><option value="comparison">左右の写真＋中央の見出し</option><option value="portrait">左の見出し＋右の写真</option></select></label>
+<div id="single-controls"><label>守りたい主役の位置<select id="protect-subject"><option value="none">自動顔検出を試す／指定なし</option><option value="left">左側</option><option value="center">中央</option><option value="right">右側</option></select></label><label>文字の位置<select id="text-position"><option value="left">左</option><option value="center">中央</option><option value="right">右</option></select></label><label>文字の背面を暗くする<input id="shade" type="range" min="0" max="85" value="45"></label><p>横長写真1枚で作れます。1280×720に合わせて切り取るため、必要に応じて写真の位置を調整してください。</p></div>
+<label>強調色<input id="accent" type="color" value="#ffdc24"></label><p>文字サイズは自動調整。2行目に強調色を使います。フォントは端末によって変わります。写真上の読みやすさは自動採点していません。</p>
+<button id="auto-layout" type="button">写真から配置3案を作る</button><p>写真1枚の読み込み後、明るさと細かな模様を比較して3案を作ります。対応ブラウザでは顔検出を試します。検出できない場合や商品には主役の位置を指定してください。</p><section id="auto-candidates" aria-label="写真からの自動配置候補"></section>
+<canvas id="preview" width="1280" height="720" style="width:100%;height:auto" aria-label="サムネイルのプレビュー"></canvas><p id="editor-status" role="status" aria-live="polite"></p><button id="save-editor" type="button">1280×720 PNGを保存</button>
+</details>
+</fieldset></main></html>

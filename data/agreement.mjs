@@ -15,9 +15,12 @@ export function collectScores(rows, schema) {
     const set = sets.get(key) ?? { candidate_id: r.candidate_id, scoring_version: r.scoring_version, scores: {} };
     if (!e.length && r.style in set.scores) e.push('duplicate style for candidate_id/scoring_version');
     if (e.length) { invalid.push({ line: i + 2, errors: e }); return; }
-    set.scores[r.style] = Number(r.overall); sets.set(key, set);
+    set.scores[r.style] = Number(r.overall); set.unevaluated = { ...set.unevaluated, [r.style]: r.unevaluated }; sets.set(key, set);
   });
   const complete = [...sets.values()].filter(s => STYLES.every(st => st in s.scores));
+  // 3案とも未評価項目が記録されていて、その組み合わせが違う組は、順位を比較しない（採点0.4.0の合意：同じ評価範囲の中だけで比べる）
+  const norm = v => String(v).split('|').filter(Boolean).sort().join('|');
+  for (const s of complete) s.comparable = !(STYLES.every(st => s.unevaluated?.[st] !== undefined) && new Set(STYLES.map(st => norm(s.unevaluated[st]))).size > 1);
   const incomplete = [...sets.values()].filter(s => !complete.includes(s)).map(s => s.candidate_id);
   return { invalid, complete, incomplete };
 }
@@ -70,14 +73,17 @@ export function summarizeAgreement(prefRows, scoreRows, prefSchema, scoresSchema
   });
   const versions = [...new Set(scores.complete.map(s => s.scoring_version))].sort();
   const byVersion = versions.map(v => {
-    const sets = new Map(scores.complete.filter(s => s.scoring_version === v).map(s => [s.candidate_id, s.scores]));
+    const inVersion = scores.complete.filter(s => s.scoring_version === v);
+    const sets = new Map(inVersion.filter(s => s.comparable).map(s => [s.candidate_id, s.scores]));
+    const incomparable = new Set(inVersion.filter(s => !s.comparable).map(s => s.candidate_id));
     const matched = used.filter(r => sets.has(r.candidate_id));
     const results = matched.map(r => ({ split: r.split, candidate_id: r.candidate_id, preferred: r.preferred_candidate, scores: sets.get(r.candidate_id), ...compare(r, sets.get(r.candidate_id)) }));
     const failures = results.filter(r => r.failure).map(({ candidate_id, split, preferred, scores, gap, failure }) => ({ candidate_id, split, failure, preferred, gap, scores }));
     const count = k => failures.filter(f => f.failure === k).length;
     return {
       scoring_version: v,
-      unmatched_preferences: used.length - matched.length,
+      different_coverage: used.filter(r => incomparable.has(r.candidate_id)).length, // 評価範囲が違うため順位比較から除外した選好
+      unmatched_preferences: used.filter(r => !sets.has(r.candidate_id) && !incomparable.has(r.candidate_id)).length,
       dev: aggregate(results.filter(r => r.split === 'dev')),
       holdout: aggregate(results.filter(r => r.split === 'holdout')),
       failure_types: { score_tie: count('score_tie'), close_miss: count('close_miss'), clear_miss: count('clear_miss') },
