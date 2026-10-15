@@ -3,6 +3,7 @@ import {completePrompt} from './complete-prompt.mjs';
 
 const ENDPOINT='https://api.openai.com/v1/images/generations';
 const MODEL='gpt-image-2.5-flare';
+export const COMPLETE_IMAGE_SETTINGS=Object.freeze({model:MODEL,n:1,size:'1536x864',quality:'medium',output_format:'png'});
 const MAX_RESPONSE_BYTES=16*1024*1024;
 function integer(value,fallback,min,max) {
   const n=value===undefined?fallback:Number(value);
@@ -25,7 +26,7 @@ export function createOpenAIBackgroundProvider({env=process.env,fetchImpl=(...ar
     try {
       const complete=input.complete===true;
       let editBody;
-      if(complete){editBody=new FormData();for(const [key,value]of Object.entries({model:MODEL,n:'1',size:'1536x864',quality:'medium',output_format:'png',prompt:completePrompt(input)}))editBody.set(key,value);editBody.append('image[]',new Blob([Buffer.from(input.imageDataUrl.split(',')[1],'base64')],{type:'image/png'}),'source.png');if(input.revision)editBody.append('image[]',new Blob([Buffer.from(input.revision.imageDataUrl.slice(22),'base64')],{type:'image/png'}),'previous.png');}
+      if(complete){editBody=new FormData();for(const [key,value]of Object.entries({...COMPLETE_IMAGE_SETTINGS,prompt:completePrompt(input)}))editBody.set(key,String(value));editBody.append('image[]',new Blob([Buffer.from(input.imageDataUrl.split(',')[1],'base64')],{type:'image/png'}),'source.png');if(input.revision)editBody.append('image[]',new Blob([Buffer.from(input.revision.imageDataUrl.slice(22),'base64')],{type:'image/png'}),'previous.png');}
       const response=complete?await fetchImpl('https://api.openai.com/v1/images/edits',{method:'POST',signal:controller.signal,headers:{Authorization:`Bearer ${env.OPENAI_API_KEY.trim()}`},body:editBody}):await backgroundRequest();
       async function backgroundRequest(){return fetchImpl(ENDPOINT,{method:'POST',signal:controller.signal,headers:{'Authorization':`Bearer ${env.OPENAI_API_KEY.trim()}`,'Content-Type':'application/json'},body:JSON.stringify({model:MODEL,n:1,size:'1536x1024',quality:'low',output_format:'png',prompt:[
         'Create a visually striking background illustration for a YouTube thumbnail.',

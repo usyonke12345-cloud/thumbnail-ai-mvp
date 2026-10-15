@@ -8,9 +8,11 @@ import { generationMode } from './generation/index.mjs';
 import {generateComplete} from './generation/complete.mjs';
 import {generateBackground} from './generation/openai.mjs';
 import {analyzePngAssets,MAX_JSON_BYTES} from './analysis/complete-png.mjs';
+import {freezeValidationA,checkValidationARequest} from './validation-a.mjs';
 const assets=new Map([['/complete-gallery.js',['complete-gallery.js','text/javascript; charset=utf-8']],['/complete-gallery-model.js',['complete-gallery-model.js','text/javascript; charset=utf-8']],['/complete-gallery-store.js',['complete-gallery-store.js','text/javascript; charset=utf-8']],['/review', ['review.html','text/html; charset=utf-8']],['/review.js',['review.js','text/javascript; charset=utf-8']],['/comparison-model.js',['comparison-model.js','text/javascript; charset=utf-8']],['/comparison-store.js',['comparison-store.js','text/javascript; charset=utf-8']],["/editor-draft.js",["editor-draft.js","text/javascript; charset=utf-8"]],['/editor',['editor.html','text/html; charset=utf-8']],['/editor.js',['editor.js','text/javascript; charset=utf-8']],['/editor-layout.js',['editor-layout.js','text/javascript; charset=utf-8']],['/', ['index.html','text/html; charset=utf-8']],['/app.js',['app.js','text/javascript; charset=utf-8']],['/style.css',['style.css','text/css; charset=utf-8']],['/references',['references.html','text/html; charset=utf-8']],['/references.js',['references.js','text/javascript; charset=utf-8']]]);
 assets.set('/complete-png-transfer.js',['complete-png-transfer.js','text/javascript; charset=utf-8']);
 assets.set('/feedback-memory.js',['feedback-memory.js','text/javascript; charset=utf-8']);
+assets.set('/validation-a.js',['validation-a.js','text/javascript; charset=utf-8']);
 assets.set('/shared/generation-feedback.mjs',['../shared/generation-feedback.mjs','text/javascript; charset=utf-8']);
 assets.set('/shared/reviewer-id.mjs',['../shared/reviewer-id.mjs','text/javascript; charset=utf-8']);
 assets.set('/shared/evaluation-split.mjs',['../shared/evaluation-split.mjs','text/javascript; charset=utf-8']);
@@ -19,7 +21,7 @@ for(const file of ['local-archive.js','editor-tools.js','attempt-history.js','ed
 assets.set('/editor-design-guide.js',['editor-design-guide.js','text/javascript; charset=utf-8']);
 assets.set('/shared/complete-designs.mjs',['../shared/complete-designs.mjs','text/javascript; charset=utf-8']);
 assets.set('/shared/complete-images.mjs',['../shared/complete-images.mjs','text/javascript; charset=utf-8']);
-export function makeServer() {
+export function makeServer({complete=generateComplete}={}) {
   const server=createServer(async(req,res)=> {
     const send=(status,value)=>{res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'});res.end(JSON.stringify(value));};
     try {
@@ -29,13 +31,18 @@ export function makeServer() {
         const [file,mime]=assets.get(path), content=await readFile(new URL(`../frontend/${file}`,import.meta.url));
         res.writeHead(200,{'Content-Type':mime,'X-Content-Type-Options':'nosniff','Cache-Control':'no-store'});return res.end(content);
       }
-      if(!['/api/v1/thumbnails','/api/v1/complete-thumbnail','/api/v1/complete-diagnostics'].includes(path)) return send(404,{error:{code:'NOT_FOUND',message:'ページがありません。'}});
+      if(!['/api/v1/thumbnails','/api/v1/complete-thumbnail','/api/v1/complete-diagnostics','/api/v1/validation-a/freeze'].includes(path)) return send(404,{error:{code:'NOT_FOUND',message:'ページがありません。'}});
       if(req.method!=='POST') {res.setHeader('Allow','POST');return send(405,{error:{code:'METHOD_NOT_ALLOWED',message:'POSTを使用してください。'}});}
       if(req.headers['content-type']?.split(';')[0].trim()!=='application/json') throw new ApiError(415,'UNSUPPORTED_MEDIA_TYPE','application/jsonを指定してください。');
       let size=0;const chunks=[];
-      for await (const chunk of req) {size+=chunk.length;if(size>(path==='/api/v1/complete-diagnostics'?MAX_JSON_BYTES:path==='/api/v1/complete-thumbnail'?28*1024*1024:16384)) throw new ApiError(413,'BODY_TOO_LARGE','入力が大きすぎます。');chunks.push(chunk);}
+      for await (const chunk of req) {size+=chunk.length;if(size>(path==='/api/v1/complete-diagnostics'?MAX_JSON_BYTES:path==='/api/v1/validation-a/freeze'?4*1024*1024:path==='/api/v1/complete-thumbnail'?28*1024*1024:16384)) throw new ApiError(413,'BODY_TOO_LARGE','入力が大きすぎます。');chunks.push(chunk);}
       let body;try {body=JSON.parse(Buffer.concat(chunks).toString('utf8'));}catch {throw new ApiError(400,'INVALID_JSON','JSONが不正です。');}
-      send(200,path==='/api/v1/complete-diagnostics'?analyzePngAssets(body):path==='/api/v1/complete-thumbnail'?await generateComplete(body):await runPipeline(body));
+      if(path==='/api/v1/validation-a/freeze')return send(200,await freezeValidationA(body));
+      if(path==='/api/v1/complete-thumbnail'){
+        const validationA=req.headers['x-validation-a-case']===undefined?null:await checkValidationARequest(body,req.headers['x-validation-a-case']);
+        return send(200,{...await complete(body),...(validationA?{validationA}:{})});
+      }
+      send(200,path==='/api/v1/complete-diagnostics'?analyzePngAssets(body):await runPipeline(body));
     } catch(error) {
       if(!res.headersSent) send(error instanceof ApiError?error.status:500,{error:{code:error instanceof ApiError?error.code:'INTERNAL_ERROR',message:error instanceof ApiError?error.message:'処理に失敗しました。'}});
     }

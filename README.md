@@ -1,5 +1,7 @@
 # サムネ工房 — 2人開発スターター
 
+2026-10-15：A検証の入力固定を追加。`/editor`の「A検証の入力を固定してZIP保存（無料）」で、送信する写真・タイトル・イメージ・生成設定・実行コードのSHA-256と同条件のChatGPT依頼文を保存する。固定中は評価メモをオフにし、入力や版が変わると有料生成前に停止する。リロード後も固定状態を復元する。入力固定だけでは生成や人の比較は行わない。[固定する手順](docs/VALIDATION-A-FREEZE.md)。
+
 2026-10-15：A（最初の1枚）とB（評価による好みへの適応）を主な仮説として検証する。評価メモはgroupId全体のSHA-256で決めたdevだけを使い、約3割のholdoutを除外する。新しい生成要求もholdoutを拒否。解析dataset1.7.0にsplit・feedbackUsed・feedbackUsageKnown・過去のholdout利用の監査を追加。旧画像と記録は変えない。比較手順はdocs/VALIDATION-PLAN.md。
 
 2026-10-15：人物範囲1.1.0に両画像共通のextent（基本はhead_shoulders）と画像ごとのtruncatedを追加。旧1.0.0の部位は推測せず保持し、再保存時に本人が確認する。評価者IDは^r[0-9]{2,}$へ統一。外側の比較1.7.0・解析dataset1.5.0は維持する。詳細はdocs/SUBJECT-REGIONS.md。

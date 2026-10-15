@@ -1,5 +1,7 @@
 # v1 API / 生成と評価の境界
 
+2026-10-15：無料の`POST /api/v1/validation-a/freeze`でA検証の写真・入力・実行コード・モデル設定を固定する。完成PNG生成には任意の`X-Validation-A-Case`ヘッダーを追加し、条件の不一致・評価メモ・修正元はプロバイダー呼び出し前に拒否。照合した成功応答のみ任意の`validationA`を返す。ヘッダーなしの既存API・Candidate/Assessment・比較JSONは維持する。OpenAPI 0.3.6、人工fixtureはfixtures/validation-a.json。静的配信のvalidation-a.jsと任意の下書きvalidationAを追加。共同レビュー対象。[形式・照合・限界](VALIDATION-A-FREEZE.md)。
+
 2026-10-15：A（最初の1枚）とB（評価による好みへの適応）を主な仮説として検証する。評価メモはgroupId全体のSHA-256で決めたdevだけを使い、約3割のholdoutを除外する。新しい生成要求もholdoutを拒否。解析dataset1.7.0にsplit・feedbackUsed・feedbackUsageKnown・過去のholdout利用の監査を追加。旧画像と記録は変えない。比較手順はVALIDATION-PLAN.md。
 
 2026-10-15：人物範囲1.1.0に両画像共通のextent（基本はhead_shoulders）と画像ごとのtruncatedを追加。旧1.0.0の部位は推測せず保持し、再保存時に本人が確認する。評価者IDは^r[0-9]{2,}$へ統一。外側の比較1.7.0・解析dataset1.5.0は維持する。詳細はSUBJECT-REGIONS.md。
