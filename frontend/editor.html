@@ -26,7 +26,8 @@
 <section id="ai-design-guide" aria-label="AI完成画像の字体と配置の指定"></section>
 <p>AIは写真の主役・余白と動画タイトルから構成を選びます。特定のデザインや構図を選ぶと、その指定を優先します。人物を切り抜いて移動せず、写真全体の切り取りと文字の配置で仕上げるよう指示します。完成画像で文字と写真の保持を確認してください。</p>
 <section id="revision-tools" hidden><h2>生成済み画像の修正</h2><div id="revision-preview"></div><label>修正する点<textarea id="revision-instruction" maxlength="300" rows="2"></textarea></label><button id="cancel-revision" type="button">修正元の指定を外す</button><p>元写真と前の完成PNGを参考に、1枚を作り直します。元画像は比較一覧に残ります。修正生成も有料で、画像入力が増えるため初回生成と実費が異なる場合があります。</p></section>
-<section id="generation-feedback" aria-label="次の生成に反映する評価メモ"></section>
+<fieldset id="generation-feedback" aria-label="次の生成に反映する評価メモ" style="border:0;padding:0"></fieldset>
+<section id="validation-a" aria-label="A検証の入力固定"></section>
 <label><input id="ai-consent" type="checkbox"> 写真・タイトル・任意の動画内容・仕上がりのイメージ・見出しの指定・修正元の完成画像・有効な過去の評価メモをOpenAIへ送り、有料で1枚生成することを確認しました</label>
 <button id="ai-complete" type="button">写真からAIで完成画像1枚を作る（有料）</button>
 <p>1枚写真モードの写真を使います。生成はmedium品質。文字・顔・髪型が正しく保たれたか確認してください。失敗や期限超過でも料金が発生する場合があります。</p>

@@ -1,0 +1,25 @@
+{
+  "source": "synthetic",
+  "version": "validation-a-fixture-1.0.0",
+  "input": {
+    "title": "人工タイトル：ゆっくりした旅",
+    "brief": "",
+    "visualIntent": "写真を自然に、文字も穏やかに。",
+    "headlineMode": "auto",
+    "headline": null,
+    "design": "auto",
+    "composition": "auto"
+  },
+  "photo": "complete-generation-options.json の人工 imageDataUrl を使う。実写真と人の評価は含まない。",
+  "expected": {
+    "version": "validation-a-case-1.0.0",
+    "hypothesis": "A",
+    "feedbackUsed": false,
+    "revisionUsed": false,
+    "inputWidth": 1280,
+    "inputHeight": 720,
+    "quality": "medium",
+    "size": "1536x864",
+    "n": 1
+  }
+}

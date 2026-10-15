@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Thumbnail AI MVP",
-    "version": "0.3.5",
+    "version": "0.3.6",
     "description": "Local SVG layout heuristics, opt-in paid complete PNG generation, and local PNG diagnostics. Complete PNG diagnostics are not a quality or CTR score."
   },
   "servers": [
@@ -465,6 +465,38 @@
                     "feedbackApplied": {
                       "$ref": "#/components/schemas/GenerationFeedback",
                       "description": "Present only when feedback was supplied. Echo of the normalized context added to the prompt, not evidence that the output followed it."
+                    },
+                    "validationA": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "caseId",
+                        "requestSha256",
+                        "sourceSha256",
+                        "serviceSourceSha256",
+                        "feedbackUsed"
+                      ],
+                      "properties": {
+                        "caseId": {
+                          "type": "string",
+                          "pattern": "^validation-a-[a-f0-9]{64}$"
+                        },
+                        "requestSha256": {
+                          "type": "string",
+                          "pattern": "^[a-f0-9]{64}$"
+                        },
+                        "sourceSha256": {
+                          "type": "string",
+                          "pattern": "^[a-f0-9]{64}$"
+                        },
+                        "serviceSourceSha256": {
+                          "type": "string",
+                          "pattern": "^[a-f0-9]{64}$"
+                        },
+                        "feedbackUsed": {
+                          "const": false
+                        }
+                      }
                     }
                   }
                 }
@@ -473,6 +505,9 @@
           },
           "400": {
             "description": "Invalid input or missing consent"
+          },
+          "409": {
+            "description": "VALIDATION_A_MISMATCH: 固定入力または実行版の不一致。生成しない。"
           },
           "413": {
             "description": "Input too large"
@@ -489,7 +524,19 @@
           "504": {
             "description": "Provider deadline exceeded"
           }
-        }
+        },
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-Validation-A-Case",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^validation-a-[a-f0-9]{64}$"
+            },
+            "description": "A検証の固定ID。入力・実行コード・モデル設定を照合し、不一致やfeedback/revisionは有料呼び出し前に拒否する。"
+          }
+        ]
       }
     },
     "/api/v1/complete-diagnostics": {
@@ -531,6 +578,139 @@
           },
           "500": {
             "description": "Internal failure"
+          }
+        }
+      }
+    },
+    "/api/v1/validation-a/freeze": {
+      "post": {
+        "operationId": "freezeValidationA",
+        "description": "ローカルの無料処理。写真と入力を検証し、実行コードのハッシュ・生成設定・同条件のChatGPT依頼文を返す。外部送信・保存・有料生成は行わない。consent、feedback、revisionは受け付けない。入力上限4MiB。",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "title",
+                  "imageDataUrl"
+                ],
+                "properties": {
+                  "title": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 120
+                  },
+                  "brief": {
+                    "type": "string",
+                    "maxLength": 1000,
+                    "default": "",
+                    "description": "Optional video content notes. Omitted, empty or whitespace-only normalizes to an empty string; title and photograph are enough in automatic-headline mode. No missing video facts should be invented."
+                  },
+                  "headline": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 80,
+                    "description": "Required nonempty text in manual mode. In auto mode omit this field or send null/empty; actual rendered wording is not extracted."
+                  },
+                  "headlineMode": {
+                    "type": "string",
+                    "enum": [
+                      "auto",
+                      "manual"
+                    ],
+                    "default": "manual",
+                    "description": "Omitted retains the existing manual-headline API behavior. Auto asks the image model to choose a short headline from the video title and optional brief in the same paid image-edit call."
+                  },
+                  "design": {
+                    "type": "string",
+                    "enum": [
+                      "auto",
+                      "photo_focus",
+                      "editorial",
+                      "impact"
+                    ],
+                    "default": "auto",
+                    "description": "Art-direction intent. photo_focus requests a lower caption in upright humanist sans-serif over the full photo; editorial requests an upper headline in upright serif/Mincho; impact requests a large side headline in condensed bold sans-serif. Explicit composition overrides the default headline zone. Auto is passed unchanged to the image model, which chooses typography and layout from the photograph, available space and video context in the same image edit; it is not a preset rotation. These are requests, not verified fonts or layouts; results require visual checking."
+                  },
+                  "visualIntent": {
+                    "type": "string",
+                    "maxLength": 300,
+                    "description": "Optional requested atmosphere, e.g. calm everyday travel. The model chooses composition and typography in the same image edit; this is not a selected or measured layout. Omitted or whitespace-only means infer from title and brief. Explicit design/composition constraints still apply."
+                  },
+                  "imageDataUrl": {
+                    "type": "string",
+                    "maxLength": 3145728,
+                    "description": "1280x720 PNG data URL"
+                  },
+                  "composition": {
+                    "type": "string",
+                    "enum": [
+                      "auto",
+                      "text_left",
+                      "text_right",
+                      "text_top"
+                    ],
+                    "default": "auto",
+                    "description": "Optional composition intent for the photo edit. Omitted means photo-aware automatic composition. Preservation and exact layout still require visual checking."
+                  }
+                },
+                "allOf": [
+                  {
+                    "if": {
+                      "required": [
+                        "headlineMode"
+                      ],
+                      "properties": {
+                        "headlineMode": {
+                          "const": "auto"
+                        }
+                      }
+                    },
+                    "then": {
+                      "properties": {
+                        "headline": {
+                          "enum": [
+                            null,
+                            ""
+                          ]
+                        }
+                      }
+                    },
+                    "else": {
+                      "required": [
+                        "headline"
+                      ],
+                      "properties": {
+                        "headline": {
+                          "type": "string",
+                          "minLength": 1
+                        }
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "固定入力。写真本体は返さず、ブラウザが同じ写真とZIPへ保存する。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationACase"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "INVALID_VALIDATION_A または既存の入力検証エラー"
           }
         }
       }
@@ -1788,6 +1968,230 @@
           }
         ],
         "description": "Frozen historical review snapshot used only as context in the same paid image edit. No model training or Assessment update. Runtime also checks unique group/image IDs, selected-image membership, meaningful reasons/issues, parseable dates, criteria derived from issue tags, and serialized size <=24,000 characters. SHA references are supplied provenance, not server-verified access to historical assets. New generation requests reject every holdout group: SHA-256 of the complete groupId string, first byte <77 is holdout. Historical snapshots are retained unchanged by archive import. Reviewer IDs must match ^r[0-9]{2,}$."
+      },
+      "ValidationACase": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "version",
+          "caseId",
+          "createdAt",
+          "hypothesis",
+          "input",
+          "source",
+          "requestSha256",
+          "service",
+          "servicePromptSha256",
+          "servicePrompt",
+          "chatgptPrompt"
+        ],
+        "properties": {
+          "version": {
+            "const": "validation-a-case-1.0.0"
+          },
+          "caseId": {
+            "type": "string",
+            "pattern": "^validation-a-[a-f0-9]{64}$"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "hypothesis": {
+            "const": "A"
+          },
+          "input": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "title",
+              "brief",
+              "visualIntent",
+              "headlineMode",
+              "headline",
+              "design",
+              "composition"
+            ],
+            "properties": {
+              "title": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 120
+              },
+              "brief": {
+                "type": "string",
+                "maxLength": 1000,
+                "default": "",
+                "description": "Optional video content notes. Omitted, empty or whitespace-only normalizes to an empty string; title and photograph are enough in automatic-headline mode. No missing video facts should be invented."
+              },
+              "visualIntent": {
+                "type": "string",
+                "maxLength": 300,
+                "description": "Optional requested atmosphere, e.g. calm everyday travel. The model chooses composition and typography in the same image edit; this is not a selected or measured layout. Omitted or whitespace-only means infer from title and brief. Explicit design/composition constraints still apply."
+              },
+              "headlineMode": {
+                "type": "string",
+                "enum": [
+                  "auto",
+                  "manual"
+                ],
+                "default": "manual",
+                "description": "Omitted retains the existing manual-headline API behavior. Auto asks the image model to choose a short headline from the video title and optional brief in the same paid image-edit call."
+              },
+              "headline": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "maxLength": 80,
+                "description": "Required nonempty text in manual mode. In auto mode omit this field or send null/empty; actual rendered wording is not extracted."
+              },
+              "design": {
+                "type": "string",
+                "enum": [
+                  "auto",
+                  "photo_focus",
+                  "editorial",
+                  "impact"
+                ],
+                "default": "auto",
+                "description": "Art-direction intent. photo_focus requests a lower caption in upright humanist sans-serif over the full photo; editorial requests an upper headline in upright serif/Mincho; impact requests a large side headline in condensed bold sans-serif. Explicit composition overrides the default headline zone. Auto is passed unchanged to the image model, which chooses typography and layout from the photograph, available space and video context in the same image edit; it is not a preset rotation. These are requests, not verified fonts or layouts; results require visual checking."
+              },
+              "composition": {
+                "type": "string",
+                "enum": [
+                  "auto",
+                  "text_left",
+                  "text_right",
+                  "text_top"
+                ],
+                "default": "auto",
+                "description": "Optional composition intent for the photo edit. Omitted means photo-aware automatic composition. Preservation and exact layout still require visual checking."
+              }
+            }
+          },
+          "source": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "path",
+              "sha256",
+              "bytes",
+              "width",
+              "height"
+            ],
+            "properties": {
+              "path": {
+                "const": "source.png"
+              },
+              "sha256": {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}$"
+              },
+              "bytes": {
+                "type": "integer",
+                "minimum": 24,
+                "maximum": 2359296
+              },
+              "width": {
+                "const": 1280
+              },
+              "height": {
+                "const": 720
+              }
+            }
+          },
+          "requestSha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "service": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "generationVersion",
+              "model",
+              "n",
+              "size",
+              "quality",
+              "output_format",
+              "endpoint",
+              "feedbackUsed",
+              "revisionUsed",
+              "files",
+              "sourceSha256",
+              "nodeVersion"
+            ],
+            "properties": {
+              "generationVersion": {
+                "type": "string"
+              },
+              "model": {
+                "type": "string"
+              },
+              "n": {
+                "const": 1
+              },
+              "size": {
+                "const": "1536x864"
+              },
+              "quality": {
+                "const": "medium"
+              },
+              "output_format": {
+                "const": "png"
+              },
+              "endpoint": {
+                "const": "images/edits"
+              },
+              "feedbackUsed": {
+                "const": false
+              },
+              "revisionUsed": {
+                "const": false
+              },
+              "files": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "path",
+                    "sha256"
+                  ],
+                  "properties": {
+                    "path": {
+                      "type": "string"
+                    },
+                    "sha256": {
+                      "type": "string",
+                      "pattern": "^[a-f0-9]{64}$"
+                    }
+                  }
+                }
+              },
+              "sourceSha256": {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}$"
+              },
+              "nodeVersion": {
+                "type": "string"
+              }
+            }
+          },
+          "servicePromptSha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "servicePrompt": {
+            "type": "string",
+            "maxLength": 30000
+          },
+          "chatgptPrompt": {
+            "type": "string",
+            "maxLength": 5000
+          }
+        }
       }
     }
   }

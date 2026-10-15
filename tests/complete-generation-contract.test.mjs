@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {validateComplete,generateComplete,COMPLETE_GENERATION_VERSION} from '../backend/generation/complete.mjs';
 import {bundle,png,dataUrl} from './helpers/complete-png.mjs';
+import {freezeValidationA,checkValidationARequest} from '../backend/validation-a.mjs';
 
 const spec=JSON.parse(await readFile(new URL('../shared/openapi.json',import.meta.url),'utf8'));
 const schema=spec.paths['/api/v1/complete-thumbnail'].post.requestBody.content['application/json'].schema;
@@ -11,7 +12,8 @@ const fixture=JSON.parse(await readFile(new URL('../docs/fixtures/complete-gener
 // Checks only keywords used by this request schema; conditional branches are essential here.
 function matches(value,s){
  if(s.$ref)s=spec.components.schemas[s.$ref.split('/').at(-1)];
- if(s.type&&!([s.type].flat().includes(value===null?'null':Array.isArray(value)?'array':typeof value)))return false;
+ if(s.type&&!([s.type].flat().includes(value===null?'null':Array.isArray(value)?'array':typeof value))&&!(s.type==='integer'&&Number.isInteger(value)))return false;
+ if(typeof value==='number'&&(s.minimum!==undefined&&value<s.minimum||s.maximum!==undefined&&value>s.maximum))return false;
  if('const'in s&&value!==s.const||s.enum&&!s.enum.includes(value))return false;
  if(typeof value==='string'&&(s.minLength!==undefined&&[...value].length<s.minLength||s.maxLength!==undefined&&[...value].length>s.maxLength))return false;
  if(typeof value==='string'&&s.pattern&&!new RegExp(s.pattern).test(value))return false;
@@ -44,6 +46,13 @@ test('synthetic complete requests agree with OpenAPI for manual compatibility an
   assert.equal(matches(input,schema),false);
   assert.throws(()=>validateComplete(input));
  }
+});
+
+test('free A snapshot and optional generation receipt agree with OpenAPI while memo, revision and consent are forbidden in freeze input',async()=>{
+ const f=JSON.parse(await readFile(new URL('../docs/fixtures/validation-a.json',import.meta.url),'utf8')),input={...f.input,imageDataUrl:fixture.imageDataUrl},fixed=await freezeValidationA(input),freezeSchema=spec.paths['/api/v1/validation-a/freeze'].post.requestBody.content['application/json'].schema;
+ assert.equal(f.source,'synthetic');assert.ok(matches(input,freezeSchema));assert.ok(matches(fixed,{$ref:'#/components/schemas/ValidationACase'}));
+ for(const key of ['consent','revision','feedback'])assert.equal(matches({...input,[key]:null},freezeSchema),false);
+ const validationA=await checkValidationARequest({...input,consent:true},fixed.caseId),response=await generateComplete({...input,consent:true},{generate:async()=>dataUrl(png())}),responseSchema=spec.paths['/api/v1/complete-thumbnail'].post.responses['200'].content['application/json'].schema;assert.ok(matches({...response,validationA},responseSchema));assert.equal(matches({...response,validationA:{...validationA,feedbackUsed:true}},responseSchema),false);
 });
 test('complete response contract includes parent identity only for revisions and rejects malformed hashes',async()=>{
  const parent=await bundle({count:1,review:false}),input={title:'Synthetic revision',headlineMode:'auto',imageDataUrl:parent.group.sourceImageDataUrl,consent:true},responseSchema=spec.paths['/api/v1/complete-thumbnail'].post.responses['200'].content['application/json'].schema;
