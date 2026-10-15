@@ -54,11 +54,11 @@ test('versioned mood records survive import and private analysis without fabrica
  assert.equal(exported.version,'complete-comparison-1.4.0');assert.equal(normalized.group.input.visualIntent,entry.group.input.visualIntent);assert.equal(normalized.images[0].design,'auto');assert.equal((await validateCompleteImport(normalized))[0].group.id,entry.group.id);
  const request=await diagnosticRequest(normalized);assert.equal(request.assetVersion,'image-assets-1.0.0');assert.equal(request.images[0].textRegions,null);assert.equal(request.images[0].renderedTextVerified,false);
  for(const mutate of [x=>x.group.input.visualIntent='bright',x=>x.version='complete-comparison-1.3.0',x=>x.group.input.visualIntent='x'.repeat(301)]){const invalid=structuredClone(exported);mutate(invalid);await assert.rejects(()=>validateCompleteBundle(invalid));}
- const analysis=createCompleteReviewAnalysis();await analysis.consume(normalized);const data=analysis.finish();assert.equal(data.version,'complete-evaluation-dataset-1.2.0');assert.equal(data.progress.completedHumanComparisons,0);assert.equal(data.assessment,null);assert.equal(data.scoringAgreement,null);
+ const analysis=createCompleteReviewAnalysis();await analysis.consume(normalized);const data=analysis.finish();assert.equal(data.version,'complete-evaluation-dataset-1.7.0');assert.equal(data.progress.completedHumanComparisons,0);assert.equal(data.assessment,null);assert.equal(data.scoringAgreement,null);
  const html=completePreview(data);assert.ok(html.includes('仕上がりのイメージ'));assert.ok(html.includes('&lt;script&gt;untrusted text&lt;/script&gt;'));assert.ok(!html.includes('<script>untrusted text</script>'));
 });
 
 test('editor offers atmosphere before optional manual design controls and persists it through the paid handler',async()=>{
- const html=await readFile(new URL('../frontend/editor.html',import.meta.url),'utf8'),editor=await readFile(new URL('../frontend/editor.js',import.meta.url),'utf8');assert.ok(html.indexOf('id="ai-visual-intent"')<html.indexOf('id="ai-advanced-design"'));assert.match(html,/<details id="ai-advanced-design"><summary>/);assert.match(html,/仕上がりのイメージ・見出しの指定・修正元の完成画像をOpenAI/);
+ const html=await readFile(new URL('../frontend/editor.html',import.meta.url),'utf8'),editor=await readFile(new URL('../frontend/editor.js',import.meta.url),'utf8');assert.ok(html.indexOf('id="ai-visual-intent"')<html.indexOf('id="ai-advanced-design"'));assert.match(html,/<details id="ai-advanced-design"><summary>/);assert.match(html,/仕上がりのイメージ・見出しの指定・修正元の完成画像・有効な過去の評価メモをOpenAI/);
  assert.match(editor,/visualIntent:document\.querySelector\('#ai-visual-intent'\)\.value/);assert.match(editor,/value=draft\.visualIntent/);assert.ok(editor.includes("['#ai-title','#ai-brief','#ai-visual-intent',"));
 });

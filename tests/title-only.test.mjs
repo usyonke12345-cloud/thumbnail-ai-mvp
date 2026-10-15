@@ -35,7 +35,7 @@ test('title-only output can be archived, exported and imported with honest input
  for(const version of ['complete-comparison-1.0.0','complete-comparison-1.3.0','complete-comparison-1.4.0'])await assert.rejects(()=>validateCompleteBundle({...bundle,version}));
  const invalid=structuredClone(bundle);invalid.group.input.brief='Invented missing notes';await assert.rejects(()=>validateCompleteBundle(invalid));
  const mood=await createEntry({...input,visualIntent:'自然に'},result),moodBundle=comparisonBundle(addToGallery({groups:[],images:[],reviews:[]},mood),mood.group.id);assert.equal((await validateCompleteBundle(moodBundle)).version,'complete-comparison-1.5.0');
- const analysis=createCompleteReviewAnalysis();await analysis.consume(bundle);const data=analysis.finish();assert.equal(data.version,'complete-evaluation-dataset-1.3.0');assert.equal(data.progress.completedHumanComparisons,0);assert.equal(data.assessment,null);assert.match(completePreview(data),/補足なし（動画タイトルから判断）/);
+ const analysis=createCompleteReviewAnalysis();await analysis.consume(bundle);const data=analysis.finish();assert.equal(data.version,'complete-evaluation-dataset-1.7.0');assert.equal(data.progress.completedHumanComparisons,0);assert.equal(data.assessment,null);assert.match(completePreview(data),/補足なし（動画タイトルから判断）/);
 });
 
 test('headline input is optional and hidden by default, while explicitly restored manual wording remains visible',async()=>{

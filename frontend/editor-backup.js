@@ -18,7 +18,7 @@ export async function readDraftBackup(bytes){
  async function asset(ref,prefix){if(!ref||!ref.path.startsWith(prefix)||!/^[a-z0-9.-]+$/.test(ref.path)||!/^[a-f0-9]{64}$/.test(ref.sha256))throw new Error('下書きの画像参照が不正です。');const value=files.get(ref.path);if(!value||value.length!==ref.bytes||await hashBytes(value)!==ref.sha256)throw new Error('下書きの写真が破損しています。');return value;}
  const draft={...manifest.draft,files:[]};
  for(let i=0;i<2;i++){const ref=manifest.draft.files[i];if(!ref){draft.files.push(null);continue;}const bytes=await asset(ref,`original-${i}-`);if(!['image/png','image/jpeg','image/webp'].includes(ref.type))throw new Error('元写真の形式が不正です。');draft.files.push(typeof File==='function'?new File([bytes],ref.name??`original-${i}`,{type:ref.type}):new Blob([bytes],{type:ref.type}));}
- if(manifest.draft.result){const ref=manifest.draft.result,bytes=await asset(ref,'completed-');draft.result={imageDataUrl:toDataUrl(bytes),generation_version:ref.generation_version,limitations:ref.limitations};}
+ if(manifest.draft.result){const ref=manifest.draft.result,bytes=await asset(ref,'completed-');draft.result={...ref,imageDataUrl:toDataUrl(bytes)};}
  if(manifest.draft.revision){const r=manifest.draft.revision;draft.revision={instruction:r.instruction,parentImageId:r.parentImageId,imageDataUrl:toDataUrl(await asset(r.reference,'revision-')),...(r.sourceReference?{sourceImageDataUrl:toDataUrl(await asset(r.sourceReference,'revision-source-'))}:{})};}
  return validateDraft(draft);
 }

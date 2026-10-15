@@ -1,0 +1,33 @@
+{
+  "source": "synthetic",
+  "note": "Artificial schema example; not an actual human evaluation or verified historical asset.",
+  "feedback": {
+    "version": "generation-feedback-1.0.0",
+    "scope": "project",
+    "projectName": "Synthetic project",
+    "reviewerId": "r01",
+    "records": [
+      {
+        "groupId": "complete-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "recordedAt": "2026-10-13T00:00:00.000Z",
+        "decision": "none_acceptable",
+        "selectedImageId": null,
+        "reason": "Synthetic example: typography felt too forceful for a calm journey.",
+        "reasonTruncated": false,
+        "issues": [
+          "text"
+        ],
+        "images": [
+          {
+            "imageId": "synthetic-previous-1",
+            "imageSha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "generationVersion": "ai-complete-0.5.1"
+          }
+        ]
+      }
+    ],
+    "criteria": [
+      "text"
+    ]
+  }
+}

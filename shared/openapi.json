@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Thumbnail AI MVP",
-    "version": "0.3.3",
+    "version": "0.3.5",
     "description": "Local SVG layout heuristics, opt-in paid complete PNG generation, and local PNG diagnostics. Complete PNG diagnostics are not a quality or CTR score."
   },
   "servers": [
@@ -356,6 +356,10 @@
                         "maxLength": 200
                       }
                     }
+                  },
+                  "feedback": {
+                    "$ref": "#/components/schemas/GenerationFeedback",
+                    "description": "Optional. User-selected local review snapshot; reasons are sent as historical data, never as current instructions or extra headline text. No old photo bytes are included. Current constraints take priority."
                   }
                 },
                 "allOf": [
@@ -457,6 +461,10 @@
                           "pattern": "^[a-f0-9]{64}$"
                         }
                       }
+                    },
+                    "feedbackApplied": {
+                      "$ref": "#/components/schemas/GenerationFeedback",
+                      "description": "Present only when feedback was supplied. Echo of the normalized context added to the prompt, not evidence that the output followed it."
                     }
                   }
                 }
@@ -1574,6 +1582,212 @@
             "type": "string"
           }
         }
+      },
+      "GenerationFeedback": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "version",
+          "scope",
+          "projectName",
+          "reviewerId",
+          "records",
+          "criteria"
+        ],
+        "properties": {
+          "version": {
+            "const": "generation-feedback-1.0.0"
+          },
+          "scope": {
+            "enum": [
+              "project",
+              "all"
+            ]
+          },
+          "projectName": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 120,
+            "pattern": "^[^\\u0000-\\u0008\\u000b-\\u001f\\u007f]*$"
+          },
+          "reviewerId": {
+            "type": "string",
+            "pattern": "^r[0-9]{2,}$"
+          },
+          "records": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 6,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "groupId",
+                "recordedAt",
+                "decision",
+                "selectedImageId",
+                "reason",
+                "reasonTruncated",
+                "issues",
+                "images"
+              ],
+              "properties": {
+                "groupId": {
+                  "type": "string",
+                  "pattern": "^complete-[a-f0-9]{64}$"
+                },
+                "recordedAt": {
+                  "type": "string",
+                  "maxLength": 40,
+                  "format": "date-time"
+                },
+                "decision": {
+                  "enum": [
+                    "selected",
+                    "none_acceptable"
+                  ]
+                },
+                "selectedImageId": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "maxLength": 200,
+                  "pattern": "^[^\\u0000-\\u0008\\u000b-\\u001f\\u007f]*$"
+                },
+                "reason": {
+                  "type": "string",
+                  "maxLength": 500,
+                  "pattern": "^[^\\u0000-\\u0008\\u000b-\\u001f\\u007f]*$"
+                },
+                "reasonTruncated": {
+                  "type": "boolean"
+                },
+                "issues": {
+                  "type": "array",
+                  "maxItems": 4,
+                  "uniqueItems": true,
+                  "items": {
+                    "enum": [
+                      "text",
+                      "subject",
+                      "composition",
+                      "other"
+                    ]
+                  }
+                },
+                "images": {
+                  "type": "array",
+                  "minItems": 1,
+                  "maxItems": 12,
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "imageId",
+                      "imageSha256",
+                      "generationVersion"
+                    ],
+                    "properties": {
+                      "imageId": {
+                        "type": "string",
+                        "maxLength": 200,
+                        "pattern": "^[^\\u0000-\\u0008\\u000b-\\u001f\\u007f]*$",
+                        "minLength": 1
+                      },
+                      "imageSha256": {
+                        "type": "string",
+                        "pattern": "^[a-f0-9]{64}$"
+                      },
+                      "generationVersion": {
+                        "type": [
+                          "string",
+                          "null"
+                        ],
+                        "maxLength": 100,
+                        "pattern": "^[^\\u0000-\\u0008\\u000b-\\u001f\\u007f]*$"
+                      }
+                    }
+                  }
+                }
+              },
+              "allOf": [
+                {
+                  "if": {
+                    "properties": {
+                      "decision": {
+                        "const": "none_acceptable"
+                      }
+                    },
+                    "required": [
+                      "decision"
+                    ]
+                  },
+                  "then": {
+                    "properties": {
+                      "selectedImageId": {
+                        "const": null
+                      }
+                    }
+                  },
+                  "else": {
+                    "properties": {
+                      "selectedImageId": {
+                        "type": "string",
+                        "minLength": 1
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          },
+          "criteria": {
+            "type": "array",
+            "maxItems": 4,
+            "uniqueItems": true,
+            "items": {
+              "enum": [
+                "text",
+                "subject",
+                "composition",
+                "other"
+              ]
+            }
+          }
+        },
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "scope": {
+                  "const": "all"
+                }
+              },
+              "required": [
+                "scope"
+              ]
+            },
+            "then": {
+              "properties": {
+                "projectName": {
+                  "const": null
+                }
+              }
+            },
+            "else": {
+              "properties": {
+                "projectName": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            }
+          }
+        ],
+        "description": "Frozen historical review snapshot used only as context in the same paid image edit. No model training or Assessment update. Runtime also checks unique group/image IDs, selected-image membership, meaningful reasons/issues, parseable dates, criteria derived from issue tags, and serialized size <=24,000 characters. SHA references are supplied provenance, not server-verified access to historical assets. New generation requests reject every holdout group: SHA-256 of the complete groupId string, first byte <77 is holdout. Historical snapshots are retained unchanged by archive import. Reviewer IDs must match ^r[0-9]{2,}$."
       }
     }
   }

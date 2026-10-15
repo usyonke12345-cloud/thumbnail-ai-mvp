@@ -1,6 +1,7 @@
 import {validateCompleteBundle,diagnosticRequest} from '../../frontend/complete-png-transfer.js';
 import {gallerySummary,revisionChecks} from '../../frontend/complete-gallery-model.js';
 import {analyzePngAssets,ANALYSIS_VERSION} from './complete-png.mjs';
+import {feedbackUsage,feedbackExposure,groupSplit,SPLIT_VERSION} from './feedback-audit.mjs';
 
 const fail=message=>{throw new Error(message);};
 function latest(a,b,label){
@@ -14,7 +15,7 @@ export function createCompleteReviewAnalysis({onAsset=async()=>{},decode}={}){
  const groups=new Map(),images=new Map(),reviews=new Map(),assets=new Map(),cache=new Map();
  async function consume(value){
   const bundle=await validateCompleteBundle(value),group=bundle.group;
-  const header={...group,sourceImageDataUrl:null,sourcePhotoAssetId:group.input?`source_photo-${group.input.sourceSha256}`:null};
+  const header={...group,split:groupSplit(group.id),splitVersion:SPLIT_VERSION,sourceImageDataUrl:null,sourcePhotoAssetId:group.input?`source_photo-${group.input.sourceSha256}`:null};
   const previousGroup=groups.get(group.id);
   if(previousGroup&&(JSON.stringify(previousGroup.input)!==JSON.stringify(header.input)||previousGroup.sourcePhotoAssetId!==header.sourcePhotoAssetId))fail('同じ比較組の入力条件が食い違っています。');
   groups.set(group.id,previousGroup&&Date.parse(previousGroup.capturedAt)<Date.parse(header.capturedAt)?previousGroup:header);
@@ -30,7 +31,7 @@ export function createCompleteReviewAnalysis({onAsset=async()=>{},decode}={}){
   }
   for(const image of bundle.images){
    const {result,observation,subjectRegions,...metadata}=image,{imageDataUrl,...properties}=result;
-   const value={...metadata,result:properties,assetId:`complete_thumbnail-${image.imageSha256}`},previous=images.get(image.id);
+   const value={...metadata,result:properties,assetId:`complete_thumbnail-${image.imageSha256}`,...feedbackUsage(image)},previous=images.get(image.id);
    if(previous){const {observation:old,subjectRegions:oldRegions,...frozen}=previous;if(JSON.stringify(frozen)!==JSON.stringify(value))fail('同じ完成画像IDの内容が食い違っています。');}
    else if([...images.values()].some(x=>x.groupId===image.groupId&&x.imageSha256===image.imageSha256))fail('同じ組で同じPNGが別IDになっています。比較枚数を重複して数えません。');
    const combined=latest(previous?.observation,observation,'実費・保存結果'),regions=latest(previous?.subjectRegions,subjectRegions,'人物範囲');images.set(image.id,{...value,...(combined?{observation:combined}:{}),...(regions?{subjectRegions:regions}:{})});
@@ -53,8 +54,8 @@ export function createCompleteReviewAnalysis({onAsset=async()=>{},decode}={}){
   }
   const authorized=eligible.filter(x=>['original','external'].includes(x.review.context.titleSource)&&x.review.context.titlePermissionConfirmed&&x.review.context.photoPermissionConfirmed),issues={text:0,subject:0,composition:0,other:0};
   for(const {review}of eligible)for(const issue of review.issues)issues[issue]++;
-  const newOptions=state.groups.some(x=>x.input?.headlineMode==='auto')||state.images.some(x=>x.design!==undefined),checks=revisionChecks(state.images,'analysis_dataset');
-  return {version:state.images.some(x=>x.subjectRegions)?'complete-evaluation-dataset-1.5.0':state.groups.some(x=>x.projectName)||checks.length?'complete-evaluation-dataset-1.4.0':state.groups.some(x=>x.input?.brief==='')?'complete-evaluation-dataset-1.3.0':state.groups.some(x=>x.input?.visualIntent)?'complete-evaluation-dataset-1.2.0':newOptions?'complete-evaluation-dataset-1.1.0':'complete-evaluation-dataset-1.0.0',analysisVersion:ANALYSIS_VERSION,assessment:null,assets:[...assets.values()],groups:state.groups,images:state.images,reviews:state.reviews,...(checks.length?{revisionChecks:checks}:{}),summary:gallerySummary(state),progress:{target:20,completedHumanComparisons:eligible.length,authorizedRealComparisons:authorized.length,byReviewer,pending},humanOutcomes:{selected:eligible.filter(x=>x.review.decision==='selected').length,allRejected:eligible.filter(x=>x.review.decision==='none_acceptable').length,issues},scoringAgreement:null,limitations:['寸法・破損・相対輝度の診断だけです。完成PNGの文字・人物保持・構図の品質スコアは未実装です。','採点との順位一致は未算出です。人の記録や出典・許諾を自動で補いません。','費用と時間は書き出された画像の分だけです。失敗したAPI試行を含む成功率・累計支出ではありません。',...(checks.some(x=>x.status==='unverified')?['修正元は未確認の画像があります。元画像が解析データにないため、IDとSHA-256の照合は完了していません。']:[]),...(state.groups.some(x=>x.input?.headlineMode==='auto')?['自動見出しの実際の文言は未取得です。同じ入力・見出し作成方針でも文言が変わるため、構図だけの比較とは扱いません。']:[])]};
+  const checks=revisionChecks(state.images,'analysis_dataset'),feedbackAudit=feedbackExposure(state.images);
+  return {version:'complete-evaluation-dataset-1.7.0',analysisVersion:ANALYSIS_VERSION,assessment:null,feedbackAudit,feedbackSummary:{used:state.images.filter(x=>x.feedbackUsed).length,notUsed:state.images.filter(x=>x.feedbackUsageKnown&&!x.feedbackUsed).length,unknown:state.images.filter(x=>!x.feedbackUsageKnown).length},assets:[...assets.values()],groups:state.groups,images:state.images,reviews:state.reviews,...(checks.length?{revisionChecks:checks}:{}),summary:gallerySummary(state),progress:{target:20,completedHumanComparisons:eligible.length,authorizedRealComparisons:authorized.length,byReviewer,pending},humanOutcomes:{selected:eligible.filter(x=>x.review.decision==='selected').length,allRejected:eligible.filter(x=>x.review.decision==='none_acceptable').length,issues},scoringAgreement:null,limitations:['feedbackUsedは保存されたメモ利用記録の有無です。反映や改善の証明ではありません。feedbackUsageKnown:falseの旧画像はメモなしの対照に自動採用しません。','過去に生成へ使われたholdoutの評価は汚染済みとして記録し、効果確認から除外します。', '寸法・破損・相対輝度の診断だけです。完成PNGの文字・人物保持・構図の品質スコアは未実装です。','採点との順位一致は未算出です。人の記録や出典・許諾を自動で補いません。','費用と時間は書き出された画像の分だけです。失敗したAPI試行を含む成功率・累計支出ではありません。',...(checks.some(x=>x.status==='unverified')?['修正元は未確認の画像があります。元画像が解析データにないため、IDとSHA-256の照合は完了していません。']:[]),...(state.groups.some(x=>x.input?.headlineMode==='auto')?['自動見出しの実際の文言は未取得です。同じ入力・見出し作成方針でも文言が変わるため、構図だけの比較とは扱いません。']:[])]};
  }
  return {consume,finish};
 }
