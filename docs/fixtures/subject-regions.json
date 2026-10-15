@@ -1,0 +1,37 @@
+{
+  "source": "synthetic",
+  "description": "Artificial geometry only; no human evaluation or real photo.",
+  "record": {
+    "version": "subject-regions-1.1.0",
+    "recordedAt": "2026-10-13T01:00:00.000Z",
+    "reviewerId": "r01",
+    "method": "manual",
+    "coordinateSystem": "image_pixels",
+    "sourcePhoto": {
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "width": 1280,
+      "height": 720,
+      "rect": {
+        "x": 120,
+        "y": 100,
+        "width": 400,
+        "height": 500
+      },
+      "extent": "head_shoulders",
+      "truncated": false
+    },
+    "completeThumbnail": {
+      "sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+      "width": 1536,
+      "height": 864,
+      "rect": {
+        "x": 160,
+        "y": 120,
+        "width": 480,
+        "height": 600
+      },
+      "extent": "head_shoulders",
+      "truncated": false
+    }
+  }
+}

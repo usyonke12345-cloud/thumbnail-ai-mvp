@@ -1,4 +1,5 @@
 import {addToGallery,validateQualityReview,recordObservation,mergeCompleteImport,projectName,checkGalleryCapacity} from './complete-gallery-model.js';
+import {recordSubjectRegions} from './subject-regions.js';
 export function unpackGallery(raw){
  const assets=new Map((raw.assets??[]).map(x=>[x.id,x.dataUrl]));
  for(const group of raw.groups)if(group.sourceAssetId&&!assets.has(group.sourceAssetId))throw new Error('保存した入力写真を見つけられません。記録は変更していません。');for(const image of raw.images)if(image.assetId&&!assets.has(image.assetId))throw new Error('保存した完成画像を見つけられません。記録は変更していません。');
@@ -32,6 +33,7 @@ export const galleryStorage={
  add:entry=>operate('readwrite',state=>addToGallery(state,entry)),
  review:review=>operate('readwrite',state=>{const group=state.groups.find(x=>x.id===review.groupId);if(!group)throw new Error('比較する組がありません。');validateQualityReview(review,group,state.images);return {...state,reviews:[...state.reviews.filter(x=>x.groupId!==review.groupId),review]};}),
  observe:(id,value)=>operate('readwrite',state=>recordObservation(state,id,value)),
+ subjectRegions:(id,value)=>operate('readwrite',state=>recordSubjectRegions(state,id,value)),
  import:bundles=>operate('readwrite',state=>mergeCompleteImport(state,bundles)),
  rename:(id,name)=>operate('readwrite',state=>{const value=projectName(name);if(!value)throw new Error('案件名を入力してください。');const next={...state,groups:state.groups.map(g=>g.id===id?{...g,projectName:value,projectUpdatedAt:new Date().toISOString()}:g)};checkGalleryCapacity(next);return next;}),
  remove:groupId=>operate('readwrite',state=>({groups:state.groups.filter(x=>x.id!==groupId),images:state.images.filter(x=>x.groupId!==groupId),reviews:state.reviews.filter(x=>x.groupId!==groupId)})),

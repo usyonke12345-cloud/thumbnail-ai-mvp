@@ -1,10 +1,11 @@
 import {COMPOSITIONS,DESIGNS,MAX_IMAGES,createEntry,createLegacyEntry,comparisonBundle,validateQualityReview,parseCostUsd,gallerySummary,comparisonReport,projectOf,checkGenerationCapacity,revisionChecks} from './complete-gallery-model.js';
 import {readComparisonFile} from './local-archive.js';
 import {createImageSaveControls} from './image-save.js';
+import {createSubjectRegionControls} from './subject-regions.js';
 import {galleryStorage} from './complete-gallery-store.js';
 import {diagnoseComplete,diagnosticText,validateCompleteImport,MAX_IMPORT_BYTES,createCompleteShareZip} from './complete-png-transfer.js';
 export function createCompleteGallery({root,document=globalThis.document,storage=galleryStorage,download=downloadFile,confirm=message=>window.confirm(message),diagnose=diagnoseComplete,share=createCompleteShareZip,onRevise=()=>{},imageSaveControls=createImageSaveControls}={}){
- let state={groups:[],images:[],reviews:[]},selected='',width=360,sharing=false,project='';
+ let state={groups:[],images:[],reviews:[]},selected='',width=360,sharing=false,project='',regionDisposers=[];
  const el=(tag,text='')=>{const node=document.createElement(tag);node.textContent=text;return node;};
  const heading=el('h2','AI完成画像を見比べる'),intro=el('p','実際に生成した完成PNGを、同じ入力写真・タイトル・内容・見出しの作り方ごとに保存します。構図やデザインを変えて1枚ずつ作った結果を見比べられます。生成・自動学習はこの比較操作では行いません。'),feedback=el('p');feedback.setAttribute('role','status');feedback.setAttribute('aria-live','polite');
  const select=el('select'),label=el('label','比較する組 ');label.append(select);select.setAttribute('aria-label','AI完成画像の比較する組');
@@ -39,7 +40,7 @@ export function createCompleteGallery({root,document=globalThis.document,storage
  function current(){return state.groups.find(x=>x.id===selected);}
  function outputs(){return state.images.filter(x=>x.groupId===selected).sort((a,b)=>Date.parse(a.capturedAt)-Date.parse(b.capturedAt)||a.id.localeCompare(b.id));}
  function renderImages(){
-  const candidates=outputs(),checks=revisionChecks(candidates);images.replaceChildren();candidates.forEach((image,i)=>{
+  for(const dispose of regionDisposers)dispose();regionDisposers=[];const candidates=outputs(),checks=revisionChecks(candidates);images.replaceChildren();candidates.forEach((image,i)=>{
    const name=`案${String.fromCharCode(65+i)}`,card=el('article'),title=el('h3',`${name}：${COMPOSITIONS[image.composition]??'以前の完成画像'}`),preview=el('img'),details=el('p'),link=el('a','この完成PNGを保存');
    preview.src=image.result.imageDataUrl;preview.alt=`AI完成画像の${name}`;preview.style.width=`min(100%,${width}px)`;preview.style.height='auto';preview.dataset.imageId=image.id;link.href=image.result.imageDataUrl;link.download=`ai-complete-${image.id}.png`;
    details.textContent=`${image.result.generation_version??'生成版不明'}・${image.elapsedMs===null?'生成時間不明':`${(image.elapsedMs/1000).toFixed(1)}秒`}・${image.design?`希望：${DESIGNS[image.design]}・`:''}未採点`;
@@ -55,7 +56,8 @@ export function createCompleteGallery({root,document=globalThis.document,storage
    const inspect=el('button','このPNGを無料で診断'),diagnosticStatus=el('p');inspect.type='button';diagnosticStatus.setAttribute('role','status');diagnosticStatus.setAttribute('aria-live','polite');
    inspect.addEventListener('click',async()=>{if(inspect.disabled)return;inspect.disabled=true;diagnosticStatus.textContent='このPC内でPNGを診断しています…';try{diagnosticStatus.textContent=diagnosticText(await diagnose(comparisonBundle(state,image.groupId),image.id),image.id);}catch(error){diagnosticStatus.textContent=`PNG診断に失敗しました：${error.message} 完成画像と比較記録は保持しています。`;}finally{inspect.disabled=false;}});
    const saveOptions=el('div');imageSaveControls({root:saveOptions,imageDataUrl:image.result.imageDataUrl,document,download});
-   card.append(title,preview,details,link,saveOptions,revisionInput,revise,revisionStatus,el('p','診断はこのPC内で行います。外部AIへは送らず、課金もありません。'),inspect,diagnosticStatus,record);images.append(card);
+   const regions=el('div');regionDisposers.push(createSubjectRegionControls({root:regions,group:current(),image,document,reviewerId:()=>reviewer.value,onSave:async value=>{state=await storage.subjectRegions(image.id,value);renderSummary();}}));
+   card.append(title,preview,details,link,saveOptions,revisionInput,revise,revisionStatus,regions,el('p','診断はこのPC内で行います。外部AIへは送らず、課金もありません。'),inspect,diagnosticStatus,record);images.append(card);
   });
  }
  function renderSummary(){
