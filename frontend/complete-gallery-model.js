@@ -1,5 +1,6 @@
 import {normalizeVisualIntent,normalizeVideoBrief} from '../shared/complete-designs.mjs';
 import {isCompletePngDataUrl,MAX_COMPLETE_PNG_DATA_URL_LENGTH,revisionParent} from '../shared/complete-images.mjs';
+import {isReviewerId} from '../shared/reviewer-id.mjs';
 import {validateSubjectRegions} from './subject-regions.js';
 import {normalizeGenerationFeedback} from '../shared/generation-feedback.mjs';
 export const COMPOSITIONS={auto:'写真に合わせて自動',text_left:'文字を左・主役を右',text_right:'文字を右・主役を左',text_top:'見出しを上・主役を大きく'};
@@ -101,7 +102,7 @@ export function validateQualityReview(review,group,images){
  return review;
 }
 export function validateReviewContext(value){
- if(value?.version!==1||typeof value.reviewerId!=='string'||!/^r[0-9a-z_-]{1,39}$/i.test(value.reviewerId)||!['unknown','original','external','synthetic'].includes(value.titleSource)||typeof value.titlePermissionConfirmed!=='boolean'||typeof value.photoPermissionConfirmed!=='boolean')fail('評価者はr01のような匿名IDを指定し、タイトルの出典と利用確認を確かめてください。');
+ if(value?.version!==1||typeof value.reviewerId!=='string'||!isReviewerId(value.reviewerId)||!['unknown','original','external','synthetic'].includes(value.titleSource)||typeof value.titlePermissionConfirmed!=='boolean'||typeof value.photoPermissionConfirmed!=='boolean')fail('評価者はr01のような匿名IDを指定し、タイトルの出典と利用確認を確かめてください。');
  return {version:1,reviewerId:value.reviewerId,titleSource:value.titleSource,titlePermissionConfirmed:value.titlePermissionConfirmed,photoPermissionConfirmed:value.photoPermissionConfirmed};
 }
 export function comparisonBundle(state,groupId){
