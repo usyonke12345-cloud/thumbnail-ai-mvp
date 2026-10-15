@@ -1,8 +1,9 @@
 import {FEEDBACK_VERSION,FEEDBACK_ISSUES,MAX_FEEDBACK_RECORDS,normalizeGenerationFeedback,normalizeFeedbackSettings} from '../shared/generation-feedback.mjs';
 import {projectOf,validateQualityReview} from './complete-gallery-model.js';
+import {splitForId} from '../shared/evaluation-split.mjs';
 const labels={text:'文字の雰囲気・読みやすさ',subject:'人物・素材の保持',composition:'構図',other:'その他'};
 export const feedbackRecordKey=record=>record.groupId+'|'+record.recordedAt;
-export function buildGenerationFeedback(state,context,settings){
+export async function buildGenerationFeedback(state,context,settings){
  const options=normalizeFeedbackSettings(settings),projectName=(context.projectName||context.title||'').trim();
  if(!options.enabled||options.scope==='project'&&!projectName)return null;
  const records=[];
@@ -11,6 +12,7 @@ export function buildGenerationFeedback(state,context,settings){
   if(!group?.input||review.context?.reviewerId!==options.reviewerId||options.excluded.includes(feedbackRecordKey(review))||options.scope==='project'&&projectOf(group).trim()!==projectName)continue;
   // A stale/invalid review is not attributed to a later image or silently treated as a comparison.
   try{validateQualityReview(review,group,images);}catch{continue;}
+  if(await splitForId(group.id)==='holdout')continue;
   if(!review.reason.trim()&&!review.issues.length)continue;
   const chars=[...review.reason.replace(/[\u0000-\u0008\u000b-\u001f\u007f]/gu,' ')],reason=chars.length>500?chars.slice(0,499).join('')+'…':chars.join('');
   records.push({groupId:group.id,recordedAt:review.recordedAt,decision:review.decision,selectedImageId:review.imageId,reason,reasonTruncated:chars.length>500,issues:[...review.issues],images:images.map(image=>({imageId:image.id,imageSha256:image.imageSha256,generationVersion:image.result.generation_version??null}))});
@@ -25,7 +27,7 @@ export function createFeedbackMemory({root,readHistory,context,onChange=()=>{},d
  enabled.type=all.type='checkbox';enabled.checked=true;reviewer.value='r01';reviewer.maxLength=40;reviewer.setAttribute('aria-label','生成に反映する評価者ID');refreshButton.type='button';
  const enableLabel=el('label','保存した評価を次の生成に反映する'),allLabel=el('label','別の案件の評価も使う'),reviewerLabel=el('label','自分の評価者ID');enableLabel.prepend(enabled);allLabel.prepend(all);reviewerLabel.append(reviewer);
  preview.style.whiteSpace='pre-wrap';preview.setAttribute('aria-label','次の生成へ送る評価メモ');status.setAttribute('role','status');
- root.replaceChildren(el('h3','過去の評価を次の生成へ'),enableLabel,el('p','このブラウザに保存した自分の評価から、最大6件の理由を生成指示に加えます。メモ作成は無料です。モデルの再学習や品質点数の更新は行いません。'),reviewerLabel,allLabel,refreshButton,preview,choices,status);
+ root.replaceChildren(el('h3','過去の評価を次の生成へ'),enableLabel,el('p','このブラウザに保存した自分の評価のうち、調整用devの最大6組の理由を使います。約3割のholdoutは効果確認用としてメモに使いません。メモ作成は無料で、モデルの再学習や品質点数の更新は行いません。'),el('p','有料生成すると、表示された評価理由もOpenAIへ送ります。第三者の名前・連絡先などは理由に書かないでください。'),reviewerLabel,allLabel,refreshButton,preview,choices,status);
  let excluded=[],run=0;
  const settings=()=>normalizeFeedbackSettings({enabled:enabled.checked,scope:all.checked?'all':'project',reviewerId:reviewer.value.trim(),excluded});
  function render(value){preview.textContent=feedbackText(value);choices.replaceChildren();for(const record of value?.records??[]){const input=el('input'),label=el('label',`この記録を使う：${record.reason||record.issues.map(x=>labels[x]).join(' / ')}`);input.type='checkbox';input.checked=true;label.prepend(input);choices.append(label);input.addEventListener('change',()=>{const key=feedbackRecordKey(record);excluded=input.checked?excluded.filter(x=>x!==key):[...new Set([...excluded,key])].slice(-60);onChange();refresh();});}if(excluded.length){const reset=el('button','外した記録を戻す');reset.type='button';reset.addEventListener('click',()=>{excluded=[];onChange();refresh();});choices.append(reset);}}

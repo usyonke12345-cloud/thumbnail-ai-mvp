@@ -54,7 +54,7 @@ test('versioned mood records survive import and private analysis without fabrica
  assert.equal(exported.version,'complete-comparison-1.4.0');assert.equal(normalized.group.input.visualIntent,entry.group.input.visualIntent);assert.equal(normalized.images[0].design,'auto');assert.equal((await validateCompleteImport(normalized))[0].group.id,entry.group.id);
  const request=await diagnosticRequest(normalized);assert.equal(request.assetVersion,'image-assets-1.0.0');assert.equal(request.images[0].textRegions,null);assert.equal(request.images[0].renderedTextVerified,false);
  for(const mutate of [x=>x.group.input.visualIntent='bright',x=>x.version='complete-comparison-1.3.0',x=>x.group.input.visualIntent='x'.repeat(301)]){const invalid=structuredClone(exported);mutate(invalid);await assert.rejects(()=>validateCompleteBundle(invalid));}
- const analysis=createCompleteReviewAnalysis();await analysis.consume(normalized);const data=analysis.finish();assert.equal(data.version,'complete-evaluation-dataset-1.2.0');assert.equal(data.progress.completedHumanComparisons,0);assert.equal(data.assessment,null);assert.equal(data.scoringAgreement,null);
+ const analysis=createCompleteReviewAnalysis();await analysis.consume(normalized);const data=analysis.finish();assert.equal(data.version,'complete-evaluation-dataset-1.7.0');assert.equal(data.progress.completedHumanComparisons,0);assert.equal(data.assessment,null);assert.equal(data.scoringAgreement,null);
  const html=completePreview(data);assert.ok(html.includes('仕上がりのイメージ'));assert.ok(html.includes('&lt;script&gt;untrusted text&lt;/script&gt;'));assert.ok(!html.includes('<script>untrusted text</script>'));
 });
 

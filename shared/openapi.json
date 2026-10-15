@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Thumbnail AI MVP",
-    "version": "0.3.4",
+    "version": "0.3.5",
     "description": "Local SVG layout heuristics, opt-in paid complete PNG generation, and local PNG diagnostics. Complete PNG diagnostics are not a quality or CTR score."
   },
   "servers": [
@@ -1614,7 +1614,7 @@
           },
           "reviewerId": {
             "type": "string",
-            "pattern": "^[rR][0-9a-zA-Z_-]{1,39}$"
+            "pattern": "^r[0-9]{2,}$"
           },
           "records": {
             "type": "array",
@@ -1787,7 +1787,7 @@
             }
           }
         ],
-        "description": "Frozen historical review snapshot used only as context in the same paid image edit. No model training or Assessment update. Runtime also checks unique group/image IDs, selected-image membership, meaningful reasons/issues, parseable dates, criteria derived from issue tags, and serialized size <=24,000 characters. SHA references are supplied provenance, not server-verified access to historical assets."
+        "description": "Frozen historical review snapshot used only as context in the same paid image edit. No model training or Assessment update. Runtime also checks unique group/image IDs, selected-image membership, meaningful reasons/issues, parseable dates, criteria derived from issue tags, and serialized size <=24,000 characters. SHA references are supplied provenance, not server-verified access to historical assets. New generation requests reject every holdout group: SHA-256 of the complete groupId string, first byte <77 is holdout. Historical snapshots are retained unchanged by archive import. Reviewer IDs must match ^r[0-9]{2,}$."
       }
     }
   }

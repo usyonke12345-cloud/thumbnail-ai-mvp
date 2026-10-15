@@ -25,7 +25,7 @@ test('automatic headline and requested designs survive export, diagnostics and r
  assert.ok(request.images.every(x=>x.headlineProvided===null&&x.renderedTextVerified===false&&x.textRegions===null));
  const analysis=createCompleteReviewAnalysis();await analysis.consume(exported);await analysis.consume(normalized);
  const data=analysis.finish();
- assert.equal(data.version,'complete-evaluation-dataset-1.1.0');assert.equal(data.images.length,2);
+ assert.equal(data.version,'complete-evaluation-dataset-1.7.0');assert.equal(data.images.length,2);
  assert.equal(data.progress.completedHumanComparisons,0);assert.equal(data.scoringAgreement,null);
  assert.equal(data.groups[0].input.headline,null);
  const html=completePreview(data);
@@ -49,7 +49,7 @@ test('changed automatic policy, declared design or old format cannot silently ch
  }
  const legacy=await bundle();assert.equal((await validateCompleteBundle(legacy)).version,'complete-comparison-1.2.0');
  const analysis=createCompleteReviewAnalysis();await analysis.consume(legacy);
- assert.equal(analysis.finish().version,'complete-evaluation-dataset-1.0.0');
+ assert.equal(analysis.finish().version,'complete-evaluation-dataset-1.7.0');
 });
 
 test('model-selected layout exports and reimports as automatic intent without fabricating actual fonts, zones or preferences',async()=>{
