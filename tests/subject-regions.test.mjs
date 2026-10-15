@@ -9,6 +9,7 @@ import {comparisonFromZip} from '../frontend/local-archive.js';
 import {packGallery,unpackGallery} from '../frontend/complete-gallery-store.js';
 import {createCompleteReviewAnalysis} from '../backend/analysis/complete-review.mjs';
 import {completePreview} from '../backend/analysis/complete-preview.mjs';
+import {validateReviewContext} from '../frontend/complete-gallery-model.js';
 const sourceRect={x:120,y:100,width:400,height:500},completeRect={x:160,y:120,width:480,height:600},time='2026-10-13T01:00:00.000Z';
 async function fixture(){const b=await bundle(),state={groups:[b.group],images:b.images,reviews:[b.review]},record=subjectRegionsRecord(b.group,b.images[0],sourceRect,completeRect,'r01',time);return {b,state,record};}
 test('subject selection records bind both exact PNG identities and reject invalid geometry or invented automatic measurements',async()=>{
@@ -48,4 +49,27 @@ test('manual region controls load lazily, save one paired record, retain errors 
 test('subject selector module is served locally without changing the diagnostics API or requiring an image key',async()=>{
  const {makeServer}=await import('../backend/server.mjs'),server=makeServer();await new Promise(r=>server.listen(0,'127.0.0.1',r));try{const url=`http://127.0.0.1:${server.address().port}`,before=await(await fetch(url+'/api/v1/health')).json();assert.equal((await fetch(url+'/subject-regions.js')).status,200);assert.deepEqual((await(await fetch(url+'/api/v1/health')).json()).completeGeneration,before.completeGeneration);}finally{await new Promise(r=>server.close(r));}
  const fixture=JSON.parse(await readFile(new URL('../docs/fixtures/subject-regions.json',import.meta.url),'utf8'));assert.equal(fixture.source,'synthetic');assert.equal(fixture.record.method,'manual');
+});
+test('paired extent is required and identical while truncation is independent for each image',async()=>{
+ const {b,record}=await fixture();assert.equal(record.version,'subject-regions-1.1.0');assert.equal(record.sourcePhoto.extent,'head_shoulders');assert.equal(record.completeThumbnail.truncated,false);
+ const cut=subjectRegionsRecord(b.group,b.images[0],sourceRect,{x:0,y:0,width:400,height:400},'r01',time,{extent:'face',completeTruncated:true});assert.equal(cut.sourcePhoto.truncated,false);assert.equal(cut.completeThumbnail.truncated,true);
+ for(const change of [{extent:'upper_body'},{extent:'unknown'},{truncated:undefined},{truncated:1}])assert.throws(()=>validateSubjectRegions({...record,completeThumbnail:{...record.completeThumbnail,...change}},b.group,b.images[0]));
+ for(const key of ['extent','truncated']){const changed=structuredClone(record);delete changed.sourcePhoto[key];assert.throws(()=>validateSubjectRegions(changed,b.group,b.images[0]));}
+ assert.throws(()=>subjectRegionsRecord(b.group,b.images[0],null,null,'r01',time,{completeTruncated:true}));
+});
+test('legacy rectangles retain unknown extent across export, ZIP and analysis rather than inventing head-and-shoulders annotations',async()=>{
+ const {b,state,record}=await fixture(),legacy=structuredClone(record);legacy.version='subject-regions-1.0.0';for(const key of ['sourcePhoto','completeThumbnail']){delete legacy[key].extent;delete legacy[key].truncated;}
+ assert.deepEqual(validateSubjectRegions(legacy,b.group,b.images[0]),legacy);const annotated=recordSubjectRegions(state,b.images[0].id,legacy),out=comparisonBundle(annotated,b.group.id);assert.deepEqual((await validateCompleteBundle(out)).images[0].subjectRegions,legacy);
+ const zip=await createCompleteShareZip(comparisonReport(annotated)),restored=await comparisonFromZip(new Uint8Array(await zip.blob.arrayBuffer()));assert.deepEqual(restored.sets[0].images[0].subjectRegions,legacy);
+ const analysis=createCompleteReviewAnalysis();await analysis.consume(out);const result=analysis.finish();assert.equal(result.images[0].subjectRegions.sourcePhoto.extent,undefined);assert.match(completePreview(result),/旧記録で未確認/);
+});
+test('numeric reviewer IDs are shared by human comparisons and subject records without silently remapping old alphabetic IDs',async()=>{
+ const {b,record}=await fixture(),context=b.review.context;for(const reviewerId of ['rabc','r0','R01','r01_name','r-01','r01\n','someone']){assert.throws(()=>validateReviewContext({...context,reviewerId}));assert.throws(()=>validateSubjectRegions({...record,reviewerId},b.group,b.images[0]));}
+ for(const reviewerId of ['r01','r001','r12345']){assert.equal(validateReviewContext({...context,reviewerId}).reviewerId,reviewerId);assert.equal(validateSubjectRegions({...record,reviewerId},b.group,b.images[0]).reviewerId,reviewerId);}
+});
+test('subject controls preserve chosen extent/truncation and require confirmation when upgrading old rectangles',async()=>{
+ const {b,record}=await fixture(),legacy=structuredClone(record);legacy.version='subject-regions-1.0.0';for(const key of ['sourcePhoto','completeThumbnail']){delete legacy[key].extent;delete legacy[key].truncated;}
+ const d=dom(),records=[];createSubjectRegionControls({...d,group:b.group,image:{...b.images[0],subjectRegions:legacy},loadImage:async src=>({naturalWidth:src===b.group.sourceImageDataUrl?1280:1536,naturalHeight:src===b.group.sourceImageDataUrl?720:864}),onSave:async r=>records.push(r)});
+ const details=d.all(d.root).find(x=>x.tag==='details');details.open=true;await details.events.toggle();const save=d.all(d.root).find(x=>x.textContent==='両方の人物範囲を保存');await save.events.click();assert.equal(records.length,0);assert.ok(d.all(d.root).some(x=>x.textContent.includes('旧記録には部位')));
+ d.all(d.root).find(x=>x.tag==='label'&&x.textContent.startsWith('旧記録の範囲')).children[0].checked=true;d.all(d.root).find(x=>x.attrs['aria-label']==='人物範囲の部位').value='upper_body';d.all(d.root).find(x=>x.attrs['aria-label']==='completeThumbnail truncated').checked=true;await save.events.click();assert.equal(records.length,1);assert.equal(records[0].sourcePhoto.extent,'upper_body');assert.equal(records[0].completeThumbnail.extent,'upper_body');assert.equal(records[0].completeThumbnail.truncated,true);
 });
