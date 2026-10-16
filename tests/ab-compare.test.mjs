@@ -16,7 +16,7 @@ test('assignment: every pair once, sides are balanced-ish and stable per reviewe
   assert.doesNotMatch(html, /service|chatgpt|ChatGPT|このサービス/, '方法を表示しない');
   assert.match(html, /&lt;タイトル&gt;/); assert.equal((html.match(/<\/script>/g) || []).length, 1);
   const rows = parseCsv(sheetCsv(a, 'r01'));
-  assert.deepEqual(Object.keys(rows[0]), FIELDS); assert.ok(rows.every(r => r.preferred === '' && r.reason === ''));
+  assert.deepEqual(Object.keys(rows[0]), FIELDS); assert.ok(rows.every(r => Object.entries(r).every(([k, v]) => ['trial_id', 'pair_id', 'reviewer_id'].includes(k) || v === '')), '判断の欄は空欄');
   assert.throws(() => assign(ids, '山田')); assert.throws(() => assign(['a', 'a'], 'r01')); assert.throws(() => assign(['../x'], 'r01'));
 });
 
@@ -27,23 +27,26 @@ test('sign test p-values match the exact binomial', () => {
   assert.equal(signTestP(3, 3), 1);
 });
 
-test('summary maps X/Y back through the key, counts ties separately and reports invalid rows', () => {
+test('summary maps X/Y back to methods, aggregates per-image answers and creator records, and reports invalid rows', () => {
   const key = assign(['p1', 'p2', 'p3'], 'r01');
-  const pick = (t, s) => (t.x === s ? 'X' : 'Y');
-  const rows = [
-    { trial_id: key[0].trialId, pair_id: key[0].pairId, reviewer_id: 'r01', preferred: pick(key[0], 'service'), would_use_x: 'yes', would_use_y: 'no', reason: '文字がよい' },
-    { trial_id: key[1].trialId, pair_id: key[1].pairId, reviewer_id: 'r01', preferred: pick(key[1], 'chatgpt'), would_use_x: 'no', would_use_y: 'no', reason: '' },
-    { trial_id: key[2].trialId, pair_id: key[2].pairId, reviewer_id: 'r01', preferred: 'same', would_use_x: 'yes', would_use_y: 'yes', reason: '差がない' },
-    { trial_id: 'ab999', pair_id: 'p9', reviewer_id: 'r01', preferred: 'X', would_use_x: 'yes', would_use_y: 'yes', reason: '' },
-    { trial_id: key[0].trialId, pair_id: key[0].pairId, reviewer_id: 'r01', preferred: '', would_use_x: '', would_use_y: '', reason: '' },
-  ];
-  const s = summarizeAb(rows, { r01: key });
+  // 方法ごとの回答を作り、案X/案Yへ並べ替える（service は使える・文字だけ直したい、chatgpt は使えない・写真の描き直しと写り込み）
+  const ans = { service: { would_use: 'yes', fix: 'text', fix_note: '字体', photo_preserved: 'yes', text_mood_fit: '4' }, chatgpt: { would_use: 'no', fix: 'photo|unwanted', fix_note: '顔が変わる', photo_preserved: 'partly', text_mood_fit: '2' } };
+  const row = (t, preferred, extra = {}) => ({ trial_id: t.trialId, pair_id: t.pairId, reviewer_id: 'r01', ...Object.fromEntries(Object.entries(ans[t.x]).map(([k, v]) => ['x_' + k, v])), ...Object.fromEntries(Object.entries(ans[t.y]).map(([k, v]) => ['y_' + k, v])), preferred, reason: 'r', ...extra });
+  const pick = (t, m) => (t.x === m ? 'X' : 'Y');
+  const rows = [row(key[0], pick(key[0], 'service')), row(key[1], pick(key[1], 'chatgpt')), row(key[2], 'same'),
+    row(key[0], 'X', { x_fix: 'none|text' }), row(key[1], 'X', { y_text_mood_fit: '6' }), { ...row(key[2], 'X'), trial_id: 'ab999' }];
+  const meta = { p1: { service: { firstSeconds: 12, revisionsToUsable: 0 }, chatgpt: { firstSeconds: 30, revisionsToUsable: 2 } }, p2: { service: { firstSeconds: 14, revisionsToUsable: 1 }, chatgpt: { firstSeconds: 40, revisionsToUsable: 'gave_up' } } };
+  const s = summarizeAb(rows, { r01: key }, meta);
   assert.deepEqual(s.preferred, { service: 1, chatgpt: 1, same: 1 });
-  assert.deepEqual(s.invalid.map(x => x.line), [5, 6]);
-  assert.equal(s.signTestP, 1);
-  const svcUse = [key[0], key[1], key[2]].map((t, i) => (t.x === 'service' ? rows[i].would_use_x : rows[i].would_use_y) === 'yes');
-  assert.equal(s.wouldUseRate.service, svcUse.filter(Boolean).length / 3);
+  assert.deepEqual(s.invalid.map(x => x.line), [5, 6, 7], 'none と他の併記・範囲外の点数・対応表にない行');
+  const sv = s.byMethod.service, cg = s.byMethod.chatgpt;
+  assert.equal(sv.n, 3); assert.equal(sv.wouldUseRate, 1); assert.equal(cg.wouldUseRate, 0);
+  assert.equal(sv.fixCounts.text, 3); assert.equal(cg.fixCounts.photo, 3); assert.equal(cg.fixCounts.unwanted, 3); assert.equal(sv.fixCounts.none, 0);
+  assert.deepEqual(cg.photoPreserved, { yes: 0, partly: 3, no: 0 }); assert.equal(sv.textMoodFitMean, 4);
+  assert.deepEqual(sv.creator, { firstSecondsMedian: 13, revisionsToUsable: { recorded: 2, median: 0.5, gaveUp: 0 } });
+  assert.deepEqual(cg.creator, { firstSecondsMedian: 35, revisionsToUsable: { recorded: 1, median: 2, gaveUp: 1 } });
   assert.equal(s.reasons.find(r => r.pair_id === key[0].pairId).chose, 'service');
+  assert.equal(s.reasons[0].chatgptFix, '顔が変わる');
   assert.match(s.note, /参考値/);
 });
 test('embedded image data cannot close the script tag', () => {
