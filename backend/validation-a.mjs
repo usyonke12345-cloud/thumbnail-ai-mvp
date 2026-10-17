@@ -8,7 +8,7 @@ import {completePrompt} from './generation/complete-prompt.mjs';
 const hash=value=>createHash('sha256').update(value).digest('hex');
 // Capture the running build at module load, rather than labelling modified files
 // on disk as the code already loaded by a long-running Node process.
-const sourceFiles=['backend/server.mjs','backend/validation-a.mjs','backend/generation/complete.mjs','backend/generation/complete-prompt.mjs','backend/generation/openai.mjs','shared/contracts.mjs','shared/complete-designs.mjs','shared/complete-images.mjs','shared/generation-feedback.mjs','shared/reviewer-id.mjs','shared/evaluation-split.mjs','frontend/editor.js','frontend/editor-layout.js','frontend/editor-draft.js','frontend/validation-a.js','frontend/local-archive.js','package.json','package-lock.json'];
+const sourceFiles=['backend/server.mjs','backend/validation-a.mjs','backend/generation/complete.mjs','backend/generation/complete-prompt.mjs','backend/generation/complete-editorial.mjs','backend/generation/openai.mjs','shared/contracts.mjs','shared/complete-designs.mjs','shared/complete-images.mjs','shared/generation-feedback.mjs','shared/reviewer-id.mjs','shared/evaluation-split.mjs','frontend/editor.js','frontend/editor-layout.js','frontend/editor-draft.js','frontend/validation-a.js','frontend/local-archive.js','package.json','package-lock.json'];
 const build=Promise.all(sourceFiles.map(async path=>({path,sha256:hash(await readFile(new URL('../'+path,import.meta.url)))}))).then(files=>({files,sourceSha256:hash(JSON.stringify(files)),nodeVersion:process.version}));
 
 export async function freezeValidationA(value){

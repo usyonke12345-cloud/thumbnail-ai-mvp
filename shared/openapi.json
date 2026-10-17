@@ -291,7 +291,7 @@
                       "manual"
                     ],
                     "default": "manual",
-                    "description": "Omitted retains the existing manual-headline API behavior. Auto asks the image model to choose a short headline from the video title and optional brief in the same paid image-edit call."
+                    "description": "Omitted retains the existing manual-headline API behavior. Auto asks the image model to choose one concise, supported reason to watch from the video title and optional brief, preserving the title language rather than replacing a story with an isolated topic word. This happens in the same paid image-edit call. Actual wording is not extracted or verified."
                   },
                   "design": {
                     "type": "string",
@@ -302,7 +302,7 @@
                       "impact"
                     ],
                     "default": "auto",
-                    "description": "Art-direction intent. photo_focus requests a lower caption in upright humanist sans-serif over the full photo; editorial requests an upper headline in upright serif/Mincho; impact requests a large side headline in condensed bold sans-serif. Explicit composition overrides the default headline zone. Auto is passed unchanged to the image model, which chooses typography and layout from the photograph, available space and video context in the same image edit; it is not a preset rotation. These are requests, not verified fonts or layouts; results require visual checking."
+                    "description": "Art-direction intent. photo_focus requests a lower caption in upright humanist sans-serif over the full photo; editorial requests an upper headline in upright serif/Mincho; impact requests a large side headline in condensed bold sans-serif. Explicit composition overrides the default headline zone. Auto is passed unchanged to the image model, which chooses familiar typeset letterforms, key-phrase hierarchy and feasible upper, lower or side space from the actual photograph and video context in the same edit; it is not a preset rotation. Reference-derived spatial studies are text instructions, not uploaded reference images. These are requests, not verified fonts or layouts; results require visual checking."
                   },
                   "visualIntent": {
                     "type": "string",
