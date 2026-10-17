@@ -58,3 +58,7 @@ groupIdのUTF-8文字列全体（complete-を含む）をSHA-256へ通し、先�
 解析dataset1.7.0では、すべての画像にfeedbackUsedとfeedbackUsageKnownを、組にsplitとsplitVersionを出す。feedbackUsedはcontext/echoの有無から計算し、利用が記録された場合はtrue。falseは記録なし。既知の生成0.0〜0.5系・0.6.0/0.6.1では利用記録が無ければメモなしとして扱い、それ以外の版や版不明はfeedbackUsageKnown:falseで対照から除外する。既知の版でも手作業で情報が削られた記録は本人が申告し、対照に使わない。利用記録は実画像への追従や改善の証明ではない。
 
 外側の比較1.8.0・report1.1.0と旧入力は維持する。現在の解析writerは旧比較も1.7.0へまとめるが、元のgeneration_version、固定入力、snapshot、画像ハッシュは変えない。新しい分割とusageの項目は相互レビュー対象。ブラインド比較用の手順と出力物はVALIDATION-PLAN.mdを参照。
+
+## 生成0.7.0の扱い（2026-10-18）
+
+0.7.0も、利用記録がなければfeedbackUsed:false / feedbackUsageKnown:trueとして解析する。メモ送信・echoの形式は維持する。B比較ツールの既存の対象版0.6.1は変更せず、新版を旧版の対照と混ぜない。新しい見出し・字体の指示と手動指定の優先順位は[編集基準](THUMBNAIL-EDITORIAL-GUIDE.md)を参照。旧版の説明と評価は履歴として残す。

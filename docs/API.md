@@ -22,7 +22,7 @@ Day5の `/review`・`/review.js`・`/comparison-model.js`・`/comparison-store.j
 
 完成PNGの比較JSONは、各組または全組reportを`/editor`から読み込めます。SHA-256と固定した入力・画像の参照を再検証し、最大60画像・保存済みとの重複を除いた合計192MiBの暫定上限内で一括保存します。JSONファイルは70MiBまで。読み込みはブラウザ内だけで、新しいHTTP APIやCandidate/Assessmentの変更はありません。補足なしの比較JSONはcomplete-comparison-1.5.0、補足ありでイメージを指定したものは1.4.0です。旧1.0.0〜1.4.0も読めます。人の記録・利用確認・実費は保存された申告として復元し、新しい評価や許諾確認として扱いません。書き出し形式の版も維持します。
 
-写真の `/api/v1/complete-thumbnail` は任意の `composition`・`headlineMode`・`design` を受け付けます。生成版はai-complete-0.6.1。briefを任意にし、自動見出しモードなら写真と動画タイトルだけで生成できる。APIの見出しモード省略時は従来のmanualを維持する。既存の見出し指定入力はそのまま使え、Candidate/Assessmentには影響しません。完成PNGは未採点、1回1枚、手動同意・期限・起動内回数制限は維持します。この共有入力と書き出し形式の追加は相互レビュー対象です。人工fixtureはdocs/fixtures/complete-generation-options.json、OpenAPIとの照合テストはtests/complete-generation-contract.test.mjsです。
+写真の `/api/v1/complete-thumbnail` は任意の `composition`・`headlineMode`・`design` を受け付けます。生成版はai-complete-0.7.0。briefを任意にし、自動見出しモードなら写真と動画タイトルだけで生成できる。APIの見出しモード省略時は従来のmanualを維持する。既存の見出し指定入力はそのまま使え、Candidate/Assessmentには影響しません。完成PNGは未採点、1回1枚、手動同意・期限・起動内回数制限は維持します。この共有入力と書き出し形式の追加は相互レビュー対象です。人工fixtureはdocs/fixtures/complete-generation-options.json、OpenAPIとの照合テストはtests/complete-generation-contract.test.mjsです。
 
 ## POST /api/v1/thumbnails
 
@@ -145,7 +145,7 @@ Day 3: SVG内の文字は同梱フォントから生成したpathです。PNGは
 - visualIntent: 任意の文字列、300 Unicodeコードポイント以内。省略・空欄なら動画内容から推測する。雰囲気を希望として伝え、構成・字体・大きさは同じ画像編集APIでAIが選ぶ。明示したdesign/compositionは優先する。イメージを指定した比較は別の組IDに固定し、補足ありでは書き出し1.4.0・分析dataset1.2.0、補足なしでは書き出し1.5.0・分析dataset1.3.0に保存する。空欄では旧組IDと形式を維持する。実フォント・文字座標・選択理由は未取得。[検証しながら増やす手順](STYLE-PATTERN-GROWTH.md)。
 - composition: auto / text_left / text_right / text_top。省略時auto。明示した配置はデザインの既定の見出し領域を置き換え、字体は維持する。既定配置と指定配置を同時に送らない。写真の保持を優先し、人物の切り抜き移動は許さず、写真全体の切り取りと拡縮だけを指示する。
 - revision: 任意の修正指示。instruction（1〜300文字）、parentImageId（1〜200文字）、imageDataUrl（1536×864 PNG）が必須。PNG本体は16MiB、data URLは22,369,646文字まで。Base64の文字数だけでなく、復号後のバイト数も確認する。元写真と前の完成PNGを1回の画像編集へ送る。
-- 修正成功時だけ、応答にrevision: {parentImageId, parentImageSha256}を追加する。SHA-256は受け取った前のPNG本体からサーバーが計算する。APIは保存庫の元画像を参照しないため、この応答だけで修正元との照合完了とは扱わない。通常生成ではrevisionを返さない。生成版はai-complete-0.6.1。
+- 修正成功時だけ、応答にrevision: {parentImageId, parentImageSha256}を追加する。SHA-256は受け取った前のPNG本体からサーバーが計算する。APIは保存庫の元画像を参照しないため、この応答だけで修正元との照合完了とは扱わない。通常生成ではrevisionを返さない。生成版はai-complete-0.7.0。
 
 見出しと構図は同じ画像編集API呼び出しで作る。見出し用の追加リクエストは行わず、既存と同じ1回1枚。料金は実際の利用履歴で確認する。構図の違い・人物保持・適切な見出しは新しい指示でも実画像の確認が必要。
 
@@ -174,3 +174,7 @@ OpenAPIのCompleteDiagnosticRequest/Response、人工例docs/fixtures/complete-d
 
 
 任意のfeedbackはGenerationFeedback形式（generation-feedback-1.0.0）。生成に使う過去の理由・分類と画像参照を最大6組受け取り、指定時のみfeedbackAppliedへ正規化した内容を返す。echoは反映の検証結果ではない。APIは過去の画像を持たず、参照は由来の記録として扱う。現在の指示・写真保持条件を優先し、追加のAI呼び出しは行わない。保存時のfeedbackContextは画像の固定情報で、応答のechoと一致が必要。旧サーバーのecho省略も許容する。共有APIと書き出し形式の追加は相互レビュー対象。詳細は[生成の評価メモ](GENERATION-FEEDBACK.md)。
+
+## 生成0.7.0：見出しと構成の編集指示
+
+入力・応答スキーマ、モデル、品質、サイズ、1回1枚は維持する。autoの見出しはタイトルと任意briefに根拠のある見どころを一つ残し、タイトルの言語を基本にする。autoの構成では定番の字体・中心の句の強弱・写真内の空き領域を具体的に指示する。実文言・字体・位置は未抽出、完成PNGは未採点で、改善の実画像確認は未完。[詳細](THUMBNAIL-EDITORIAL-GUIDE.md)。sharedのauto指示とOpenAPIの説明は相互レビュー対象。
