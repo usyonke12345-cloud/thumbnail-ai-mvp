@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {runInNewContext} from 'node:vm';
+import {createAttemptHistory} from '../frontend/attempt-history.js';
 import {png,dataUrl} from './helpers/complete-png.mjs';
 const source=await readFile(new URL('../frontend/editor.js',import.meta.url),'utf8');
 const display=source.slice(source.indexOf('function showCompleted('),source.indexOf('const canvas='));
@@ -28,4 +29,18 @@ test('only a successful API response receives the current-result label and ident
 test('gallery save failure still identifies the new API image, while an imported draft is labelled as restored',async()=>{
  const a=app();a.show(old,'restored');a.setResponse(latest,{storageFailure:true});await a.click();assert.equal(a.calls(),1);assert.match(a.notice().textContent,/今回APIから受け取った.*比較一覧への保存に失敗/);assert.match(a.notice().textContent,/0\.7\.0/);assert.equal(a.nodes['#ai-result'].children.find(n=>n.tag==='a').href,latest.imageDataUrl);
  assert.match(source,/if\(draft\.result\)showCompleted\(draft\.result,'restored'\)/);
+});
+test('attempt export reads the latest stored attempt without writes or images, and refuses a stale export when storage cannot be read',async()=>{
+ const document={createElement:tag=>({tag,children:[],events:{},textContent:'',append(...nodes){this.children.push(...nodes);},replaceChildren(...nodes){this.children=nodes;},setAttribute(){},addEventListener(name,fn){this.events[name]=fn;}})},root=document.createElement('section'),downloads=[];let records=[],fail=false,writes=0;
+ const history=createAttemptHistory({root,document,storage:{load:async()=>{if(fail)throw new Error('Synthetic read failure');return records;},put:async()=>{writes++;}},download:(...args)=>downloads.push(args)});await history.ready;
+ records=[{version:1,id:'another-tab',startedAt:'2026-10-18T00:00:00Z',finishedAt:'2026-10-18T00:00:05Z',status:'api_error',title:'Synthetic title',projectName:'Synthetic project',elapsedMs:5000,imageReturned:false,costUsd:null,error:'Synthetic API error',parentImageId:null}];
+ await history.exportJson();assert.equal(writes,0);assert.equal(downloads[0][0],'complete-generation-attempts.json');const exported=JSON.parse(downloads[0][1]);assert.equal(exported.records[0].id,'another-tab');assert.equal(exported.summary.counts.api_error,1);assert.equal(exported.summary.costUsd,null);assert.doesNotMatch(downloads[0][1],/imageDataUrl|data:image/);
+ fail=true;await assert.rejects(()=>history.exportJson(),/Synthetic read failure/);assert.equal(downloads.length,1);assert.equal(writes,0);
+});
+test('the export button next to paid generation saves only the attempt JSON, prevents double clicks and leaves generation untouched',async()=>{
+ const block=source.slice(source.indexOf('const exportAttempts='),source.indexOf('createEditorTools(',source.indexOf('const exportAttempts=')));let button,inserted,exports=0,fail=false,resolveExport;
+ const link={tag:'a'},aiStatus={children:[],textContent:'',replaceChildren(...items){this.children=items;}},scope={document:{createElement:()=>button={events:{},disabled:false,addEventListener(type,fn){this.events[type]=fn;}},querySelector:id=>{assert.equal(id,'#ai-complete');return {after(node){inserted=node;}};}},aiStatus,attemptHistory:{exportJson:async()=>{exports++;if(fail)throw new Error('Synthetic export error');await new Promise(r=>resolveExport=r);return link;}},fetch:()=>assert.fail('Export must not contact the server')};
+ runInNewContext(block,scope);assert.equal(inserted,button);assert.equal(button.type,'button');assert.match(button.textContent,/生成エラー確認用/);
+ const pending=button.events.click();await button.events.click();assert.equal(exports,1);assert.equal(button.disabled,true);resolveExport();await pending;assert.equal(button.disabled,false);assert.match(aiStatus.children[0],/complete-generation-attempts\.json/);assert.equal(aiStatus.children[1],link);
+ fail=true;await button.events.click();assert.equal(button.disabled,false);assert.match(aiStatus.textContent,/Synthetic export error/);
 });

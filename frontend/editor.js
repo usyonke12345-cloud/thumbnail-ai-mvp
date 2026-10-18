@@ -191,6 +191,14 @@ async function prepareRevision({group,image,instruction}){
 }
 document.querySelector('#cancel-revision').addEventListener('click',()=>{activeRevision=null;renderRevision();scheduleDraft();});
 const attemptHistory=createAttemptHistory({root:document.querySelector('#attempt-history'),download:downloadLocal});
+const exportAttempts=document.createElement('button');exportAttempts.type='button';exportAttempts.textContent='生成エラー確認用の履歴を保存（無料）';
+document.querySelector('#ai-complete').after(exportAttempts);
+exportAttempts.addEventListener('click',async()=>{
+ if(exportAttempts.disabled)return;exportAttempts.disabled=true;
+ try{const link=await attemptHistory.exportJson();aiStatus.replaceChildren('試行履歴 complete-generation-attempts.json を出力しました。保存が始まらない場合：',...(link?[link]:[]));}
+ catch(error){aiStatus.textContent='試行履歴を保存できません：'+error.message;}
+ finally{exportAttempts.disabled=false;}
+});
 createEditorTools({root:document.querySelector('#editor-tools'),download:downloadLocal,captureDraft:async()=>{await saveQueue.catch(()=>{});return captureCurrentDraft();},restoreDraft:applyImportedDraft,isBusy:()=>document.querySelector('#clear-draft').disabled,setLocked:locked=>document.querySelector('#editor-workspace').disabled=locked,onPhoto:async file=>{const version=++versions[0],url=URL.createObjectURL(file);try{const image=new Image();image.src=url;await image.decode();if(version!==versions[0])return false;if(image.naturalWidth*image.naturalHeight>40000000)throw new Error('写真が大きすぎます。');storedFiles[0]=file;photos[0]=image;settings[0]={zoom:1,x:.5,y:.5};layout.value='single';activeRevision=null;renderRevision();const ranges=cards[0].querySelectorAll('input[type="range"]');['zoom','x','y'].forEach((key,n)=>ranges[n].value=settings[0][key]*100);draw();await autoLayouts();}finally{URL.revokeObjectURL(url);}}});
 
 restoreDraft();
