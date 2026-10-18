@@ -88,10 +88,10 @@ test('video frames keep aspect ratio and timestamp, reject unavailable/seeking f
 });
 function dom(){const all=n=>[n,...n.children.flatMap(all)],document={createElement(tag){return {tag,children:[],style:{},attrs:{},events:{},value:'',disabled:false,textContent:'',append(...n){this.children.push(...n);},prepend(...n){this.children.unshift(...n);},replaceChildren(...n){this.children=n;},setAttribute(k,v){this.attrs[k]=v;},addEventListener(k,f){this.events[k]=f;}};}};const root=document.createElement('section');return {root,document,find:p=>all(root).find(p)};}
 test('attempt history persists success, API/timeout/network and save errors, keeping costs and interrupted results unknown',async()=>{
- const fixture=dom(),stored=new Map(),downloads=[],storage={load:async()=>[],put:async r=>stored.set(r.id,structuredClone(r))},history=createAttemptHistory({...fixture,storage,download:(...args)=>downloads.push(args)});await history.ready;
+ const fixture=dom(),stored=new Map(),downloads=[],storage={load:async()=>[...stored.values()],put:async r=>stored.set(r.id,structuredClone(r))},history=createAttemptHistory({...fixture,storage,download:(...args)=>downloads.push(args)});await history.ready;
  for(const status of ['success','api_error','network_error','timeout','save_error']){const id=await history.start({title:'synthetic',projectName:'tests'});await history.finish(id,{status,elapsedMs:1200,error:status==='success'?null:'artificial failure'});}
  await history.start({title:'unconfirmed'});const summary=summarizeAttempts([...stored.values()]);assert.equal(summary.finished,5);assert.equal(summary.imagesReturned,2);assert.equal(summary.imageReturnRate,.4);assert.equal(summary.counts.pending,1);assert.ok([...stored.values()].every(x=>x.costUsd===null));
- fixture.find(x=>x.textContent==='試行履歴をJSONで保存').events.click();const saved=JSON.parse(downloads[0][1]);assert.equal(saved.records.length,6);assert.equal(saved.summary.costUsd,null);
+ await fixture.find(x=>x.textContent==='試行履歴をJSONで保存').events.click();const saved=JSON.parse(downloads[0][1]);assert.equal(saved.records.length,6);assert.equal(saved.summary.costUsd,null);
  const r=[...stored.values()][0];assert.throws(()=>validateAttempt({...r,costUsd:0}));assert.throws(()=>validateAttempt({...r,imageReturned:false}));assert.throws(()=>validateAttempt({...r,finishedAt:'1999-01-01'}));
 });
 test('draft import locks the workspace and does not mutate it if checksum/restore fails; exporting does not generate',async()=>{
