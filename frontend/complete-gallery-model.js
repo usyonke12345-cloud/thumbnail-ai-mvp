@@ -4,7 +4,7 @@ import {isReviewerId} from '../shared/reviewer-id.mjs';
 import {validateSubjectRegions} from './subject-regions.js';
 import {normalizeGenerationFeedback} from '../shared/generation-feedback.mjs';
 export const COMPOSITIONS={auto:'写真に合わせて自動',text_left:'文字を左・主役を右',text_right:'文字を右・主役を左',text_top:'見出しを上・主役を大きく'};
-export const DESIGNS={auto:'写真と内容に合わせて自動',photo_focus:'写真を主役にする',editorial:'落ち着いた誌面風',impact:'文字を大きく見せる'};
+export const DESIGNS={auto:'写真と内容に合わせて自動',recompose:'写真の素材から再構成（実験）',photo_focus:'写真を主役にする',editorial:'落ち着いた誌面風',impact:'文字を大きく見せる'};
 export const MAX_IMAGES=60, MAX_GROUP_IMAGES=12, MAX_PROJECT_IMAGES=24, MAX_STORED_CHARS=192*1024*1024;
 const fail=message=>{throw new Error(message);};
 const date=value=>typeof value==='string'&&Number.isFinite(Date.parse(value));

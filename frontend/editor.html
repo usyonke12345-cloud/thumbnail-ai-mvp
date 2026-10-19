@@ -20,11 +20,11 @@
 <p id="headline-mode-description">見出しの入力は不要です。AIが動画タイトルから短い文言を考えます。</p>
 </details>
 <details id="ai-advanced-design"><summary>構成・字体の詳細指定（任意）</summary>
-<label>デザインの方向<select id="ai-design"><option value="auto">写真と内容からAIが決める</option><option value="photo_focus">写真を主役にする</option><option value="editorial">落ち着いた誌面風</option><option value="impact">文字を大きく見せる</option></select></label>
+<label>デザインの方向<select id="ai-design"><option value="auto">写真と内容からAIが決める</option><option value="recompose">写真の素材から再構成（実験）</option><option value="photo_focus">写真を主役にする</option><option value="editorial">落ち着いた誌面風</option><option value="impact">文字を大きく見せる</option></select></label>
 <label>AI完成画像の構図<select id="ai-composition"><option value="auto">写真と内容に合わせてAIが決める</option><option value="text_left">文字を左・主役を右</option><option value="text_right">文字を右・主役を左</option><option value="text_top">見出しを上・主役を大きく</option></select></label>
 </details>
 <section id="ai-design-guide" aria-label="AI完成画像の字体と配置の指定"></section>
-<p>AIは写真の主役・余白と動画タイトルから構成を選びます。特定のデザインや構図を選ぶと、その指定を優先します。人物を切り抜いて移動せず、写真全体の切り取りと文字の配置で仕上げるよう指示します。完成画像で文字と写真の保持を確認してください。</p>
+<p>通常は写真全体を生かし、文字の配置で仕上げます。「写真の素材から再構成」では元写真の人物・小物の切り抜きや再配置を指示します。どちらも特定のデザイン・構図の指定を優先します。再構成はAI編集のため描き直しが起きる場合があります。完成画像で文字・人物・素材を確認してください。</p>
 <section id="revision-tools" hidden><h2>生成済み画像の修正</h2><div id="revision-preview"></div><label>修正する点<textarea id="revision-instruction" maxlength="300" rows="2"></textarea></label><button id="cancel-revision" type="button">修正元の指定を外す</button><p>元写真と前の完成PNGを参考に、1枚を作り直します。元画像は比較一覧に残ります。修正生成も有料で、画像入力が増えるため初回生成と実費が異なる場合があります。</p></section>
 <fieldset id="generation-feedback" aria-label="次の生成に反映する評価メモ" style="border:0;padding:0"></fieldset>
 <section id="validation-a" aria-label="A検証の入力固定"></section>

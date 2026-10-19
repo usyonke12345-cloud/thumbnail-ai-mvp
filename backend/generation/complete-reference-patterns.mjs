@@ -50,8 +50,8 @@ export const COMPLETE_REFERENCE_PATTERNS=Object.freeze([
 ].map(value=>Object.freeze({...value,sources:Object.freeze(value.sources),status:'experimental'})));
 
 export function completeReferencePatternInstructions({design='auto',composition='auto',revision}={}){
- // Explicit art direction and revisions must not silently acquire a competing
- // layout. Automatic copy is independent: manual wording can still use auto art.
+ // These are whole-scene typography/placement examples, not cutout recipes.
+ // Do not let them replace a requested material edit or revision.
  if(design!=='auto'||composition!=='auto'||revision)return '';
  return [
   `REFERENCE PATTERN LIBRARY: ${REFERENCE_PATTERN_LIBRARY_VERSION}. These are abstract observed design relationships, not proven high-performing templates or learned model weights.`,

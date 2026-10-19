@@ -66,7 +66,7 @@ function dom(){
 test('free design choices update the actual control, selected state and composition explanation, including restored values',()=>{
  const {document,all}=dom(),root=document.createElement('section'),designControl={value:'auto',events:{},addEventListener(k,v){this.events[k]=v;}},compositionControl={value:'auto',events:{},addEventListener(k,v){this.events[k]=v;}};
  let saved=0;const guide=createEditorDesignGuide({root,designControl,compositionControl,document,onSelect:()=>saved++});
- const automatic=all.find(x=>x.textContent==='AIに構成を任せる'),buttons=all.filter(x=>x.tag==='button'&&x!==automatic),status=all.find(x=>x.attributes.role==='status');assert.equal(buttons.length,3);assert.equal(saved,0);assert.equal(automatic.attributes['aria-pressed'],'true');assert.match(status.textContent,/写真の主役/);
+ const automatic=all.find(x=>x.textContent==='AIに構成を任せる'),buttons=all.filter(x=>x.tag==='button'&&Object.values(COMPLETE_DESIGNS).some(recipe=>recipe.label===x.textContent)),status=all.find(x=>x.attributes.role==='status');assert.equal(buttons.length,3);assert.equal(saved,0);assert.equal(automatic.attributes['aria-pressed'],'true');assert.match(status.textContent,/写真の主役/);
  for(const [i,id]of Object.keys(COMPLETE_DESIGNS).entries()){
   buttons[i].events.click();assert.equal(designControl.value,id);assert.equal(saved,i+1);assert.equal(buttons.filter(x=>x.attributes['aria-pressed']==='true').length,1);assert.ok(status.textContent.includes(COMPLETE_DESIGNS[id].fontLabel));
  }
