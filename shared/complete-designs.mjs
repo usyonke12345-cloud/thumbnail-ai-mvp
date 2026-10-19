@@ -59,17 +59,19 @@ const placements=Object.freeze({
  text_right:{label:'文字を右・主役を左',prompt:'Create a right-headline composition: place the headline in the right-side space and keep the existing subject visible toward the left through whole-photo cropping only.'},
  text_top:{label:'見出しを上・主役を大きく',prompt:'Create a top-headline composition: place the headline across the upper space while keeping the existing photographic subject visible below.'}
 });
-export function completeDesignInstructions(design='auto',composition='auto'){
+export function completeDesignInstructions(design='auto',composition='auto',{revision=false}={}){
  if(design==='recompose'){
   if(composition!=='auto'&&!placements[composition])throw new Error('Unknown complete design or composition.');
   const zone={text_left:'Put the headline on the left and arrange the source subject on the right.',text_right:'Put the headline on the right and arrange the source subject on the left.',text_top:'Put the headline above the source subject.'}[composition];
   return [
-   'MATERIAL RECOMPOSITION: use the attached photograph as the sole photographic source. Build a new thumbnail composition from its existing people, objects and scene portions rather than merely placing text over the full photograph.',
-   'Internally compare two or three arrangements: a source-person cutout with a scene crop, an enlarged source detail beside the person, or a source-person cutout against a restrained neutral graphic background. Choose only an arrangement supported by useful visible source material; do not force every element into a collage. Show each person once. If the source has no useful separate detail, use its person and scene rather than inventing a prop.',
+   revision?'MATERIAL REVISION: the original photograph remains the sole source for photographic material. Apply the requested change to the previous thumbnail without rebuilding its composition unless requested.':'MATERIAL RECOMPOSITION: use the attached photograph as the sole photographic source. Build a new thumbnail composition from its existing people, objects and scene portions rather than merely placing text over the full photograph.',
+   revision?'REVISION SCOPE: preserve the previous design\'s existing material arrangement unless the current revision explicitly requests changing it. Do not force a new cutout or a new composition for a typography-only revision. Recover source appearance from the original photograph.':'REQUIRED SPATIAL EDIT: isolate at least one existing person, coherent group of people or useful object from its original background, then change its position or size relative to the backdrop. A whole-photo crop, color change or text overlay alone does not satisfy this request. Do not silently fall back to the unchanged full scene with a headline.',
+   revision?'Keep the previous arrangement and its subject scale unless changing them is part of the current revision. Show each source person once.':'Choose one coherent material arrangement: a source-person or group cutout over a source-scene crop, a source-person cutout beside a useful source-object detail, or a source-person/group cutout against a restrained neutral graphic background. Plan the subject silhouette and background separately before placing the words. Use only arrangements supported by visible source material; do not force every element into a collage. Show each person once, including in any background crop. If the source has no useful separate object, use its person or group rather than inventing a prop.',
    'LAYOUT: '+(zone?zone+' This explicit placement replaces other headline zones; do not add another caption.':'Choose subject scale, placement and one headline zone together from the video meaning and desired atmosphere. Do not always use the same side-headline layout.'),
    'TYPOGRAPHY: choose one readable typeset Gothic/sans-serif, serif/Mincho or restrained personal lettering family that suits the actual message and atmosphere. Give the supported reason to watch a clear hierarchy. Do not default to huge white-and-yellow Gothic, aggressive brush texture, sticker outlines or unnecessary arrows.',
    'PHOTOGRAPH: cut out, crop, scale and reposition only material already visible in the original photograph. Preserve each person\'s identity, expression, pose, hair, natural skin and clothing, and the shapes of source objects. Keep edges and lighting coherent. Use source scenery or a neutral graphic backdrop, never an invented location, activity, replacement person or before/after event. Keep faces and important material clear of the words.',
-   'Output one coherent finished thumbnail, not a contact sheet or multiple alternatives. These are image-editing directions, not a guarantee of pixel-identical cutouts or a report of actual selected regions.'
+   'Output one coherent finished thumbnail, not a contact sheet or multiple alternatives. These are image-editing directions, not a guarantee of pixel-identical cutouts or a report of actual selected regions.',
+   ...(revision?[]:['BEFORE OUTPUT: check that a source subject or object is visibly isolated and placed at a different position or size relative to the backdrop; faces, pose, clothes and source-object shapes must still match the original. If only typography, global cropping or color changed, revise the material arrangement within this same image edit before returning. Do not print this checklist or claim a successful cutout in text.'])
   ].join('\n');
  }
  const recipe=COMPLETE_DESIGNS[design];
@@ -94,7 +96,7 @@ export function completeDesignInstructions(design='auto',composition='auto'){
  ].join('\n');
 }
 export function completeDesignSummary(design='auto',composition='auto'){
- if(design==='recompose')return `写真内の人物・小物・背景の一部を素材に、切り抜き・拡縮・再配置する構成をAIが考えます。${placements[composition]?`配置の希望：${placements[composition].label}。`:'配置と字体はAIに任せています。'}AIによる画像編集なので描き直しが起きる場合があります。切り抜きの画素保持は保証されず、完成画像で人物・素材を確認します。`;
+ if(design==='recompose')return `初回の再構成では、写真内の人物・小物などを少なくとも1つ切り抜き、背景に対する位置か大きさを変えるよう指示します。${placements[composition]?`配置の希望：${placements[composition].label}。`:'配置と字体はAIに任せています。'}AIによる画像編集なので描き直しが起きる場合があります。切り抜きの画素保持は保証されず、実行されたかと人物・素材の自然さを完成画像で確認します。`;
  const recipe=COMPLETE_DESIGNS[design],override=placements[composition];
  return recipe?`${recipe.fontLabel}。配置の希望：${override?.label??recipe.layoutLabel}。${override?'構図を固定しています。配置も変える場合は「写真と内容に合わせてAIが決める」を選んでください。':''}`:
   `写真の主役・文字を置ける余白と動画の内容から、AIが字体・文字サイズ・配置を決めます。${override?'構図を固定しているため、見出しの位置はこの指定を優先します。':'配置もAIに任せています。'}実際の字体・位置・選択理由は未取得で、完成画像で確認します。`;

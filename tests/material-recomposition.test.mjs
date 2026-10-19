@@ -13,6 +13,7 @@ import {createCompleteReviewAnalysis} from '../backend/analysis/complete-review.
 import {completePreview} from '../backend/analysis/complete-preview.mjs';
 import {feedbackUsage} from '../backend/analysis/feedback-audit.mjs';
 import {freezeValidationA} from '../backend/validation-a.mjs';
+import {createHash} from 'node:crypto';
 import {assertValidationAInput,validationACase} from '../frontend/validation-a.js';
 import {makeServer} from '../backend/server.mjs';
 import {png,dataUrl} from './helpers/complete-png.mjs';
@@ -20,7 +21,7 @@ const photo=png(1280,720),finished=png(1536,864),input={title:'海辺で過ご�
 
 test('recomposition is explicit opt-in; every existing design retains the photograph-preserving boundary',()=>{
  const normalized=validateComplete(input),prompt=completePrompt(normalized);
- assert.equal(normalized.design,'recompose');assert.match(prompt,/sole photographic source/);assert.match(prompt,/isolate, crop, scale and reposition existing/);assert.match(prompt,/exact facial features, expression, pose/);assert.match(prompt,/Do not repaint skin, change clothing/);assert.match(prompt,/Show each person once/);assert.match(prompt,/neutral graphic backdrop/);assert.match(prompt,/proposed recomposed layout/);
+ assert.equal(normalized.design,'recompose');assert.match(prompt,/sole photographic source/);assert.match(prompt,/isolate, crop, scale and reposition existing/);assert.match(prompt,/exact facial features, expression, pose/);assert.match(prompt,/Do not repaint skin, change clothing/);assert.match(prompt,/Show each person once/);assert.match(prompt,/neutral graphic backdrop/);assert.match(prompt,/REQUIRED SPATIAL EDIT/);assert.match(prompt,/position or size relative to the backdrop/);assert.match(prompt,/A whole-photo crop, color change or text overlay alone does not satisfy/);assert.doesNotMatch(prompt,/REFERENCE PATTERN LIBRARY/);
  assert.doesNotMatch(prompt,/Do not isolate or reposition|whole-photo cropping only|Do not relocate the person|rather than moving the person|Keep the photographed scene and subject positions intact/);
  for(const design of [undefined,'auto','photo_focus','editorial','impact']){
   const preserved=validateComplete({...input,design});assert.equal(preserved.design,design??'auto');
@@ -41,10 +42,10 @@ test('one recomposition uses one photo edit and a revision uses the original plu
  let requests=0;const provider=createOpenAIBackgroundProvider({env:{OPENAI_API_KEY:'synthetic-test-key',OPENAI_IMAGE_ENABLED:'true',OPENAI_MAX_CALLS:'2'},fetchImpl:async(url,{body})=>{
   requests++;assert.match(url,/images\/edits$/);assert.equal(body.getAll('image[]').length,requests);assert.deepEqual(Buffer.from(await body.getAll('image[]')[0].arrayBuffer()),photo);
   for(const [key,value]of Object.entries({model:'gpt-image-2.5-flare',n:'1',quality:'medium',size:'1536x864',output_format:'png'}))assert.equal(body.get(key),value);
-  if(requests===2){assert.deepEqual(Buffer.from(await body.getAll('image[]')[1].arrayBuffer()),finished);assert.match(body.get('prompt'),/image 1 is the original photograph, the authoritative source/);assert.match(body.get('prompt'),/preserve unrequested design features/);assert.doesNotMatch(body.get('prompt'),/REFERENCE PATTERN LIBRARY/);}
+  if(requests===2){assert.deepEqual(Buffer.from(await body.getAll('image[]')[1].arrayBuffer()),finished);assert.match(body.get('prompt'),/image 1 is the original photograph, the authoritative source/);assert.match(body.get('prompt'),/preserve unrequested design features/);assert.match(body.get('prompt'),/REVISION SCOPE/);assert.doesNotMatch(body.get('prompt'),/REFERENCE PATTERN LIBRARY|REQUIRED SPATIAL EDIT|Choose one coherent material arrangement/);}
   return new Response(JSON.stringify({data:[{b64_json:finished.toString('base64')}]}));
  }});
- const result=await generateComplete(input,{generate:provider});assert.equal(result.generation_version,'ai-complete-0.9.0');assert.ok(result.limitations.some(x=>x.includes('画素が同一の切り抜きは保証しません')));assert.equal(result.selectedRegions,undefined);assert.equal(result.assessment,undefined);
+ const result=await generateComplete(input,{generate:provider});assert.equal(result.generation_version,COMPLETE_GENERATION_VERSION);assert.ok(result.limitations.some(x=>x.includes('画素が同一の切り抜きは保証しません')));assert.equal(result.selectedRegions,undefined);assert.equal(result.assessment,undefined);
  const revision=await generateComplete({...input,revision:{parentImageId:'synthetic-original',imageDataUrl:dataUrl(finished),instruction:'見出しだけ少し小さく'}},{generate:provider});assert.equal(revision.revision.parentImageId,'synthetic-original');assert.equal(requests,2);
  await assert.rejects(()=>generateComplete(input,{generate:provider}),error=>error.code==='GENERATION_LIMIT');assert.equal(requests,2);
 });
@@ -54,7 +55,7 @@ test('free recomposition control updates and restores the actual choice, keeps i
  const control=value=>({value,events:{},addEventListener(k,v){this.events[k]=v;}}),designControl=control('auto'),compositionControl=control('text_left'),intentControl=control('');let saved=0;
  const guide=createEditorDesignGuide({root:document.createElement('section'),document,designControl,compositionControl,intentControl,onSelect:()=>saved++});
  const choose=nodes.find(x=>x.tag==='button'&&x.textContent==='写真の素材から再構成する（実験）'),status=nodes.find(x=>x.attributes.role==='status'),automatic=nodes.find(x=>x.textContent==='AIに構成を任せる');
- assert.equal(choose.attributes['aria-pressed'],'false');assert.equal(saved,0);choose.events.click();assert.equal(designControl.value,'recompose');assert.equal(compositionControl.value,'auto');assert.equal(choose.attributes['aria-pressed'],'true');assert.match(status.textContent,/再配置/);assert.match(status.textContent,/画素保持は保証されず/);assert.equal(saved,1);
+ assert.equal(choose.attributes['aria-pressed'],'false');assert.equal(saved,0);choose.events.click();assert.equal(designControl.value,'recompose');assert.equal(compositionControl.value,'auto');assert.equal(choose.attributes['aria-pressed'],'true');assert.match(status.textContent,/位置か大きさ/);assert.match(status.textContent,/画素保持は保証されず/);assert.equal(saved,1);
  nodes.find(x=>x.tag==='button'&&x.textContent==='落ち着いた旅').events.click();assert.equal(designControl.value,'recompose');assert.match(intentControl.value,/ゆっくりした旅/);
  designControl.value='auto';guide.render();designControl.value='recompose';guide.render();assert.equal(choose.attributes['aria-pressed'],'true');automatic.events.click();assert.equal(designControl.value,'auto');assert.equal(choose.attributes['aria-pressed'],'false');assert.equal(automatic.attributes['aria-pressed'],'true');assert.equal(saved,3);
 });
@@ -79,4 +80,11 @@ test('A snapshot binds recomposition in both prompts and rejects a changed desig
 
 test('all three OpenAPI design enums allow recomposition while existing assessment and image contracts remain separate',async()=>{
  const schema=JSON.parse(await readFile(new URL('../shared/openapi.json',import.meta.url),'utf8'));let count=0;function visit(value){if(!value||typeof value!=='object')return;if(value.properties?.design?.enum?.includes('photo_focus')){assert.ok(value.properties.design.enum.includes('recompose'));assert.match(value.properties.design.description,/not pixel-identical segmentation/);count++;}for(const child of Object.values(value))visit(child);}visit(schema);assert.equal(count,3);assert.equal(schema.info.version,'0.3.7');
+});
+
+test('a 0.9.0 fixed case cannot silently use strengthened 0.9.1 edit instructions; analysis keeps the historical memory status',async()=>{
+ const {consent,...value}=input,fixed=await freezeValidationA(value);assert.equal(fixed.service.generationVersion,'ai-complete-0.9.1');assert.match(fixed.chatgptPrompt,/少なくとも1つを切り抜き/);assert.match(fixed.chatgptPrompt,/文字追加だけでは/);
+ const prior={...fixed.service,generationVersion:'ai-complete-0.9.0'},oldCaseId='validation-a-'+createHash('sha256').update(JSON.stringify({requestSha256:fixed.requestSha256,service:prior,servicePromptSha256:fixed.servicePromptSha256})).digest('hex');
+ const {checkValidationARequest}=await import('../backend/validation-a.mjs');await assert.rejects(()=>checkValidationARequest(input,oldCaseId),error=>error.code==='VALIDATION_A_MISMATCH');
+ for(const version of ['ai-complete-0.9.0','ai-complete-0.9.1'])assert.deepEqual(feedbackUsage({result:{generation_version:version}}),{feedbackUsed:false,feedbackUsageKnown:true});assert.equal(feedbackUsage({result:{generation_version:'ai-complete-0.9.2'}}).feedbackUsageKnown,false);
 });

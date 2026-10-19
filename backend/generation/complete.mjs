@@ -5,7 +5,7 @@ import {isCompletePngDataUrl} from '../../shared/complete-images.mjs';
 import {createHash} from 'node:crypto';
 import {normalizeGenerationFeedback} from '../../shared/generation-feedback.mjs';
 import {splitFromDigest} from '../../shared/evaluation-split.mjs';
-export const COMPLETE_GENERATION_VERSION='ai-complete-0.9.0';
+export const COMPLETE_GENERATION_VERSION='ai-complete-0.9.1';
 export function validateComplete(value){
  if(!value||typeof value!=='object'||Array.isArray(value)||Object.keys(value).some(k=>!['title','brief','headline','headlineMode','design','visualIntent','imageDataUrl','consent','composition','revision','feedback'].includes(k)))throw new ApiError(400,'INVALID_INPUT','完成画像の入力形式が不正です。');
  if(value.consent!==true)throw new ApiError(400,'CONSENT_REQUIRED','写真のAPI送信と有料生成を確認してください。');

@@ -50,17 +50,16 @@ export const COMPLETE_REFERENCE_PATTERNS=Object.freeze([
 ].map(value=>Object.freeze({...value,sources:Object.freeze(value.sources),status:'experimental'})));
 
 export function completeReferencePatternInstructions({design='auto',composition='auto',revision}={}){
- // Explicit art direction and revisions must not silently acquire a competing
- // layout. Automatic copy is independent: manual wording can still use auto art.
- if(!['auto','recompose'].includes(design)||composition!=='auto'||revision)return '';
- const recompose=design==='recompose';
+ // These are whole-scene typography/placement examples, not cutout recipes.
+ // Do not let them replace a requested material edit or revision.
+ if(design!=='auto'||composition!=='auto'||revision)return '';
  return [
   `REFERENCE PATTERN LIBRARY: ${REFERENCE_PATTERN_LIBRARY_VERSION}. These are abstract observed design relationships, not proven high-performing templates or learned model weights.`,
   'Select typography AND placement together from the conditional candidates below, using the actual attached photograph, current headline meaning and desired atmosphere. These are candidate directions, not nine images to render.',
-  recompose?'Assess these typography/placement relationships against the proposed recomposed layout, after choosing useful existing people and source details. Internally compare two or three coherent arrangements within this single edit; source cutouts may move or scale. Candidate conditions refer to available space in that proposed composition. Do not create extra people, props or scenes to fit a candidate.':'First inspect occupied areas and existing clear space. Internally compare two or three feasible candidates with different letterform or placement treatments; choose one coherent treatment for this image. Do this inside this single edit, not through extra calls, a random rotation, or new panels. If only one zone is feasible, preserve it and choose context-appropriate lettering rather than moving the person just for variety.',
+  'First inspect occupied areas and existing clear space. Internally compare two or three feasible candidates with different letterform or placement treatments; choose one coherent treatment for this image. Do this inside this single edit, not through extra calls, a random rotation, or new panels. If only one zone is feasible, preserve it and choose context-appropriate lettering rather than moving the person just for variety.',
   'The lettering should visibly reflect the chosen family: Gothic, serif/Mincho, or genuinely readable personal handwriting. Do not turn every family into the same oversized bold Gothic block with a yellow key phrase. A single neutral color can be sufficient; select an accent only when it clarifies the message. The explicit atmosphere and photo preservation constraints take priority.',
-  ...COMPLETE_REFERENCE_PATTERNS.map(({id,typography,layout,when,avoid})=>JSON.stringify({id,typography,layout,suitableWhen:when,avoid:recompose&&id==='upper_flanks'?'Do not force symmetry, add a second slogan, or copy reference arrows, question marks or lighting.':avoid})),
-  recompose?'Use only a candidate whose conditions are met by the proposed arrangement of source material. If none fits, use a clear headline with a natural source-person cutout and source scene or neutral graphic backdrop. Do not invent events or discard the meaningful headline. Manual headline text remains exact. Do not render candidate IDs or explanations.':'Use only a candidate whose conditions are met. If none is feasible, use a simple readable headline in existing clear space; do not manufacture space, add another photo, invent events or discard the meaningful headline. Manual headline text remains exact. Do not render candidate IDs, reference information or explanation text.',
+  ...COMPLETE_REFERENCE_PATTERNS.map(({id,typography,layout,when,avoid})=>JSON.stringify({id,typography,layout,suitableWhen:when,avoid})),
+  'Use only a candidate whose conditions are met. If none is feasible, use a simple readable headline in existing clear space; do not manufacture space, add another photo, invent events or discard the meaningful headline. Manual headline text remains exact. Do not render candidate IDs, reference information or explanation text.',
   'No reference image is attached: borrow only these abstract letterform and spatial relationships. Do not imitate a particular person, channel identity, wording or scene. The chosen family and its successful rendering are not being reported as measured metadata.'
  ].join('\n');
 }
