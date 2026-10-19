@@ -302,7 +302,7 @@
                       "impact"
                     ],
                     "default": "auto",
-                    "description": "Art-direction intent. photo_focus requests a lower caption in upright humanist sans-serif over the full photo; editorial requests an upper headline in upright serif/Mincho; impact requests a large side headline in condensed bold sans-serif. Explicit composition overrides the default headline zone. Auto is passed unchanged to the image model, which chooses familiar typeset letterforms, key-phrase hierarchy and feasible upper, lower or side space from the actual photograph and video context in the same edit; it is not a preset rotation. Reference-derived spatial studies are text instructions, not uploaded reference images. These are requests, not verified fonts or layouts; results require visual checking."
+                    "description": "Art-direction intent. photo_focus requests a lower caption in upright humanist sans-serif over the full photo; editorial requests an upper headline in upright serif/Mincho; impact requests a large side headline in condensed bold sans-serif. Explicit composition overrides the default headline zone. In generation 0.8.0, a normal edit with both design and composition auto includes a versioned bank of nine conditional typography/placement relationships for the image model to compare against the actual photo, headline and atmosphere in the same call. Manual design or composition and revisions do not receive those competing candidates. No reference images or video wording are uploaded. This is not a rotation, measured pattern selection or proof of quality; actual fonts, layout and selected pattern remain unverified."
                   },
                   "visualIntent": {
                     "type": "string",
@@ -635,7 +635,7 @@
                       "impact"
                     ],
                     "default": "auto",
-                    "description": "Art-direction intent. photo_focus requests a lower caption in upright humanist sans-serif over the full photo; editorial requests an upper headline in upright serif/Mincho; impact requests a large side headline in condensed bold sans-serif. Explicit composition overrides the default headline zone. Auto is passed unchanged to the image model, which chooses typography and layout from the photograph, available space and video context in the same image edit; it is not a preset rotation. These are requests, not verified fonts or layouts; results require visual checking."
+                    "description": "Art-direction intent. photo_focus requests a lower caption in upright humanist sans-serif over the full photo; editorial requests an upper headline in upright serif/Mincho; impact requests a large side headline in condensed bold sans-serif. Explicit composition overrides the default headline zone. In generation 0.8.0, a normal edit with both design and composition auto includes a versioned bank of nine conditional typography/placement relationships for the image model to compare against the actual photo, headline and atmosphere in the same call. Manual design or composition and revisions do not receive those competing candidates. No reference images or video wording are uploaded. This is not a rotation, measured pattern selection or proof of quality; actual fonts, layout and selected pattern remain unverified."
                   },
                   "visualIntent": {
                     "type": "string",
