@@ -1,6 +1,7 @@
 import {completeDesignInstructions} from '../../shared/complete-designs.mjs';
 import {normalizeGenerationFeedback} from '../../shared/generation-feedback.mjs';
 import {headlineInstructions} from './complete-editorial.mjs';
+import {completeReferencePatternInstructions} from './complete-reference-patterns.mjs';
 export function completePrompt(input){
  const feedback=input.feedback?normalizeGenerationFeedback(input.feedback):null;
  return [
@@ -10,6 +11,7 @@ export function completePrompt(input){
   'CHANGE ONLY: add the requested headline typography and its local readability treatment. Whole-photo crop or scale is allowed to fit the chosen layout. Do not isolate or reposition a person, repaint skin, replace the environment or redraw the scene. If the video context is unrelated to the photograph, retain the photograph rather than replace it.',
   headlineInstructions(input.headlineMode),
   completeDesignInstructions(input.design??'auto',input.composition??'auto'),
+  completeReferencePatternInstructions(input),
   'DESIRED ATMOSPHERE: visualIntent in the context data describes the requested feeling, not new facts or permission to alter the photograph. Translate that feeling into readable typography, scale, spacing and hierarchy. Honor explicit design or placement constraints when provided. Do not render the atmosphere notes as extra headline text. If no atmosphere is supplied, infer it from the video topic and brief.',
   'OPTIONAL VIDEO BRIEF: if brief is empty, use the video title as the only stated content context and the attached photograph as visual material. Choose a concise honest headline without inventing missing video details, activities, results or claims. Extra content notes are not required.',
   'Keep the visual energy consistent with the video: calm everyday/lifestyle content should feel calm, with restrained saturation. Preserve the photographic color balance. Do not substitute palette changes for the requested letterforms or headline placement. Do not add decorative objects merely because a place name occurs in the title.',
