@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Thumbnail AI MVP",
-    "version": "0.3.6",
+    "version": "0.3.7",
     "description": "Local SVG layout heuristics, opt-in paid complete PNG generation, and local PNG diagnostics. Complete PNG diagnostics are not a quality or CTR score."
   },
   "servers": [
@@ -299,10 +299,11 @@
                       "auto",
                       "photo_focus",
                       "editorial",
-                      "impact"
+                      "impact",
+                      "recompose"
                     ],
                     "default": "auto",
-                    "description": "Art-direction intent. photo_focus requests a lower caption in upright humanist sans-serif over the full photo; editorial requests an upper headline in upright serif/Mincho; impact requests a large side headline in condensed bold sans-serif. Explicit composition overrides the default headline zone. In generation 0.8.0, a normal edit with both design and composition auto includes a versioned bank of nine conditional typography/placement relationships for the image model to compare against the actual photo, headline and atmosphere in the same call. Manual design or composition and revisions do not receive those competing candidates. No reference images or video wording are uploaded. This is not a rotation, measured pattern selection or proof of quality; actual fonts, layout and selected pattern remain unverified."
+                    "description": "Art-direction intent. photo_focus requests a lower caption in upright humanist sans-serif over the full photo; editorial requests an upper headline in upright serif/Mincho; impact requests a large side headline in condensed bold sans-serif. Explicit composition overrides the default headline zone. In generation 0.8.0, a normal edit with both design and composition auto includes a versioned bank of nine conditional typography/placement relationships for the image model to compare against the actual photo, headline and atmosphere in the same call. Manual design or composition and revisions do not receive those competing candidates. No reference images or video wording are uploaded. This is not a rotation, measured pattern selection or proof of quality; actual fonts, layout and selected pattern remain unverified. In generation 0.9.0, opt-in recompose permits isolating, cropping, scaling and repositioning people, objects and scene portions already visible in the original photograph. Source scenery or a neutral graphic backdrop may be used; preserve identity, expression, pose, skin, clothing and object shapes. Do not invent people, objects, locations or activities or duplicate a person. Other designs retain whole-photo preservation. Automatic composition may use the same abstract reference relationships with conditions assessed against the recomposed arrangement. Revisions keep their requested design and do not receive competing reference layouts. This is an image-editing request, not pixel-identical segmentation, measured regions, layers or proof of quality."
                   },
                   "visualIntent": {
                     "type": "string",
@@ -632,10 +633,11 @@
                       "auto",
                       "photo_focus",
                       "editorial",
-                      "impact"
+                      "impact",
+                      "recompose"
                     ],
                     "default": "auto",
-                    "description": "Art-direction intent. photo_focus requests a lower caption in upright humanist sans-serif over the full photo; editorial requests an upper headline in upright serif/Mincho; impact requests a large side headline in condensed bold sans-serif. Explicit composition overrides the default headline zone. In generation 0.8.0, a normal edit with both design and composition auto includes a versioned bank of nine conditional typography/placement relationships for the image model to compare against the actual photo, headline and atmosphere in the same call. Manual design or composition and revisions do not receive those competing candidates. No reference images or video wording are uploaded. This is not a rotation, measured pattern selection or proof of quality; actual fonts, layout and selected pattern remain unverified."
+                    "description": "Art-direction intent. photo_focus requests a lower caption in upright humanist sans-serif over the full photo; editorial requests an upper headline in upright serif/Mincho; impact requests a large side headline in condensed bold sans-serif. Explicit composition overrides the default headline zone. In generation 0.8.0, a normal edit with both design and composition auto includes a versioned bank of nine conditional typography/placement relationships for the image model to compare against the actual photo, headline and atmosphere in the same call. Manual design or composition and revisions do not receive those competing candidates. No reference images or video wording are uploaded. This is not a rotation, measured pattern selection or proof of quality; actual fonts, layout and selected pattern remain unverified. In generation 0.9.0, opt-in recompose permits isolating, cropping, scaling and repositioning people, objects and scene portions already visible in the original photograph. Source scenery or a neutral graphic backdrop may be used; preserve identity, expression, pose, skin, clothing and object shapes. Do not invent people, objects, locations or activities or duplicate a person. Other designs retain whole-photo preservation. Automatic composition may use the same abstract reference relationships with conditions assessed against the recomposed arrangement. Revisions keep their requested design and do not receive competing reference layouts. This is an image-editing request, not pixel-identical segmentation, measured regions, layers or proof of quality."
                   },
                   "visualIntent": {
                     "type": "string",
@@ -2052,10 +2054,11 @@
                   "auto",
                   "photo_focus",
                   "editorial",
-                  "impact"
+                  "impact",
+                  "recompose"
                 ],
                 "default": "auto",
-                "description": "Art-direction intent. photo_focus requests a lower caption in upright humanist sans-serif over the full photo; editorial requests an upper headline in upright serif/Mincho; impact requests a large side headline in condensed bold sans-serif. Explicit composition overrides the default headline zone. Auto is passed unchanged to the image model, which chooses typography and layout from the photograph, available space and video context in the same image edit; it is not a preset rotation. These are requests, not verified fonts or layouts; results require visual checking."
+                "description": "Art-direction intent. photo_focus requests a lower caption in upright humanist sans-serif over the full photo; editorial requests an upper headline in upright serif/Mincho; impact requests a large side headline in condensed bold sans-serif. Explicit composition overrides the default headline zone. Auto is passed unchanged to the image model, which chooses typography and layout from the photograph, available space and video context in the same image edit; it is not a preset rotation. These are requests, not verified fonts or layouts; results require visual checking. In generation 0.9.0, opt-in recompose permits isolating, cropping, scaling and repositioning people, objects and scene portions already visible in the original photograph. Source scenery or a neutral graphic backdrop may be used; preserve identity, expression, pose, skin, clothing and object shapes. Do not invent people, objects, locations or activities or duplicate a person. Other designs retain whole-photo preservation. Automatic composition may use the same abstract reference relationships with conditions assessed against the recomposed arrangement. Revisions keep their requested design and do not receive competing reference layouts. This is an image-editing request, not pixel-identical segmentation, measured regions, layers or proof of quality."
               },
               "composition": {
                 "type": "string",

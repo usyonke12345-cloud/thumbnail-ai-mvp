@@ -31,7 +31,7 @@ test('reference-guided generation sends the exact photograph once, keeps cost se
   assert.equal(body.get('prompt'),completePrompt(validateComplete(input)));
   return new Response(JSON.stringify({data:[{b64_json:finished.toString('base64')}]}));
  }});
- const result=await generateComplete(input,{generate:provider});assert.equal(calls,1);assert.equal(result.generation_version,'ai-complete-0.8.0');
+ const result=await generateComplete(input,{generate:provider});assert.equal(calls,1);assert.equal(result.generation_version,COMPLETE_GENERATION_VERSION);
  assert.equal(result.selectedPattern,undefined);assert.equal(result.assessment,undefined);assert.equal(result.feedbackApplied,undefined);
  await assert.rejects(()=>generateComplete(input,{generate:provider}),error=>error.code==='GENERATION_LIMIT');assert.equal(calls,1);
 });
@@ -44,7 +44,7 @@ test('explicit design, fixed placement and revisions do not receive competing re
  assert.equal(completeReferencePatternInstructions({design:'editorial'}),'');
 });
 
-test('A freeze records the pattern file hash and binds the library to generation 0.8.0; a prior-version ID is rejected before dispatch',async()=>{
+test('A freeze records the pattern file hash and binds the library to the current generation; a prior-version ID is rejected before dispatch',async()=>{
  const {consent,...value}=input,fixed=await freezeValidationA(value),path='backend/generation/complete-reference-patterns.mjs';
  const file=fixed.service.files.find(x=>x.path===path);assert.ok(file);assert.equal(file.sha256,createHash('sha256').update(await readFile(new URL('../'+path,import.meta.url))).digest('hex'));
  assert.equal(fixed.service.generationVersion,COMPLETE_GENERATION_VERSION);assert.ok(fixed.servicePrompt.includes(REFERENCE_PATTERN_LIBRARY_VERSION));assert.doesNotMatch(fixed.chatgptPrompt,/REFERENCE PATTERN LIBRARY|lower_sentence/);

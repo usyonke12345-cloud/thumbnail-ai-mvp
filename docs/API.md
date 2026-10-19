@@ -1,8 +1,10 @@
 # v1 API / 生成と評価の境界
 
+2026-10-19：生成0.9.0、OpenAPI 0.3.7。designに任意のrecomposeを追加し、元写真の素材の切り抜き・再配置を指示できるようにする。既定はautoのまま。A固定・下書き・比較ZIP・解析も希望したdesignを保持する。共有enumと生成指示は相互レビュー対象。[方式と互換性](PHOTO-MATERIAL-RECOMPOSITION.md)。
+
 2026-10-19：生成0.8.0。通常生成でdesign/compositionが両方autoの場合に、9つの条件付き字体・配置候補を同じ画像編集の指示へ加える。元の実例画像・動画文言は送らない。手動design/compositionと修正生成では今回の候補を追加しない。新ファイルをA固定のコードハッシュへ含める。入力・応答・OpenAPIの形は維持、説明のみ更新。sharedの自動指示とA固定対象は相互レビュー対象。[詳細](REFERENCE-PATTERNS.md)。
 
-2026-10-15：無料の`POST /api/v1/validation-a/freeze`でA検証の写真・入力・実行コード・モデル設定を固定する。完成PNG生成には任意の`X-Validation-A-Case`ヘッダーを追加し、条件の不一致・評価メモ・修正元はプロバイダー呼び出し前に拒否。照合した成功応答のみ任意の`validationA`を返す。ヘッダーなしの既存API・Candidate/Assessment・比較JSONは維持する。OpenAPI 0.3.6、人工fixtureはfixtures/validation-a.json。静的配信のvalidation-a.jsと任意の下書きvalidationAを追加。共同レビュー対象。[形式・照合・限界](VALIDATION-A-FREEZE.md)。
+2026-10-15：無料の`POST /api/v1/validation-a/freeze`でA検証の写真・入力・実行コード・モデル設定を固定する。完成PNG生成には任意の`X-Validation-A-Case`ヘッダーを追加し、条件の不一致・評価メモ・修正元はプロバイダー呼び出し前に拒否。照合した成功応答のみ任意の`validationA`を返す。ヘッダーなしの既存API・Candidate/Assessment・比較JSONは維持する。OpenAPI 0.3.7、人工fixtureはfixtures/validation-a.json。静的配信のvalidation-a.jsと任意の下書きvalidationAを追加。共同レビュー対象。[形式・照合・限界](VALIDATION-A-FREEZE.md)。
 
 2026-10-15：A（最初の1枚）とB（評価による好みへの適応）を主な仮説として検証する。評価メモはgroupId全体のSHA-256で決めたdevだけを使い、約3割のholdoutを除外する。新しい生成要求もholdoutを拒否。解析dataset1.7.0にsplit・feedbackUsed・feedbackUsageKnown・過去のholdout利用の監査を追加。旧画像と記録は変えない。比較手順はVALIDATION-PLAN.md。
 
@@ -143,11 +145,11 @@ Day 3: SVG内の文字は同梱フォントから生成したpathです。PNGは
 - headlineMode: manual / auto。APIで省略するとmanual（既存の呼び出しとの互換）。画面の初期値はauto。
 - manualではheadline（1〜80文字、改行可）が必須。指定した文言を描画するよう指示する。
 - autoではheadlineを省略・null・空文字のいずれかにする。動画タイトルと任意の内容補足から短い見出しを画像生成中に選ぶ。実際の文言はレスポンスで取得せず、画像で確認する。文字起こしや生成前の文言プレビューは行わない。
-- design: auto / photo_focus / editorial / impact。省略時auto。写真全面＋下部のサンセリフ、上部のセリフ／明朝、横の細長い太字見出し、の方向を指定する。特定のdesignを固定すると同じレシピを繰り返す。autoはそのままAPIへ送り、写真の主役・余白・動画内容から画像モデルが字体・大きさ・配置を判断する。3つの手動レシピだけに限定せず、履歴による順番切り替えは行わない。同じ写真・内容では似た構成になる場合もある。保存するdesign=autoは希望で、モデルが使った実字体・位置・判断理由ではない。字体と座標は生成への希望で、実測情報ではない。[定義と確認手順](COMPLETE-DESIGN-RECIPES.md)。
+- design: auto / photo_focus / editorial / impact / recompose。recomposeは元写真の素材から構成を作り直す実験的な方式。省略時auto。写真全面＋下部のサンセリフ、上部のセリフ／明朝、横の細長い太字見出し、の方向を指定する。特定のdesignを固定すると同じレシピを繰り返す。autoはそのままAPIへ送り、写真の主役・余白・動画内容から画像モデルが字体・大きさ・配置を判断する。3つの手動レシピだけに限定せず、履歴による順番切り替えは行わない。同じ写真・内容では似た構成になる場合もある。保存するdesign=autoは希望で、モデルが使った実字体・位置・判断理由ではない。字体と座標は生成への希望で、実測情報ではない。[定義と確認手順](COMPLETE-DESIGN-RECIPES.md)。
 - visualIntent: 任意の文字列、300 Unicodeコードポイント以内。省略・空欄なら動画内容から推測する。雰囲気を希望として伝え、構成・字体・大きさは同じ画像編集APIでAIが選ぶ。明示したdesign/compositionは優先する。イメージを指定した比較は別の組IDに固定し、補足ありでは書き出し1.4.0・分析dataset1.2.0、補足なしでは書き出し1.5.0・分析dataset1.3.0に保存する。空欄では旧組IDと形式を維持する。実フォント・文字座標・選択理由は未取得。[検証しながら増やす手順](STYLE-PATTERN-GROWTH.md)。
-- composition: auto / text_left / text_right / text_top。省略時auto。明示した配置はデザインの既定の見出し領域を置き換え、字体は維持する。既定配置と指定配置を同時に送らない。写真の保持を優先し、人物の切り抜き移動は許さず、写真全体の切り取りと拡縮だけを指示する。
+- composition: auto / text_left / text_right / text_top。省略時auto。明示した配置はデザインの既定の見出し領域を置き換え、字体は維持する。既定配置と指定配置を同時に送らない。recomposeでは人物・素材の切り抜き移動を許す。ほかのdesignでは写真全体の切り取りと拡縮だけを指示する。
 - revision: 任意の修正指示。instruction（1〜300文字）、parentImageId（1〜200文字）、imageDataUrl（1536×864 PNG）が必須。PNG本体は16MiB、data URLは22,369,646文字まで。Base64の文字数だけでなく、復号後のバイト数も確認する。元写真と前の完成PNGを1回の画像編集へ送る。
-- 修正成功時だけ、応答にrevision: {parentImageId, parentImageSha256}を追加する。SHA-256は受け取った前のPNG本体からサーバーが計算する。APIは保存庫の元画像を参照しないため、この応答だけで修正元との照合完了とは扱わない。通常生成ではrevisionを返さない。生成版はai-complete-0.8.0。
+- 修正成功時だけ、応答にrevision: {parentImageId, parentImageSha256}を追加する。SHA-256は受け取った前のPNG本体からサーバーが計算する。APIは保存庫の元画像を参照しないため、この応答だけで修正元との照合完了とは扱わない。通常生成ではrevisionを返さない。生成版はai-complete-0.9.0。
 
 見出しと構図は同じ画像編集API呼び出しで作る。見出し用の追加リクエストは行わず、既存と同じ1回1枚。料金は実際の利用履歴で確認する。構図の違い・人物保持・適切な見出しは新しい指示でも実画像の確認が必要。
 

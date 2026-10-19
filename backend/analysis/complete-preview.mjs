@@ -2,7 +2,7 @@ import {feedbackText} from '../../frontend/feedback-memory.js';
 import {subjectRegionsText} from '../../frontend/subject-regions.js';
 const escape=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const labels={text:'文字',subject:'人物・素材',composition:'構図',other:'その他'};
-const designLabels={auto:'写真と内容から選択',photo_focus:'写真を主役にする',editorial:'落ち着いた誌面風',impact:'文字を大きく見せる'};
+const designLabels={auto:'写真と内容から選択',recompose:'写真の素材から再構成（実験）',photo_focus:'写真を主役にする',editorial:'落ち着いた誌面風',impact:'文字を大きく見せる'};
 const pendingLabels={unknown_input:'入力条件が不明',unavailable_image:'解析できない画像あり',need_multiple_images:'完成画像が1枚のため品質確認のみ',review_missing:'人の記録待ち',stale_review:'案追加後の再確認待ち',reviewer_missing:'評価者の記録待ち'};
 
 // Only receives the normalized dataset produced by createCompleteReviewAnalysis.

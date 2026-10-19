@@ -60,6 +60,18 @@ const placements=Object.freeze({
  text_top:{label:'見出しを上・主役を大きく',prompt:'Create a top-headline composition: place the headline across the upper space while keeping the existing photographic subject visible below.'}
 });
 export function completeDesignInstructions(design='auto',composition='auto'){
+ if(design==='recompose'){
+  if(composition!=='auto'&&!placements[composition])throw new Error('Unknown complete design or composition.');
+  const zone={text_left:'Put the headline on the left and arrange the source subject on the right.',text_right:'Put the headline on the right and arrange the source subject on the left.',text_top:'Put the headline above the source subject.'}[composition];
+  return [
+   'MATERIAL RECOMPOSITION: use the attached photograph as the sole photographic source. Build a new thumbnail composition from its existing people, objects and scene portions rather than merely placing text over the full photograph.',
+   'Internally compare two or three arrangements: a source-person cutout with a scene crop, an enlarged source detail beside the person, or a source-person cutout against a restrained neutral graphic background. Choose only an arrangement supported by useful visible source material; do not force every element into a collage. Show each person once. If the source has no useful separate detail, use its person and scene rather than inventing a prop.',
+   'LAYOUT: '+(zone?zone+' This explicit placement replaces other headline zones; do not add another caption.':'Choose subject scale, placement and one headline zone together from the video meaning and desired atmosphere. Do not always use the same side-headline layout.'),
+   'TYPOGRAPHY: choose one readable typeset Gothic/sans-serif, serif/Mincho or restrained personal lettering family that suits the actual message and atmosphere. Give the supported reason to watch a clear hierarchy. Do not default to huge white-and-yellow Gothic, aggressive brush texture, sticker outlines or unnecessary arrows.',
+   'PHOTOGRAPH: cut out, crop, scale and reposition only material already visible in the original photograph. Preserve each person\'s identity, expression, pose, hair, natural skin and clothing, and the shapes of source objects. Keep edges and lighting coherent. Use source scenery or a neutral graphic backdrop, never an invented location, activity, replacement person or before/after event. Keep faces and important material clear of the words.',
+   'Output one coherent finished thumbnail, not a contact sheet or multiple alternatives. These are image-editing directions, not a guarantee of pixel-identical cutouts or a report of actual selected regions.'
+  ].join('\n');
+ }
  const recipe=COMPLETE_DESIGNS[design];
  if(design!=='auto'&&!recipe||composition!=='auto'&&!placements[composition])throw new Error('Unknown complete design or composition.');
  const override=placements[composition];
@@ -82,6 +94,7 @@ export function completeDesignInstructions(design='auto',composition='auto'){
  ].join('\n');
 }
 export function completeDesignSummary(design='auto',composition='auto'){
+ if(design==='recompose')return `写真内の人物・小物・背景の一部を素材に、切り抜き・拡縮・再配置する構成をAIが考えます。${placements[composition]?`配置の希望：${placements[composition].label}。`:'配置と字体はAIに任せています。'}AIによる画像編集なので描き直しが起きる場合があります。切り抜きの画素保持は保証されず、完成画像で人物・素材を確認します。`;
  const recipe=COMPLETE_DESIGNS[design],override=placements[composition];
  return recipe?`${recipe.fontLabel}。配置の希望：${override?.label??recipe.layoutLabel}。${override?'構図を固定しています。配置も変える場合は「写真と内容に合わせてAIが決める」を選んでください。':''}`:
   `写真の主役・文字を置ける余白と動画の内容から、AIが字体・文字サイズ・配置を決めます。${override?'構図を固定しているため、見出しの位置はこの指定を優先します。':'配置もAIに任せています。'}実際の字体・位置・選択理由は未取得で、完成画像で確認します。`;

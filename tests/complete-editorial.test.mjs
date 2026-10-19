@@ -20,7 +20,7 @@ test('new editorial direction reaches one unchanged photo edit and its version s
   const prompt=body.get('prompt');assert.match(prompt,/HEADLINE EDITING/);assert.match(prompt,/one reason to watch/);assert.match(prompt,/language of the video title/);assert.match(prompt,/TYPESETTING BASELINE/);assert.match(prompt,/REFERENCE PATTERN LIBRARY/);assert.match(prompt,/same people, exact facial features/);assert.match(prompt,/Never render these example headlines/);assert.ok(prompt.includes(JSON.stringify(input.title)));assert.ok(prompt.length<30000);
   return new Response(JSON.stringify({data:[{b64_json:finished.toString('base64')}]}));
  }});
- const result=await generateComplete(input,{generate:provider});assert.equal(result.generation_version,'ai-complete-0.8.0');assert.equal(calls,1);
+ const result=await generateComplete(input,{generate:provider});assert.equal(result.generation_version,COMPLETE_GENERATION_VERSION);assert.equal(calls,1);
  await assert.rejects(()=>generateComplete(input,{generate:provider}),e=>e.code==='GENERATION_LIMIT');assert.equal(calls,1);
  const entry=await createEntry(input,result),bundle=comparisonBundle({groups:[entry.group],images:[entry.image],reviews:[]},entry.group.id),analysis=createCompleteReviewAnalysis();await analysis.consume(bundle);const data=analysis.finish();
  assert.equal(data.images[0].result.generation_version,COMPLETE_GENERATION_VERSION);assert.equal(data.images[0].feedbackUsed,false);assert.equal(data.images[0].feedbackUsageKnown,true);assert.equal(data.assessment,null);assert.equal(data.reviews.length,0);assert.equal(data.progress.completedHumanComparisons,0);assert.equal(data.groups[0].input.headline,null);
