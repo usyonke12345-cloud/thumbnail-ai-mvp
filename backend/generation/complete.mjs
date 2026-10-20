@@ -5,10 +5,13 @@ import {isCompletePngDataUrl} from '../../shared/complete-images.mjs';
 import {createHash} from 'node:crypto';
 import {normalizeGenerationFeedback} from '../../shared/generation-feedback.mjs';
 import {splitFromDigest} from '../../shared/evaluation-split.mjs';
-export const COMPLETE_GENERATION_VERSION='ai-complete-0.9.1';
+import {prepareCompleteReferences} from '../references/selection.mjs';
+import {referenceContextText} from '../../shared/thumbnail-references.mjs';
+export const COMPLETE_GENERATION_VERSION='ai-complete-0.10.0';
 export function validateComplete(value){
- if(!value||typeof value!=='object'||Array.isArray(value)||Object.keys(value).some(k=>!['title','brief','headline','headlineMode','design','visualIntent','imageDataUrl','consent','composition','revision','feedback'].includes(k)))throw new ApiError(400,'INVALID_INPUT','完成画像の入力形式が不正です。');
+ if(!value||typeof value!=='object'||Array.isArray(value)||Object.keys(value).some(k=>!['title','brief','headline','headlineMode','design','visualIntent','imageDataUrl','consent','composition','revision','feedback','referenceMode'].includes(k)))throw new ApiError(400,'INVALID_INPUT','完成画像の入力形式が不正です。');
  if(value.consent!==true)throw new ApiError(400,'CONSENT_REQUIRED','写真のAPI送信と有料生成を確認してください。');
+ if(value.referenceMode!==undefined&&!['off','auto'].includes(value.referenceMode))throw new ApiError(400,'INVALID_INPUT','参考資料の使い方を確認してください。');
  const headlineMode=value.headlineMode??'manual',design=value.design??'auto';
  if(!['auto','manual'].includes(headlineMode)||!['auto','photo_focus','editorial','impact','recompose'].includes(design))throw new ApiError(400,'INVALID_INPUT','見出しとデザインの指定を確認してください。');
  for(const [key,max]of [['title',120],...(headlineMode==='manual'?[['headline',80]]:[])])if(typeof value[key]!=='string'||!value[key].trim()||[...value[key]].length>max||/[\u0000-\u0009\u000b-\u001f\u007f]/u.test(value[key]))throw new ApiError(400,'INVALID_INPUT','動画タイトルと、手入力の場合の見出しを確認してください。');
@@ -25,9 +28,10 @@ export function validateComplete(value){
  let feedback;try{if(value.feedback!==undefined){feedback=normalizeGenerationFeedback(value.feedback);if(feedback.records.some(record=>splitFromDigest(createHash('sha256').update(record.groupId).digest())==='holdout'))throw new Error('holdoutの評価は生成のメモへ使えません。devの記録を選んでください。');}}catch(error){throw new ApiError(400,'INVALID_FEEDBACK',error.message);}
  return {...value,brief,...(feedback?{feedback}:{}),...(value.visualIntent!==undefined?{visualIntent}:{}),headline:headlineMode==='auto'?null:value.headline,headlineMode,design,composition,complete:true};
 }
-export async function generateComplete(value,{generate=generateBackground}={}){
- const input=validateComplete(value),revision=input.revision?{parentImageId:input.revision.parentImageId,parentImageSha256:createHash('sha256').update(Buffer.from(input.revision.imageDataUrl.slice(22),'base64')).digest('hex')}:null;
+export async function generateComplete(value,{generate=generateBackground,references,expectedReferenceContext}={}){
+ const input=await prepareCompleteReferences(validateComplete(value),references),revision=input.revision?{parentImageId:input.revision.parentImageId,parentImageSha256:createHash('sha256').update(Buffer.from(input.revision.imageDataUrl.slice(22),'base64')).digest('hex')}:null;
+ if(expectedReferenceContext&&JSON.stringify(input._references?.context)!==JSON.stringify(expectedReferenceContext))throw new ApiError(409,'VALIDATION_A_MISMATCH','生成直前に参考資料が変わりました。生成せずに停止しました。入力を固定し直してください。');
  const feedbackApplied=input.feedback?normalizeGenerationFeedback(input.feedback):null;
- return {apiVersion:'1',mode:'ai_complete',imageDataUrl:await generate(input),width:1536,height:864,generation_version:COMPLETE_GENERATION_VERSION,...(feedbackApplied?{feedbackApplied}:{}),...(revision?{revision}:{}),limitations:['画像内の文字と人物の保持は目視確認が必要です。','画像内容・文字位置・CTRは未採点です。',...(feedbackApplied?['保存された評価メモを生成指示へ加えました。モデルの重みは更新せず、反映や品質向上は目視確認が必要です。']:[]),...(input.headlineMode==='auto'?['見出しは画像生成時にAIが選びます。実際の文言は未取得のため、画像を見て確認してください。']:[]),...(['auto','recompose'].includes(input.design)?['デザインは写真と動画内容からAIが選び、指定した構図がある場合は優先します。実際の字体・位置・選択理由は取得していません。']:[]),...(input.design==='recompose'?['元写真の人物・素材の切り抜き・再配置を指示しました。AIによる描き直しが起きる場合があり、画素が同一の切り抜きは保証しません。実際の切り抜き範囲やレイヤーは取得していません。']:[])]};
+ return {apiVersion:'1',mode:'ai_complete',imageDataUrl:await generate(input),width:1536,height:864,generation_version:COMPLETE_GENERATION_VERSION,...(input._references?{referenceContext:input._references.context}:{}),...(feedbackApplied?{feedbackApplied}:{}),...(revision?{revision}:{}),limitations:[...(input._references?[referenceContextText(input._references.context)]:[]),'画像内の文字と人物の保持は目視確認が必要です。','画像内容・文字位置・CTRは未採点です。',...(feedbackApplied?['保存された評価メモを生成指示へ加えました。モデルの重みは更新せず、反映や品質向上は目視確認が必要です。']:[]),...(input.headlineMode==='auto'?['見出しは画像生成時にAIが選びます。実際の文言は未取得のため、画像を見て確認してください。']:[]),...(['auto','recompose'].includes(input.design)?['デザインは写真と動画内容からAIが選び、指定した構図がある場合は優先します。実際の字体・位置・選択理由は取得していません。']:[]),...(input.design==='recompose'?['元写真の人物・素材の切り抜き・再配置を指示しました。AIによる描き直しが起きる場合があり、画素が同一の切り抜きは保証しません。実際の切り抜き範囲やレイヤーは取得していません。']:[])]};
 }
 

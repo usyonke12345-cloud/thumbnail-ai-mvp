@@ -1,0 +1,9 @@
+import {referenceContextText} from '../shared/thumbnail-references.mjs';
+export function createEditorReferences({root,capture,modeControl,document=globalThis.document,fetchImpl=(...args)=>fetch(...args)}){
+ const el=(tag,text)=>{const node=document.createElement(tag);node.textContent=text??'';return node;},status=el('p'),button=el('button','今回の参考候補を確認（無料）'),list=el('div'),link=el('a','実例ライブラリを開く');link.href='/reference-library';button.type='button';status.setAttribute('role','status');
+ root.replaceChildren(status,button,list,link);
+ const ready=(async()=>{try{const response=await fetchImpl('/api/v1/reference-library');if(!response.ok)throw new Error();const data=await response.json();status.textContent=`条件確認済み ${data.metadataQualified}件 / 画像を見た観察記録 ${data.visuallyObserved}件（目標100件）。分析済みの例を最大5件選びます。写真への適合と実際の採用は生成後に確認します。`;}catch{status.textContent='参考台帳を確認できません。ライブラリを開いて確認してください。';}})();
+ button.addEventListener('click',async()=>{if(modeControl.value==='off'){status.textContent='参考ライブラリはオフです。';list.replaceChildren();return;}button.disabled=true;try{const response=await fetchImpl('/api/v1/reference-library/preview',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(capture())}),data=await response.json();if(!response.ok)throw new Error(data.error?.message??'参考候補を確認できません。');status.textContent=referenceContextText(data.context).replace('生成へ送信','生成時に送る候補として準備')+' '+data.note;list.replaceChildren(...data.candidates.map(row=>{const item=el('p'),a=el('a','出典を確認');a.href=row.url;a.target='_blank';a.rel='noreferrer';item.append(a,el('span',' ：'+row.observation.typography+' / '+row.observation.layout));return item;}));}catch(error){status.textContent=error.message;}finally{button.disabled=false;}});
+ modeControl.addEventListener('change',()=>{list.replaceChildren();status.textContent=modeControl.value==='off'?'参考ライブラリはオフです。':'参考候補は現在の入力から生成時に選び直します。確認ボタンでは生成もOpenAI送信も行いません。';});
+ return {ready};
+}
