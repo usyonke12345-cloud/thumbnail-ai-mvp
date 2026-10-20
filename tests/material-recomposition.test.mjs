@@ -79,11 +79,11 @@ test('A snapshot binds recomposition in both prompts and rejects a changed desig
 });
 
 test('all three OpenAPI design enums allow recomposition while existing assessment and image contracts remain separate',async()=>{
- const schema=JSON.parse(await readFile(new URL('../shared/openapi.json',import.meta.url),'utf8'));let count=0;function visit(value){if(!value||typeof value!=='object')return;if(value.properties?.design?.enum?.includes('photo_focus')){assert.ok(value.properties.design.enum.includes('recompose'));assert.match(value.properties.design.description,/not pixel-identical segmentation/);count++;}for(const child of Object.values(value))visit(child);}visit(schema);assert.equal(count,3);assert.equal(schema.info.version,'0.3.7');
+ const schema=JSON.parse(await readFile(new URL('../shared/openapi.json',import.meta.url),'utf8'));let count=0;function visit(value){if(!value||typeof value!=='object')return;if(value.properties?.design?.description?.includes('not pixel-identical segmentation')){assert.ok(value.properties.design.enum.includes('recompose'));assert.match(value.properties.design.description,/not pixel-identical segmentation/);count++;}for(const child of Object.values(value))visit(child);}visit(schema);assert.equal(count,3);assert.equal(schema.info.version,'0.3.8');
 });
 
 test('a 0.9.0 fixed case cannot silently use strengthened 0.9.1 edit instructions; analysis keeps the historical memory status',async()=>{
- const {consent,...value}=input,fixed=await freezeValidationA(value);assert.equal(fixed.service.generationVersion,'ai-complete-0.9.1');assert.match(fixed.chatgptPrompt,/少なくとも1つを切り抜き/);assert.match(fixed.chatgptPrompt,/文字追加だけでは/);
+ const {consent,...value}=input,fixed=await freezeValidationA(value);assert.equal(fixed.service.generationVersion,COMPLETE_GENERATION_VERSION);assert.match(fixed.chatgptPrompt,/少なくとも1つを切り抜き/);assert.match(fixed.chatgptPrompt,/文字追加だけでは/);
  const prior={...fixed.service,generationVersion:'ai-complete-0.9.0'},oldCaseId='validation-a-'+createHash('sha256').update(JSON.stringify({requestSha256:fixed.requestSha256,service:prior,servicePromptSha256:fixed.servicePromptSha256})).digest('hex');
  const {checkValidationARequest}=await import('../backend/validation-a.mjs');await assert.rejects(()=>checkValidationARequest(input,oldCaseId),error=>error.code==='VALIDATION_A_MISMATCH');
  for(const version of ['ai-complete-0.9.0','ai-complete-0.9.1'])assert.deepEqual(feedbackUsage({result:{generation_version:version}}),{feedbackUsed:false,feedbackUsageKnown:true});assert.equal(feedbackUsage({result:{generation_version:'ai-complete-0.9.2'}}).feedbackUsageKnown,false);

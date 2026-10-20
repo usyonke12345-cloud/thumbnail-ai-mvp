@@ -184,3 +184,8 @@ OpenAPIのCompleteDiagnosticRequest/Response、人工例docs/fixtures/complete-d
 ## 生成0.7.0：見出しと構成の編集指示
 
 入力・応答スキーマ、モデル、品質、サイズ、1回1枚は維持する。autoの見出しはタイトルと任意briefに根拠のある見どころを一つ残し、タイトルの言語を基本にする。autoの構成では定番の字体・中心の句の強弱・写真内の空き領域を具体的に指示する。実文言・字体・位置は未抽出、完成PNGは未採点で、改善の実画像確認は未完。[詳細](THUMBNAIL-EDITORIAL-GUIDE.md)。sharedのauto指示とOpenAPIの説明は相互レビュー対象。
+# 参考サムネイルの追加（OpenAPI 0.3.8 / 生成0.10.0）
+
+完成PNG生成とA入力固定に任意の referenceMode（auto / off）を追加しました。API省略時は従来動作、エディター既定はautoです。最大5件の観察記録と、明示した許諾根拠のある参考画像だけを同じ画像編集へ加えます。応答のreferenceContextは送信候補で、モデルが採用した型や品質評価ではありません。Candidate / Assessment・採点・重みは変更しません。
+
+無料のローカルAPI：GET /api/v1/reference-library、GET /api/v1/reference-library/thumbnail/{videoId}、POST /api/v1/reference-library/collect（空オブジェクト）、POST /api/v1/reference-library/observe、POST /api/v1/reference-library/preview。詳細・制限・共有形式・相互レビュー範囲は [参考ライブラリ仕様](RECENT-THUMBNAIL-LIBRARY.md) と shared/openapi.json を参照してください。収集と候補確認ではOpenAI APIを呼びません。

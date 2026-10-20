@@ -1,0 +1,9 @@
+<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>最近の参考サムネ台帳</title><link rel="stylesheet" href="/style.css"><script type="module" src="/reference-library.js"></script></head><body><main>
+<h1>最近の実例から、<br>構成の選択肢を増やす。</h1><p><a href="/editor">写真エディターへ</a> · <a href="/references">自分の参考メモへ</a></p>
+<aside>直近6か月・100万再生超・4分以上の動画を対象に、100件を目指します。1チャンネル最大5件。公開日・再生数の確認と、画像を見た分析は別々に数えます。再生数は収集の条件で、サムネの効果を保証する数字ではありません。</aside>
+<p id="library-summary" role="status">台帳を確認しています。</p><p id="library-status" role="status" aria-live="polite"></p>
+<button id="collect-library" type="button">候補を収集する（YouTube API・画像生成なし）</button><button id="refresh-library" type="button">台帳を再表示する</button>
+<p>キーはPC内の.envだけで扱い、この画面へ表示・入力しません。収集で画像生成は行いません。サムネを開くとYouTubeの画像を取得し、このPCの非公開フォルダに一時保存します。30日を超えた取得データは次の読み込みで削除し、再確認が必要になります。</p>
+<h2>観察と生成への接続</h2><p>画像を見て記録した字体・構成・適用条件だけを、生成時の参考候補にできます。実画像を画像生成APIへ送るのは、利用確認の根拠を記録した例だけです。未確認の例は、観察をまとめた文章だけを使います。モデルの追加学習や好みの評価とは別の記録です。</p>
+<section id="library-records" aria-label="参考候補"></section>
+</main></body></html>

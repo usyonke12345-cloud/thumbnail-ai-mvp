@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Thumbnail AI MVP",
-    "version": "0.3.7",
+    "version": "0.3.8",
     "description": "Local SVG layout heuristics, opt-in paid complete PNG generation, and local PNG diagnostics. Complete PNG diagnostics are not a quality or CTR score."
   },
   "servers": [
@@ -361,6 +361,14 @@
                   "feedback": {
                     "$ref": "#/components/schemas/GenerationFeedback",
                     "description": "Optional. User-selected local review snapshot; reasons are sent as historical data, never as current instructions or extra headline text. No old photo bytes are included. Current constraints take priority."
+                  },
+                  "referenceMode": {
+                    "type": "string",
+                    "enum": [
+                      "auto",
+                      "off"
+                    ],
+                    "description": "Optional verified reference library, omitted/off retains legacy behavior; editor defaults auto. Code shortlists up to 5 visually recorded examples by text tags and material, not source-photo analysis. Image model checks feasibility in the same edit. Raw reference images only with recorded permission; otherwise generic observations only. Revisions/manual art direction skip retrieval. No model training or measured selection."
                   }
                 },
                 "allOf": [
@@ -496,8 +504,14 @@
                         },
                         "feedbackUsed": {
                           "const": false
+                        },
+                        "referenceContext": {
+                          "$ref": "#/components/schemas/ThumbnailReferenceContext"
                         }
                       }
+                    },
+                    "referenceContext": {
+                      "$ref": "#/components/schemas/ThumbnailReferenceContext"
                     }
                   }
                 }
@@ -659,6 +673,14 @@
                     ],
                     "default": "auto",
                     "description": "Optional composition intent for the photo edit. Omitted means photo-aware automatic composition. Preservation and exact layout still require visual checking."
+                  },
+                  "referenceMode": {
+                    "type": "string",
+                    "enum": [
+                      "auto",
+                      "off"
+                    ],
+                    "description": "Optional verified reference library, omitted/off retains legacy behavior; editor defaults auto. Code shortlists up to 5 visually recorded examples by text tags and material, not source-photo analysis. Image model checks feasibility in the same edit. Raw reference images only with recorded permission; otherwise generic observations only. Revisions/manual art direction skip retrieval. No model training or measured selection."
                   }
                 },
                 "allOf": [
@@ -713,6 +735,329 @@
           },
           "400": {
             "description": "INVALID_VALIDATION_A または既存の入力検証エラー"
+          }
+        }
+      }
+    },
+    "/api/v1/reference-library": {
+      "get": {
+        "operationId": "listThumbnailReferences",
+        "description": "Private local catalog. Metadata and cached images expire after 30 days; expiration deletes them on next access. Refresh uses YouTube Data API, never OpenAI. Language/region are search preferences, not verified Japanese-language labels.",
+        "responses": {
+          "200": {
+            "description": "Catalog with separate qualified/visually observed/permission counts",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "version",
+                    "target",
+                    "metadataQualified",
+                    "visuallyObserved",
+                    "imageUploadAllowed",
+                    "records"
+                  ],
+                  "properties": {
+                    "version": {
+                      "const": "thumbnail-reference-catalog-1.0.0"
+                    },
+                    "target": {
+                      "const": 100
+                    },
+                    "metadataQualified": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "visuallyObserved": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "imageUploadAllowed": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "records": {
+                      "type": "array",
+                      "maxItems": 500,
+                      "items": {
+                        "type": "object"
+                      }
+                    },
+                    "youtubeKeyConfigured": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/reference-library/collect": {
+      "post": {
+        "operationId": "collectThumbnailReferences",
+        "description": "Bounded metadata search: rolling six calendar months, strictly more than 1,000,000 views, duration >=240s, nonlive, maximum 5/channel, target 100. Refreshes existing metadata. Up to 24 searches per run; results need not be a global top 100. No image generation, secret returned or threshold relaxation.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [],
+                "properties": {}
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "version",
+                    "target",
+                    "metadataQualified",
+                    "visuallyObserved",
+                    "imageUploadAllowed",
+                    "records"
+                  ],
+                  "properties": {
+                    "version": {
+                      "const": "thumbnail-reference-catalog-1.0.0"
+                    },
+                    "target": {
+                      "const": 100
+                    },
+                    "metadataQualified": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "visuallyObserved": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "imageUploadAllowed": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "records": {
+                      "type": "array",
+                      "maxItems": 500,
+                      "items": {
+                        "type": "object"
+                      }
+                    },
+                    "youtubeKeyConfigured": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "409": {
+            "description": "Changed image/catalog or collection in progress"
+          },
+          "502": {
+            "description": "Upstream response or network failure"
+          },
+          "503": {
+            "description": "YouTube key missing"
+          }
+        }
+      }
+    },
+    "/api/v1/reference-library/observe": {
+      "post": {
+        "operationId": "recordThumbnailObservation",
+        "description": "Store visual observations and explicit image-upload permission against cached hash.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReferenceObservationInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "409": {
+            "description": "Changed image/catalog or collection in progress"
+          },
+          "502": {
+            "description": "Upstream response or network failure"
+          },
+          "503": {
+            "description": "YouTube key missing"
+          }
+        }
+      }
+    },
+    "/api/v1/reference-library/preview": {
+      "post": {
+        "operationId": "previewThumbnailReferences",
+        "description": "Free text-tag shortlist; no source photograph supplied, generation, or OpenAI request.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "title"
+                ],
+                "properties": {
+                  "title": {
+                    "type": "string",
+                    "maxLength": 120
+                  },
+                  "brief": {
+                    "type": "string",
+                    "maxLength": 1000
+                  },
+                  "visualIntent": {
+                    "type": "string",
+                    "maxLength": 300
+                  },
+                  "design": {
+                    "enum": [
+                      "auto",
+                      "recompose",
+                      "photo_focus",
+                      "editorial",
+                      "impact"
+                    ]
+                  },
+                  "composition": {
+                    "enum": [
+                      "auto",
+                      "text_left",
+                      "text_right",
+                      "text_top"
+                    ]
+                  },
+                  "revision": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "context",
+                    "candidates",
+                    "note"
+                  ],
+                  "properties": {
+                    "context": {
+                      "$ref": "#/components/schemas/ThumbnailReferenceContext"
+                    },
+                    "candidates": {
+                      "type": "array",
+                      "maxItems": 5,
+                      "items": {
+                        "type": "object"
+                      }
+                    },
+                    "note": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "409": {
+            "description": "Changed image/catalog or collection in progress"
+          },
+          "502": {
+            "description": "Upstream response or network failure"
+          },
+          "503": {
+            "description": "YouTube key missing"
+          }
+        }
+      }
+    },
+    "/api/v1/reference-library/thumbnail/{videoId}": {
+      "get": {
+        "operationId": "cacheReferenceThumbnail",
+        "description": "Fetch allowlisted YouTube thumbnail, validate PNG/JPEG header and dimensions, cache privately by SHA-256, max 2MiB. No redirects, video downloads or OpenAI calls. Changed hashes invalidate observations and permission.",
+        "parameters": [
+          {
+            "name": "videoId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{11}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Image bytes; X-Thumbnail-SHA256 identifies this exact cached image",
+            "headers": {
+              "X-Thumbnail-SHA256": {
+                "schema": {
+                  "type": "string",
+                  "pattern": "^[a-f0-9]{64}$"
+                }
+              }
+            },
+            "content": {
+              "image/jpeg": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "image/png": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Missing or ineligible/stale metadata"
           }
         }
       }
@@ -2070,6 +2415,14 @@
                 ],
                 "default": "auto",
                 "description": "Optional composition intent for the photo edit. Omitted means photo-aware automatic composition. Preservation and exact layout still require visual checking."
+              },
+              "referenceMode": {
+                "type": "string",
+                "enum": [
+                  "auto",
+                  "off"
+                ],
+                "description": "Optional verified reference library, omitted/off retains legacy behavior; editor defaults auto. Code shortlists up to 5 visually recorded examples by text tags and material, not source-photo analysis. Image model checks feasibility in the same edit. Raw reference images only with recorded permission; otherwise generic observations only. Revisions/manual art direction skip retrieval. No model training or measured selection."
               }
             }
           },
@@ -2179,6 +2532,9 @@
               },
               "nodeVersion": {
                 "type": "string"
+              },
+              "referenceContext": {
+                "$ref": "#/components/schemas/ThumbnailReferenceContext"
               }
             }
           },
@@ -2193,8 +2549,228 @@
           "chatgptPrompt": {
             "type": "string",
             "maxLength": 5000
+          },
+          "referenceAssets": {
+            "type": "array",
+            "maxItems": 5,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "path",
+                "sha256",
+                "mimeType",
+                "bytes",
+                "dataUrl"
+              ],
+              "properties": {
+                "path": {
+                  "type": "string",
+                  "pattern": "^references/[a-f0-9]{64}\\.(jpg|png)$"
+                },
+                "sha256": {
+                  "type": "string",
+                  "pattern": "^[a-f0-9]{64}$"
+                },
+                "mimeType": {
+                  "enum": [
+                    "image/jpeg",
+                    "image/png"
+                  ]
+                },
+                "bytes": {
+                  "type": "integer",
+                  "minimum": 24,
+                  "maximum": 2097152
+                },
+                "dataUrl": {
+                  "type": "string",
+                  "maxLength": 2796228,
+                  "pattern": "^data:image/(jpeg|png);base64,[A-Za-z0-9+/]+={0,2}$"
+                }
+              }
+            },
+            "description": "Only actually sent, permission-confirmed reference assets. Runtime verifies count, candidate hash links, ZIP path, byte length and SHA-256."
           }
         }
+      },
+      "ThumbnailReferenceContext": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "version",
+          "status",
+          "reason",
+          "librarySha256",
+          "selectionMethod",
+          "candidates"
+        ],
+        "properties": {
+          "version": {
+            "const": "thumbnail-reference-context-1.0.0"
+          },
+          "status": {
+            "enum": [
+              "supplied",
+              "unavailable",
+              "skipped"
+            ]
+          },
+          "reason": {
+            "enum": [
+              "matched",
+              "no_observed_matches",
+              "manual_art_direction",
+              "revision"
+            ]
+          },
+          "librarySha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "selectionMethod": {
+            "const": "content_tags_then_image_model"
+          },
+          "candidates": {
+            "type": "array",
+            "maxItems": 5,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "videoId",
+                "thumbnailSha256",
+                "observationSha256",
+                "imageSent"
+              ],
+              "properties": {
+                "videoId": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z0-9_-]{11}$"
+                },
+                "thumbnailSha256": {
+                  "type": "string",
+                  "pattern": "^[a-f0-9]{64}$"
+                },
+                "observationSha256": {
+                  "type": "string",
+                  "pattern": "^[a-f0-9]{64}$"
+                },
+                "imageSent": {
+                  "type": "boolean"
+                }
+              }
+            }
+          }
+        },
+        "description": "Supplied candidates are not evidence of the model's chosen layout or improved output. No API view/date statistics copied to long-lived generation results."
+      },
+      "ReferenceObservationInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "videoId",
+          "thumbnailSha256",
+          "genres",
+          "moods",
+          "material",
+          "typography",
+          "layout",
+          "when",
+          "avoid",
+          "generationAllowed"
+        ],
+        "properties": {
+          "videoId": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{11}$"
+          },
+          "thumbnailSha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "observer": {
+            "enum": [
+              "human",
+              "assistant"
+            ],
+            "default": "human"
+          },
+          "genres": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 8,
+            "uniqueItems": true,
+            "items": {
+              "enum": [
+                "travel",
+                "daily_life",
+                "routine",
+                "experience",
+                "explanation",
+                "cooking",
+                "fitness",
+                "beauty"
+              ]
+            }
+          },
+          "moods": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 7,
+            "uniqueItems": true,
+            "items": {
+              "enum": [
+                "calm",
+                "friendly",
+                "energetic",
+                "refined",
+                "cinematic",
+                "playful",
+                "clear"
+              ]
+            }
+          },
+          "material": {
+            "enum": [
+              "scene",
+              "cutout",
+              "multi_photo",
+              "illustration"
+            ]
+          },
+          "typography": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          "layout": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          "when": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          "avoid": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          "generationAllowed": {
+            "type": "boolean"
+          },
+          "permissionBasis": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 300
+          }
+        },
+        "description": "Generic visual observations, not human preference labels. Permission basis required when generationAllowed=true. Saves only against the current cached thumbnail hash; mismatches return 409."
       }
     }
   }
