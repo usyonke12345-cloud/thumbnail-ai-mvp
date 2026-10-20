@@ -252,6 +252,7 @@
     "/api/v1/complete-thumbnail": {
       "post": {
         "summary": "Opt-in paid complete thumbnail from one photograph",
+        "description": "People must come solely from the original photograph. A person-free source must stay person-free. References and previous thumbnails cannot supply additional people; revisions instruct removal of people absent from the original. This is a prompt constraint, not an automatic output verification or guarantee.",
         "requestBody": {
           "required": true,
           "content": {
