@@ -173,7 +173,7 @@ document.querySelector('#clear-draft').addEventListener('click',async()=>{
  finally{restoring=false;updateHeadlineControls();designGuide.render();document.querySelector('#ai-advanced-headline').open=false;document.querySelector('#ai-content-notes').open=false;document.querySelector('#editor-workspace').disabled=false;}
 });
 
-function downloadLocal(name,body,type){const blob=new Blob([body],{type}),a=document.createElement('a');let url;const prepare=()=>{if(!url){url=URL.createObjectURL(blob);a.href=url;setTimeout(()=>{URL.revokeObjectURL(url);url=null;},60000);}};a.download=name;a.textContent='ファイルを保存';a.addEventListener('click',prepare);prepare();a.click();return a;}
+function downloadLocal(name,body,type,{autoStart=true}={}){const blob=new Blob([body],{type}),a=document.createElement('a');let url,timer;const prepare=()=>{if(!url){url=URL.createObjectURL(blob);a.href=url;}clearTimeout(timer);timer=setTimeout(()=>{URL.revokeObjectURL(url);url=null;},60000);};a.download=name;a.textContent='ファイルを保存';a.addEventListener('click',prepare);prepare();if(autoStart)a.click();return a;}
 function renderRevision(){document.querySelector('#revision-tools').hidden=!activeRevision;document.querySelector('#revision-instruction').value=activeRevision?.instruction??'';const root=document.querySelector('#revision-preview');root.replaceChildren();if(activeRevision){const image=document.createElement('img');image.src=activeRevision.imageDataUrl;image.alt='修正の参考にする前の完成画像';image.style.width='min(100%,360px)';root.append(image);}}
 async function applyImportedDraft(value){
  const draft=validateDraft(value),decoded=[];

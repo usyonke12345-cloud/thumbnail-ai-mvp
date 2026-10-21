@@ -30,6 +30,7 @@ async function operate(mode,change,metadataOnly=false){
 }
 export const galleryStorage={
  loadFeedback:()=>operate('readonly',undefined,true),
+ loadForExport:()=>operate('readonly'),
  load:()=>operate('readwrite'),
  add:entry=>operate('readwrite',state=>addToGallery(state,entry)),
  review:review=>operate('readwrite',state=>{const group=state.groups.find(x=>x.id===review.groupId);if(!group)throw new Error('比較する組がありません。');validateQualityReview(review,group,state.images);return {...state,reviews:[...state.reviews.filter(x=>x.groupId!==review.groupId),review]};}),

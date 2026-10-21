@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import vm from 'node:vm';
 import {createEntry,createLegacyEntry,addToGallery,validateQualityReview,comparisonBundle,MAX_IMAGES,parseCostUsd,validateObservation,recordObservation,gallerySummary,comparisonReport} from '../frontend/complete-gallery-model.js';
-import {createCompleteGallery} from '../frontend/complete-gallery.js';
+import {createCompleteGallery,prepareComparisonJson} from '../frontend/complete-gallery.js';
+import {validateCompleteImport} from '../frontend/complete-png-transfer.js';
 import {makeServer} from '../backend/server.mjs';
 function png(w,h,variant=0){const b=Buffer.alloc(25);Buffer.from('89504e470d0a1a0a','hex').copy(b);b.write('IHDR',12);b.writeUInt32BE(w,16);b.writeUInt32BE(h,20);b[24]=variant;return `data:image/png;base64,${b.toString('base64')}`;}
 const payload={title:'私の動画',brief:'写真の人物の紹介',headline:'MY VIDEO',composition:'text_left',imageDataUrl:png(1280,720),consent:true};
@@ -38,6 +39,54 @@ function documentFixture(){
  const root=document.createElement('section');return {document,root,find:predicate=>all(root).find(predicate)};
 }
 function storageFixture(){let state=empty(),rejectReview=false;return {get state(){return state;},set rejectReview(value){rejectReview=value;},async load(){return structuredClone(state);},async add(entry){state=addToGallery(state,entry);return structuredClone(state);},async observe(id,value){if(rejectReview)throw new Error('保存容量が足りません。');state=recordObservation(state,id,value);return structuredClone(state);},async review(review){if(rejectReview)throw new Error('保存容量が足りません。');validateQualityReview(review,state.groups.find(x=>x.id===review.groupId),state.images);state.reviews=[review];return structuredClone(state);},async remove(id){state={groups:state.groups.filter(x=>x.id!==id),images:state.images.filter(x=>x.groupId!==id),reviews:[]};return structuredClone(state);},async clear(){state=empty();return structuredClone(state);}};}
+
+test('bounded JSON parts import without losing any source, image, whole-group review or unknown cost',async()=>{
+ let state=empty();for(let i=0;i<6;i++)state=addToGallery(state,await createEntry({...payload,title:`人工の分割確認 ${i}`},{...result,imageDataUrl:png(1536,864,i)},{id:`split-${i}`}));
+ const group=state.groups[0];state=addToGallery(state,await createEntry({...payload,title:group.input.title},{...result,imageDataUrl:png(1536,864,9)},{id:'split-extra'}));
+ const images=state.images.filter(x=>x.groupId===group.id),review={version:1,groupId:group.id,recordedAt:'2026-10-22T00:00:00Z',decision:'selected',imageId:images[1].id,reason:'人物を隠さず、文字が読みやすい。😀',issues:['text'],displayWidths:images.map(x=>({imageId:x.id,width:168}))};
+ validateQualityReview(review,group,state.images);state.reviews=[review];state=recordObservation(state,images[0].id,{version:1,recordedAt:review.recordedAt,costUsd:null,pngSave:'unknown'});
+ const before=JSON.stringify(state),singleLimits=state.groups.map(g=>{const ids=new Set([g.id]);return prepareComparisonJson({groups:[g],images:state.images.filter(x=>ids.has(x.groupId)),reviews:state.reviews.filter(x=>ids.has(x.groupId))})[0].bytes;}),maxBytes=Math.max(...singleLimits)+64;
+ const files=prepareComparisonJson(state,{maxBytes});assert.ok(files.length>1);const restored=[];
+ for(const [index,file]of files.entries()){assert.ok(file.bytes<=maxBytes);assert.equal(file.bytes,new Blob([file.body]).size);assert.match(file.name,new RegExp(`part-${String(index+1).padStart(2,'0')}-of-${String(files.length).padStart(2,'0')}`));restored.push(...await validateCompleteImport(JSON.parse(file.body)));}
+ assert.equal(restored.length,state.groups.length);assert.equal(new Set(restored.map(x=>x.group.id)).size,state.groups.length);assert.equal(restored.reduce((n,x)=>n+x.images.length,0),state.images.length);
+ for(const bundle of restored){const original=comparisonBundle(state,bundle.group.id);assert.deepEqual(bundle,original);}
+ assert.equal(restored.find(x=>x.group.id===group.id).review.reason,review.reason);assert.equal(JSON.stringify(state),before);
+ assert.throws(()=>prepareComparisonJson(state,{maxBytes:10}),/1組だけ/);assert.equal(JSON.stringify(state),before);
+});
+
+test('JSON export reads the latest readonly snapshot, leaves an explicit retry link, and does not repaint an unsaved reason',async()=>{
+ const dom=documentFixture(),storage=storageFixture(),downloads=[];let reads=0,release;
+ const app=createCompleteGallery({...dom,storage,download:(...args)=>{downloads.push(args);const link=dom.document.createElement('a');link.click=()=>{};return link;}});await app.ready;await app.remember(payload,result,{id:'visible'});
+ await storage.add(await createEntry({...payload,title:'別のタブで追加した人工データ'},{...result,imageDataUrl:png(1536,864,2)},{id:'from-other-tab'}));
+ const before=structuredClone(storage.state);storage.loadForExport=async()=>{reads++;return new Promise(resolve=>release=()=>resolve(structuredClone(storage.state)));};
+ const reason=dom.find(x=>x.attrs['aria-label']==='AI完成画像の理由');reason.value='まだ保存していない入力';
+ const button=dom.find(x=>x.textContent==='全組の画像・記録・集計JSONを保存'),status=dom.find(x=>x.attrs['aria-label']==='比較JSONの書き出し状況'),links=dom.find(x=>x.attrs['aria-label']==='比較JSONの保存リンク');
+ const pending=button.events.click();assert.equal(button.disabled,true);assert.match(status.textContent,/JSONを作っています/);await button.events.click();assert.equal(reads,1);release();await pending;
+ assert.equal(button.disabled,false);assert.equal(downloads.length,1);assert.equal(JSON.parse(downloads[0][1]).sets.length,2);assert.equal(downloads[0][3].autoStart,true);assert.match(status.textContent,/保存が始まらない場合/);assert.match(links.children[0].textContent,/complete-comparison-report\.json/);assert.equal(reason.value,'まだ保存していない入力');assert.deepEqual(storage.state,before);
+});
+
+test('JSON export shows read and asynchronous download failures beside the button and can retry without changing records',async()=>{
+ const dom=documentFixture(),storage=storageFixture();let failDownload=false,downloads=0;
+ const app=createCompleteGallery({...dom,storage,download:async()=>{downloads++;if(failDownload)throw new Error('保存先の人工エラー');}});await app.ready;await app.remember(payload,result,{id:'export-errors'});const before=structuredClone(storage.state);
+ const button=dom.find(x=>x.textContent==='全組の画像・記録・集計JSONを保存'),status=dom.find(x=>x.attrs['aria-label']==='比較JSONの書き出し状況');
+ storage.loadForExport=async()=>{throw new Error('読み込みの人工エラー');};await button.events.click();assert.equal(downloads,0);assert.match(status.textContent,/読み込みの人工エラー.*保持/);assert.equal(button.disabled,false);
+ storage.loadForExport=()=>storage.load();failDownload=true;await button.events.click();assert.match(status.textContent,/保存先の人工エラー.*保持/);assert.equal(button.disabled,false);
+ failDownload=false;await button.events.click();assert.match(status.textContent,/JSONを作成/);assert.equal(downloads,2);assert.deepEqual(storage.state,before);
+});
+
+test('multipart JSON export provides every file link without triggering automatic multiple downloads',async()=>{
+ const dom=documentFixture(),storage=storageFixture(),downloads=[];let limit;
+ const app=createCompleteGallery({...dom,storage,prepareJson:s=>prepareComparisonJson(s,{maxBytes:limit}),download:(...args)=>{downloads.push(args);const link=dom.document.createElement('a');link.click=()=>{};return link;}});await app.ready;
+ for(let i=0;i<4;i++)await app.remember({...payload,title:`人工の案件 ${i}`},{...result,imageDataUrl:png(1536,864,i)},{id:`multi-${i}`});
+ limit=Math.max(...storage.state.groups.map(group=>prepareComparisonJson({groups:[group],images:storage.state.images.filter(x=>x.groupId===group.id),reviews:[]})[0].bytes))+64;
+ const before=structuredClone(storage.state);await dom.find(x=>x.textContent==='全組の画像・記録・集計JSONを保存').events.click();assert.ok(downloads.length>1);assert.ok(downloads.every(x=>x[3].autoStart===false));
+ const links=dom.find(x=>x.attrs['aria-label']==='比較JSONの保存リンク').children.filter(x=>x.tag==='a');assert.equal(links.length,downloads.length);assert.ok(links.every(x=>x.textContent.includes('part-')));assert.equal(downloads.reduce((n,x)=>n+JSON.parse(x[1]).sets.length,0),4);assert.deepEqual(storage.state,before);
+});
+
+test('editor download links allow explicit-only multipart saving and can be reused after their object URL expires',()=>{
+ const block=editor.slice(editor.indexOf('function downloadLocal('),editor.indexOf('function renderRevision('));let clicks=0,created=0;const revoked=[],timers=[],scope={Blob,document:{createElement:()=>({events:{},addEventListener(name,fn){this.events[name]=fn;},click(){clicks++;this.events.click();}})},URL:{createObjectURL:()=>`blob:synthetic-${++created}`,revokeObjectURL:url=>revoked.push(url)},setTimeout:fn=>{timers.push(fn);return timers.length;},clearTimeout(){}};
+ vm.runInNewContext(block,scope);const link=scope.downloadLocal('part-01.json','{}','application/json',{autoStart:false});assert.equal(clicks,0);assert.equal(created,1);assert.equal(link.download,'part-01.json');timers.at(-1)();assert.equal(revoked.length,1);link.events.click();assert.equal(created,2);assert.equal(link.href,'blob:synthetic-2');scope.downloadLocal('single.json','{}','application/json');assert.equal(clicks,1);
+});
 test('share button handles empty state, double clicks, successful download and failures without changing saved records',async()=>{
  const dom=documentFixture(),storage=storageFixture(),downloads=[];let calls=0,release,fail=false;
  const share=async report=>{calls++;await new Promise(resolve=>release=resolve);if(fail)throw new Error('ZIP test failure');return {blob:new Blob(['fixture']),zipBytes:7,originalBytes:100,assets:2,groups:report.sets.length,images:1};};
