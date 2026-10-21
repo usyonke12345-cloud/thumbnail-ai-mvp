@@ -5,8 +5,8 @@ import {createImageSaveControls} from './image-save.js';
 import {createSubjectRegionControls} from './subject-regions.js';
 import {galleryStorage} from './complete-gallery-store.js';
 import {diagnoseComplete,diagnosticText,validateCompleteImport,MAX_IMPORT_BYTES,createCompleteShareZip} from './complete-png-transfer.js';
-export function createCompleteGallery({root,document=globalThis.document,storage=galleryStorage,download=downloadFile,confirm=message=>window.confirm(message),diagnose=diagnoseComplete,share=createCompleteShareZip,onRevise=()=>{},onRecordsChanged=()=>{},imageSaveControls=createImageSaveControls}={}){
- let state={groups:[],images:[],reviews:[]},selected='',width=360,sharing=false,project='',regionDisposers=[];
+export function createCompleteGallery({root,document=globalThis.document,storage=galleryStorage,download=downloadFile,confirm=message=>window.confirm(message),diagnose=diagnoseComplete,share=createCompleteShareZip,prepareJson=prepareComparisonJson,onRevise=()=>{},onRecordsChanged=()=>{},imageSaveControls=createImageSaveControls}={}){
+ let state={groups:[],images:[],reviews:[]},selected='',width=360,sharing=false,exporting=false,project='',regionDisposers=[];
  const el=(tag,text='')=>{const node=document.createElement(tag);node.textContent=text;return node;};
  const heading=el('h2','AI完成画像を見比べる'),intro=el('p','実際に生成した完成PNGを、同じ入力写真・タイトル・内容・見出しの作り方ごとに保存します。構図やデザインを変えて1枚ずつ作った結果を見比べられます。生成・自動学習はこの比較操作では行いません。'),feedback=el('p');feedback.setAttribute('role','status');feedback.setAttribute('aria-live','polite');
  const select=el('select'),label=el('label','比較する組 ');label.append(select);select.setAttribute('aria-label','AI完成画像の比較する組');
@@ -17,6 +17,7 @@ export function createCompleteGallery({root,document=globalThis.document,storage
  const info=el('p'),source=el('div'),images=el('div');images.className='complete-gallery-images';
  const summary=el('pre');summary.className='complete-gallery-summary';
  const exportAll=el('button','全組の画像・記録・集計JSONを保存');exportAll.type='button';
+ const exportStatus=el('p'),exportFiles=el('div');exportStatus.setAttribute('role','status');exportStatus.setAttribute('aria-live','polite');exportStatus.setAttribute('aria-label','比較JSONの書き出し状況');exportFiles.setAttribute('aria-label','比較JSONの保存リンク');
  const exportZip=el('button','共有用ZIPを保存');exportZip.type='button';
  const shareNote=el('p','写真の重複を除き、画質と比較記録を保ったZIPを作ります。相手は展開して確認できます。作成は無料で、相手への送信は自分で行います。');
  const importFile=el('input'),importLabel=el('label','保存した写真・完成画像・比較記録のJSON・ZIPを読み込む');importFile.type='file';importFile.accept='.json,.zip,application/json,application/zip';importFile.setAttribute('aria-label','完成PNG比較JSONを読み込む');importLabel.append(importFile);
@@ -35,9 +36,10 @@ export function createCompleteGallery({root,document=globalThis.document,storage
  const note=el('p','点数はまだ付けていません。「全部使わない」も記録できます。保存時にはAPI送信しません。上の評価メモが有効な場合、次に有料生成するときに自分の理由を参考情報として送ります。');
  form.append(reviewerLabel,sourceLabel,titlePermissionLabel,photoPermissionLabel,decisionLabel,reasonLabel,el('p','気になる点（任意）'),issues,save,qualityFeedback,note);
  const actions=el('div');actions.className='save-actions';const exportButton=el('button','写真・完成画像・比較記録のJSONを保存'),remove=el('button','この組を比較一覧から削除');exportButton.type=remove.type='button';actions.append(exportButton,remove);
+ const singleExportStatus=el('p'),singleExportFiles=el('div');singleExportStatus.setAttribute('role','status');singleExportStatus.setAttribute('aria-live','polite');singleExportStatus.setAttribute('aria-label','この組のJSONの書き出し状況');actions.append(singleExportStatus,singleExportFiles);
  const name=el('input'),rename=el('button','この組の案件名を変更'),nameLabel=el('label','案件名');name.maxLength=80;nameLabel.append(name);rename.type='button';actions.append(nameLabel,rename);
- root.replaceChildren(heading,intro,feedback,summary,projectLabel,exportZip,shareNote,exportAll,importLabel,importStatus,importNote,label,refresh,toolbar,info,source,images,form,actions);
- function scoped(){const groups=project?state.groups.filter(g=>projectOf(g)===project):state.groups,ids=new Set(groups.map(g=>g.id));return {groups,images:state.images.filter(x=>ids.has(x.groupId)),reviews:state.reviews.filter(x=>ids.has(x.groupId))};}
+ root.replaceChildren(heading,intro,feedback,summary,projectLabel,exportZip,shareNote,exportAll,exportStatus,exportFiles,importLabel,importStatus,importNote,label,refresh,toolbar,info,source,images,form,actions);
+ function scoped(value=state,chosenProject=project){const groups=chosenProject?value.groups.filter(g=>projectOf(g)===chosenProject):value.groups,ids=new Set(groups.map(g=>g.id));return {groups,images:value.images.filter(x=>ids.has(x.groupId)),reviews:value.reviews.filter(x=>ids.has(x.groupId))};}
  function current(){return state.groups.find(x=>x.id===selected);}
  function outputs(){return state.images.filter(x=>x.groupId===selected).sort((a,b)=>Date.parse(a.capturedAt)-Date.parse(b.capturedAt)||a.id.localeCompare(b.id));}
  function renderImages(){
@@ -65,8 +67,9 @@ export function createCompleteGallery({root,document=globalThis.document,storage
  function renderSummary(){
   const report=gallerySummary(scoped()),seconds=value=>value===null?'不明':`${(value/1000).toFixed(1)}秒`;
   summary.textContent=`保存中：${report.images}枚 / ${report.groups}組\n選択記録：2枚以上の比較 ${report.comparedGroups}組 / 1枚の確認 ${report.singleImageReviews}組 / 案追加後の再確認待ち ${report.staleReviews}組\n20件の収集：保存中の人の比較 ${report.collection.humanComparisons}組 / 出典・利用確認済み実タイトルの比較 ${report.collection.authorizedRealComparisons}組\n生成時間：中央値 ${seconds(report.generationTime.medianMs)} / p95 ${seconds(report.generationTime.p95Ms)}（時間不明 ${report.generationTime.unknown}枚）\n確認済み実費：${report.cost.confirmedTotalUsd===null?'未確認':`${report.cost.confirmedTotalUsd} USD`}（実費不明 ${report.cost.unknownImages}枚）\nPNG保存：確認できた ${report.pngSave.saved}枚 / できなかった ${report.pngSave.failed}枚 / 未確認 ${report.pngSave.unknown}枚\n現在残っている成功画像だけの集計です。削除・失敗分は含みません。`;
-  exportAll.disabled=!state.images.length;
-  exportZip.disabled=sharing||!state.images.length;
+  exportAll.disabled=exporting||sharing||!state.images.length;
+  exportButton.disabled=exporting||sharing;
+  exportZip.disabled=sharing||exporting||!state.images.length;
   summary.textContent+=`\n絞り込み：${project||'全案件'} / 重複を除いた保存容量 ${(gallerySummary(state).storage.characters/1024/1024).toFixed(1)} / 192MiB（全体60枚・1案件24枚・1組12枚まで）`;
  }
  function render(){
@@ -105,10 +108,28 @@ export function createCompleteGallery({root,document=globalThis.document,storage
  projects.addEventListener('change',()=>{project=projects.value;selected='';render();});
  rename.addEventListener('click',async()=>{try{state=await storage.rename(selected,name.value);project='';render();feedback.textContent='案件名を保存しました。';}catch(error){feedback.textContent=error.message;}});
   form.addEventListener('submit',async event=>{event.preventDefault();if(save.disabled)return;save.disabled=true;try{const group=current();if(!group)throw new Error('比較する組がありません。');const review={version:1,groupId:group.id,recordedAt:new Date().toISOString(),decision:decision.value==='none'?'none_acceptable':'selected',imageId:decision.value==='none'?null:decision.value,reason:reason.value,issues:issueInputs.filter(x=>x.checked).map(x=>x.value),context:{version:1,reviewerId:reviewer.value.trim(),titleSource:titleSource.value,titlePermissionConfirmed:titlePermission.checked,photoPermissionConfirmed:photoPermission.checked},displayWidths:[...images.querySelectorAll('img')].map(x=>({imageId:x.dataset.imageId,width:x.getBoundingClientRect().width}))};validateQualityReview(review,group,state.images);state=await storage.review(review);render();qualityFeedback.textContent=feedback.textContent='この組の選択と理由をブラウザ内に保存しました。API送信・追加料金はありません。';}catch(error){qualityFeedback.textContent=feedback.textContent=error.message;}finally{save.disabled=false;}});
- exportButton.addEventListener('click',()=>{try{download(`${selected}.json`,JSON.stringify(comparisonBundle(state,selected),null,2),'application/json');feedback.textContent='写真・完成PNG・比較記録のJSONを出力しました。非公開で扱ってください。';}catch(error){feedback.textContent=error.message;}});
- exportAll.addEventListener('click',()=>{try{const body=JSON.stringify(comparisonReport(scoped()),null,2);if(new Blob([body]).size>MAX_IMPORT_BYTES)throw new Error('70MiBを超えています。案件で絞り込むか、組ごとに保存してください。');download('complete-comparison-report.json',body,'application/json');feedback.textContent='表示中の案件の写真・完成PNG・記録・集計を出力しました。非公開で扱ってください。';}catch(error){feedback.textContent=error.message;}});
+ async function exportJson(all){
+  if(exporting||sharing||(all?exportAll:exportButton).disabled)return;
+  const chosenProject=project,chosenGroup=selected,status=all?exportStatus:singleExportStatus,links=all?exportFiles:singleExportFiles;
+  exporting=true;renderSummary();links.replaceChildren();status.textContent='保存済みの写真・完成画像・記録を読み込み、JSONを作っています…';
+  try{
+   // Export the latest storage snapshot without changing it or repainting an
+   // unsaved review form. Another tab may have added records since render().
+   const fresh=storage.loadForExport?await storage.loadForExport():await storage.load();
+   await new Promise(resolve=>setTimeout(resolve,0));
+   let files;
+   if(all)files=prepareJson(scoped(fresh,chosenProject));
+   else{const bundle=comparisonBundle(fresh,chosenGroup),body=JSON.stringify(bundle,null,2);if(new Blob([body]).size>MAX_IMPORT_BYTES)throw new Error('この組だけで70MiBを超えています。案件で絞り込んで共有用ZIPを保存してください。');files=[{name:`${chosenGroup}.json`,body,groups:1,images:bundle.images.length,bytes:new Blob([body]).size}];}
+   for(const file of files){const link=await download(file.name,file.body,'application/json',{autoStart:files.length===1});if(link&&typeof link==='object'&&typeof link.click==='function'){link.textContent=`${file.name} を保存（${(file.bytes/1024/1024).toFixed(1)}MiB）`;links.append(link);links.append(el('br'));}}
+   const counts=`${files.reduce((n,x)=>n+x.groups,0)}組・${files.reduce((n,x)=>n+x.images,0)}枚`;
+   status.textContent=files.length===1?`JSONを作成しました（${counts}）。保存が始まらない場合は、下の保存リンクを押してください。写真を含むため非公開で扱ってください。`:`${counts}を${files.length}件のJSONに分けました。下の保存リンクを順に押し、すべてのファイルを保存してください。各ファイルは70MiB以内で、比較の組・選択・理由は分割していません。`;
+  }catch(error){status.textContent=`JSONを書き出せません：${error.message} 保存済みの画像と記録は保持しています。`;}
+  finally{exporting=false;renderSummary();}
+ }
+ exportButton.addEventListener('click',()=>exportJson(false));
+ exportAll.addEventListener('click',()=>exportJson(true));
  exportZip.addEventListener('click',async()=>{
-  if(exportZip.disabled||sharing)return;sharing=true;renderSummary();feedback.textContent='写真と記録を確認し、共有用ZIPを作っています…';
+  if(exportZip.disabled||sharing||exporting)return;sharing=true;renderSummary();feedback.textContent='写真と記録を確認し、共有用ZIPを作っています…';
   try{
    const result=await share(comparisonReport(scoped())),link=download('complete-comparison-share.zip',result.blob,'application/zip');
    feedback.textContent=`共有用ZIPを作成しました：${(result.zipBytes/1e6).toFixed(1)}MB（通常JSON ${(result.originalBytes/1e6).toFixed(1)}MB）。${result.images}枚・${result.groups}組、重複を除いた写真と完成PNG ${result.assets}枚。相手にはZIPをすべて展開してpreview.htmlを開くよう伝えてください。送信はまだ行っていません。`;
@@ -121,8 +142,24 @@ export function createCompleteGallery({root,document=globalThis.document,storage
  const ready=reload().catch(error=>{feedback.textContent=`比較保存を読み込めません：${error.message} 完成PNGはファイルにも保存してください。`;});
  return {ready,async readForFeedback(){await ready;return storage.loadFeedback?storage.loadFeedback():storage.load();},async preflight(payload,name){await ready;state=await storage.load();await checkGenerationCapacity(state,payload,name);},async remember(payload,data,options){await ready;const entry=await createEntry(payload,data,options);state=await storage.add(entry);selected=entry.group.id;render();return state.added;},async rememberLegacy(data){await ready;const entry=await createLegacyEntry(data);state=await storage.add(entry);if(state.groups.some(x=>x.id===entry.group.id))selected=entry.group.id;render();},async clear(){await ready;state=await storage.clear();selected='';render();}};
 }
-function downloadFile(name,body,type){
+// Split only between complete comparison groups, so selected-image references,
+// review widths, reasons, source images and per-image provenance stay together.
+export function prepareComparisonJson(state,{maxBytes=MAX_IMPORT_BYTES,exportedAt=new Date().toISOString()}={}){
+ if(!Number.isInteger(maxBytes)||maxBytes<1||maxBytes>MAX_IMPORT_BYTES)throw new Error('JSONの書き出し上限が不正です。');
+ if(!state.images.length)throw new Error('選択した案件に保存済みの完成画像がありません。「全案件」や保存一覧を確認してください。');
+ const rows=state.groups.map(group=>{const bundle=comparisonBundle(state,group.id);if(!bundle.images.length)throw new Error('画像のない比較組があります。保存一覧を更新してください。');const body=JSON.stringify(bundle);return {group,body,bytes:new Blob([body]).size};});
+ function measure(part){
+  const ids=new Set(part.map(x=>x.group.id)),scope={groups:part.map(x=>x.group),images:state.images.filter(x=>ids.has(x.groupId)),reviews:state.reviews.filter(x=>ids.has(x.groupId))};
+  const {sets,...metadata}=comparisonReport(scope,{exportedAt}),prefix=JSON.stringify(metadata).slice(0,-1)+',"sets":[';
+  return {prefix,groups:scope.groups.length,images:scope.images.length,bytes:new Blob([prefix,']}']).size+part.reduce((n,x)=>n+x.bytes,0)+Math.max(0,part.length-1)};
+ }
+ const parts=[];let current=[];
+ for(const row of rows){let candidate=[...current,row];if(measure(candidate).bytes>maxBytes&&current.length){parts.push(current);candidate=[row];}if(measure(candidate).bytes>maxBytes)throw new Error('1組だけでJSONの上限を超えています。該当案件に絞って共有用ZIPを保存してください。画像や理由の削除は不要です。');current=candidate;}
+ if(current.length)parts.push(current);
+ return parts.map((part,index)=>{const info=measure(part),body=info.prefix+part.map(x=>x.body).join(',')+']}';if(new Blob([body]).size!==info.bytes)throw new Error('JSONの容量計算が一致しません。');return {name:parts.length===1?'complete-comparison-report.json':`complete-comparison-report.part-${String(index+1).padStart(2,'0')}-of-${String(parts.length).padStart(2,'0')}.json`,body,bytes:info.bytes,groups:info.groups,images:info.images};});
+}
+function downloadFile(name,body,type,{autoStart=true}={}){
  const blob=new Blob([body],{type}),link=document.createElement('a');let url=null,timer;
  function prepare(){if(!url){url=URL.createObjectURL(blob);link.href=url;}clearTimeout(timer);timer=setTimeout(()=>{URL.revokeObjectURL(url);url=null;},60000);}
- link.download=name;link.textContent='ファイルを保存';link.addEventListener('click',prepare);prepare();link.click();return link;
+ link.download=name;link.textContent='ファイルを保存';link.addEventListener('click',prepare);prepare();if(autoStart)link.click();return link;
 }
