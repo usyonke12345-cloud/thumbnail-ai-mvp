@@ -19,6 +19,7 @@ assets.set('/validation-a.js',['validation-a.js','text/javascript; charset=utf-8
 assets.set('/shared/generation-feedback.mjs',['../shared/generation-feedback.mjs','text/javascript; charset=utf-8']);
 assets.set('/shared/reviewer-id.mjs',['../shared/reviewer-id.mjs','text/javascript; charset=utf-8']);
 assets.set('/shared/evaluation-split.mjs',['../shared/evaluation-split.mjs','text/javascript; charset=utf-8']);
+assets.set('/shared/validation-a-baseline.mjs',['../shared/validation-a-baseline.mjs','text/javascript; charset=utf-8']);
 assets.set('/subject-regions.js',['subject-regions.js','text/javascript; charset=utf-8']);
 for(const file of ['local-archive.js','editor-tools.js','attempt-history.js','editor-backup.js','image-save.js'])assets.set('/'+file,[file,'text/javascript; charset=utf-8']);
 assets.set('/editor-design-guide.js',['editor-design-guide.js','text/javascript; charset=utf-8']);

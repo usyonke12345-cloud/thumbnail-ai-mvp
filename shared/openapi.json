@@ -2549,7 +2549,8 @@
           },
           "chatgptPrompt": {
             "type": "string",
-            "maxLength": 5000
+            "maxLength": 5000,
+            "description": "For new A cases, the ordinary short ChatGPT request from PR #11, sharing source photo and content inputs without copying internal service rules. Historical detailed requests remain readable as reference-only comparisons."
           },
           "referenceAssets": {
             "type": "array",

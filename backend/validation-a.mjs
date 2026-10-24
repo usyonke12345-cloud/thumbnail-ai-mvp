@@ -5,11 +5,12 @@ import {validateComplete,COMPLETE_GENERATION_VERSION} from './generation/complet
 import {COMPLETE_IMAGE_SETTINGS} from './generation/openai.mjs';
 import {completePrompt} from './generation/complete-prompt.mjs';
 import {prepareCompleteReferences,frozenReferenceAssets} from './references/selection.mjs';
+import {ordinaryChatgptPrompt} from '../shared/validation-a-baseline.mjs';
 
 const hash=value=>createHash('sha256').update(value).digest('hex');
 // Capture the running build at module load, rather than labelling modified files
 // on disk as the code already loaded by a long-running Node process.
-const sourceFiles=['backend/server.mjs','backend/validation-a.mjs','backend/generation/complete.mjs','backend/generation/complete-prompt.mjs','backend/generation/complete-editorial.mjs','backend/generation/complete-reference-patterns.mjs','backend/generation/openai.mjs','backend/references/selection.mjs','backend/references/store.mjs','backend/references/youtube.mjs','backend/references/settings.mjs','shared/thumbnail-references.mjs','shared/contracts.mjs','shared/complete-designs.mjs','shared/complete-images.mjs','shared/generation-feedback.mjs','shared/reviewer-id.mjs','shared/evaluation-split.mjs','frontend/editor.js','frontend/editor-layout.js','frontend/editor-draft.js','frontend/validation-a.js','frontend/local-archive.js','package.json','package-lock.json'];
+const sourceFiles=['backend/server.mjs','backend/validation-a.mjs','backend/generation/complete.mjs','backend/generation/complete-prompt.mjs','backend/generation/complete-editorial.mjs','backend/generation/complete-reference-patterns.mjs','backend/generation/openai.mjs','backend/references/selection.mjs','backend/references/store.mjs','backend/references/youtube.mjs','backend/references/settings.mjs','shared/thumbnail-references.mjs','shared/contracts.mjs','shared/complete-designs.mjs','shared/complete-images.mjs','shared/generation-feedback.mjs','shared/reviewer-id.mjs','shared/evaluation-split.mjs','shared/validation-a-baseline.mjs','frontend/editor.js','frontend/editor-layout.js','frontend/editor-draft.js','frontend/validation-a.js','frontend/local-archive.js','package.json','package-lock.json'];
 const build=Promise.all(sourceFiles.map(async path=>({path,sha256:hash(await readFile(new URL('../'+path,import.meta.url)))}))).then(files=>({files,sourceSha256:hash(JSON.stringify(files)),nodeVersion:process.version}));
 
 export async function freezeValidationA(value,{references}={}){
@@ -22,19 +23,7 @@ export async function freezeValidationA(value,{references}={}){
  const service={generationVersion:COMPLETE_GENERATION_VERSION,...COMPLETE_IMAGE_SETTINGS,endpoint:'images/edits',feedbackUsed:false,revisionUsed:false,...await build,...(v._references?{referenceContext:v._references.context}:{})};
  const servicePrompt=completePrompt(v),servicePromptSha256=hash(servicePrompt);
  const caseId='validation-a-'+hash(JSON.stringify({requestSha256,service,servicePromptSha256}));
- const chatgptPrompt=[
-  '添付写真を使って、YouTube用の16:9のサムネイルを1枚作ってください。',
-  '人物は元写真に写っている人物だけを使ってください。人物がいない写真には人物を追加しないでください。食事中のモデル、商品を持つ手、顔、シルエット、人のイラストも新しく生成しないでください。参考例・タイトル・内容の補足より、この人物の制限を優先してください。',
-  input.design==='recompose'?'添付写真だけを写真素材にし、写っている人物・小物・背景の一部を切り抜き、拡大・再配置して内容に合う構成を作ってください。背景には元の風景やその切り取り、控えめな無地・図形を使えます。人物の顔・表情・ポーズ・髪・肌・服と物の形を自然に保ち、同じ人物を複製したり、別の人物・物・場所・活動を足したりしないでください。顔や大切な素材を文字で隠さないでください。':'写真の人物・場面を自然に保ち、顔や大切な素材を文字で隠さないでください。',
-  ...(input.design==='recompose'?['人物・まとまりのある人物群・実在する小物のうち少なくとも1つを切り抜き、背景に対する位置か大きさを変えてください。元写真全体の切り取り・色変更・文字追加だけでは、この再構成の指定を満たしません。人物や小物の形は変えないでください。']:[]),
-  `動画タイトル：${input.title}`,
-  `動画内容の補足：${input.brief||'なし'}`,
-  `仕上がりの希望：${input.visualIntent||'指定なし'}`,
-  `見出し：${input.headlineMode==='auto'?'タイトルから短い見出しを考えてください':input.headline}`,
-  ...(['auto','recompose'].includes(input.design)?[]:[`デザインの方向：${{photo_focus:'写真全面を主役にし、下部にサンセリフの見出し',editorial:'落ち着いた誌面風。上部にセリフ・明朝の見出し',impact:'横に細長い太字の見出しを大きく見せる'}[input.design]}`]),
-  ...(input.composition==='auto'?[]:[`文字の配置：${{text_left:'左',text_right:'右',text_top:'上'}[input.composition]}。デザインの既定位置よりこちらを優先してください。`]),
-  '内容に合う字体と構成を選び、小さく表示しても読みやすくしてください。'
- ].join('\n');
+ const chatgptPrompt=ordinaryChatgptPrompt(input);
  const referenceAssets=frozenReferenceAssets(v);
  return {version:'validation-a-case-1.0.0',caseId,createdAt:new Date().toISOString(),hypothesis:'A',input,source,requestSha256,service,servicePromptSha256,servicePrompt,chatgptPrompt,...(referenceAssets.length?{referenceAssets}:{})};
 }

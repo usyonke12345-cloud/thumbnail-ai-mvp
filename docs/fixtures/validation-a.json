@@ -14,6 +14,7 @@
   "expected": {
     "version": "validation-a-case-1.0.0",
     "hypothesis": "A",
+    "chatgptBaselineVersion": "pr11-ordinary-short-1.0.0",
     "feedbackUsed": false,
     "revisionUsed": false,
     "inputWidth": 1280,

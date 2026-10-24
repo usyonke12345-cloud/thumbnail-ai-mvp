@@ -50,8 +50,8 @@ test('a revision requests removal of people absent from the original instead of 
  const result=await generateComplete({...input,design:'recompose',revision:{instruction:'文字を少し小さく',parentImageId:'synthetic-previous',imageDataUrl:dataUrl(finished)}},{generate});assert.equal(sent,1);assert.equal(result.revision.parentImageSha256,hash(finished));assert.equal(result.assessment,undefined);
 });
 
-test('A freezes the people rule for both methods and rejects an old generation version before dispatch',async()=>{
- const {consent,...value}=input,fixed=await freezeValidationA(value);checkPeopleBoundary(fixed.servicePrompt);assert.match(fixed.chatgptPrompt,/元写真に写っている人物だけ/);assert.match(fixed.chatgptPrompt,/人物がいない写真には人物を追加しない/);assert.equal(fixed.service.generationVersion,COMPLETE_GENERATION_VERSION);
+test('A keeps service people constraints separate from the ordinary ChatGPT baseline and rejects an old version before dispatch',async()=>{
+ const {consent,...value}=input,fixed=await freezeValidationA(value);checkPeopleBoundary(fixed.servicePrompt);assert.match(fixed.chatgptPrompt,/写真の人物はそのまま使ってください/);assert.doesNotMatch(fixed.chatgptPrompt,/元写真に写っている人物だけ|人物がいない写真には人物を追加しない/);assert.equal(fixed.service.generationVersion,COMPLETE_GENERATION_VERSION);
  const prior={...fixed.service,generationVersion:'ai-complete-0.10.0'},oldId='validation-a-'+hash(JSON.stringify({requestSha256:fixed.requestSha256,service:prior,servicePromptSha256:fixed.servicePromptSha256}));
  await assert.rejects(()=>checkValidationARequest(input,oldId),e=>e.code==='VALIDATION_A_MISMATCH');
 });

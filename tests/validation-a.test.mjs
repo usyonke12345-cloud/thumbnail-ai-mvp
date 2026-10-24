@@ -10,16 +10,38 @@ import {createDraftBackup,readDraftBackup} from '../frontend/editor-backup.js';
 import {makeServer} from '../backend/server.mjs';
 import {validateComplete} from '../backend/generation/complete.mjs';
 import {png,dataUrl} from './helpers/complete-png.mjs';
+import {ordinaryChatgptPrompt,validationAProtocol} from '../shared/validation-a-baseline.mjs';
 const input=()=>({title:'人工タイトル：ゆっくりした旅',brief:'',visualIntent:'写真を自然に、文字も穏やかに。',headlineMode:'auto',headline:null,design:'auto',composition:'auto',imageDataUrl:dataUrl(png(1280,720))});
 
 test('A snapshot and ZIP freeze the exact sent PNG, canonical inputs, running source hashes and model settings without consent or a generated outcome',async()=>{
  const v=input(),fixed=await freezeValidationA(v),again=await freezeValidationA({...v});assert.equal(fixed.caseId,again.caseId);assert.equal(fixed.service.feedbackUsed,false);assert.equal(fixed.service.revisionUsed,false);assert.equal(fixed.service.quality,'medium');assert.equal(fixed.service.size,'1536x864');assert.equal(fixed.service.n,1);assert.match(fixed.service.sourceSha256,/^[a-f0-9]{64}$/);assert.ok(fixed.service.files.some(x=>x.path==='backend/generation/complete-prompt.mjs'));
- await assertValidationAInput(fixed,{...v,consent:true});const zip=await validationAZip(fixed,v.imageDataUrl),files=await readZip(new Uint8Array(await zip.arrayBuffer()));assert.deepEqual(Buffer.from(files.get('source.png')),png(1280,720));assert.deepEqual(JSON.parse(decodeText(files.get('validation-a.json'))),fixed);assert.match(decodeText(files.get('chatgpt-prompt.txt')),/ゆっくりした旅/);assert.match(fixed.chatgptPrompt,/動画内容の補足：なし/);assert.equal(fixed.input.headline,null);assert.doesNotMatch(JSON.stringify(fixed),/"consent"|OPENAI_API_KEY|"assessment"/);
+ await assertValidationAInput(fixed,{...v,consent:true});const zip=await validationAZip(fixed,v.imageDataUrl),files=await readZip(new Uint8Array(await zip.arrayBuffer()));assert.deepEqual(Buffer.from(files.get('source.png')),png(1280,720));assert.deepEqual(JSON.parse(decodeText(files.get('validation-a.json'))),fixed);assert.equal(decodeText(files.get('chatgpt-prompt.txt')),ordinaryChatgptPrompt(fixed.input));assert.doesNotMatch(fixed.chatgptPrompt,/動画の内容：/);assert.equal(JSON.parse(decodeText(files.get('comparison-protocol.json'))).ordinaryBaselineMatched,true);assert.equal(fixed.input.headline,null);assert.doesNotMatch(JSON.stringify(fixed),/"consent"|OPENAI_API_KEY|"assessment"/);
  for(const change of [{title:'changed'},{visualIntent:'別の希望'},{composition:'text_top'},{design:'editorial'},{brief:'new'},{headlineMode:'manual',headline:'短い文字'},{imageDataUrl:dataUrl(png(1280,720,[1,2,3,255]))}]){await assert.rejects(()=>assertValidationAInput(fixed,{...v,...change}),/固定時と変わり/);await assert.rejects(()=>checkValidationARequest({...v,...change,consent:true},fixed.caseId),e=>e.code==='VALIDATION_A_MISMATCH');}
  for(const key of ['consent','feedback','revision'])await assert.rejects(()=>freezeValidationA({...v,[key]:null}),e=>e.code==='INVALID_VALIDATION_A');
  await assert.rejects(()=>validationAZip(fixed,dataUrl(png(1280,720,[1,2,3,255]))),/ハッシュ|固定時/);
  const modified=structuredClone(fixed);modified.service.model='changed';await assert.rejects(()=>validationAZip(modified,v.imageDataUrl),/固定ID/);
- const manual=await freezeValidationA({...v,headlineMode:'manual',headline:'旅の一日',composition:'text_right',design:'editorial'});assert.match(manual.chatgptPrompt,/見出し：旅の一日/);assert.match(manual.chatgptPrompt,/文字の配置：右/);assert.match(manual.chatgptPrompt,/誌面風/);
+ const manual=await freezeValidationA({...v,headlineMode:'manual',headline:'旅の一日',composition:'text_right',design:'editorial'});assert.match(manual.chatgptPrompt,/サムネイルに入れる文字：「旅の一日」/);assert.doesNotMatch(manual.chatgptPrompt,/文字の配置|誌面風/);assert.match(manual.servicePrompt,/旅の一日/);
+});
+
+test('ordinary A baseline matches the PR11 short request without service instructions or invented empty context',async()=>{
+ const v={...input(),title:'海辺の一日',brief:'海でビールを飲みながら話す',visualIntent:'落ち着いた旅',design:'recompose',composition:'text_right'};
+ const fixed=await freezeValidationA(v);
+ assert.equal(fixed.chatgptPrompt,'この写真を使って、YouTube動画のサムネイル画像を作ってください。\n横長（16:9）でお願いします。\n動画タイトル：「海辺の一日」\n動画の内容：海でビールを飲みながら話す\n仕上がりのイメージ：落ち着いた旅\n動画タイトルをもとに、サムネイルに入れる短い見出しを考えて入れてください。\n写真の人物はそのまま使ってください。');
+ assert.match(fixed.servicePrompt,/PEOPLE SOURCE RULE/);assert.match(fixed.servicePrompt,/REQUIRED SPATIAL EDIT/);
+ assert.doesNotMatch(fixed.chatgptPrompt,/切り抜|再配置|人物がいない|文字の配置|元写真に写っている人物だけ|REQUIRED/);
+ const other=await freezeValidationA({...v,design:'auto',composition:'auto'});assert.equal(other.chatgptPrompt,fixed.chatgptPrompt);assert.notEqual(other.caseId,fixed.caseId);
+ const blank=await freezeValidationA({...v,brief:'',visualIntent:''});assert.doesNotMatch(blank.chatgptPrompt,/動画の内容|仕上がりのイメージ|なし|指定なし/);
+ assert.equal(validationAProtocol(fixed).comparison,'service_vs_ordinary_chatgpt');
+ assert.equal(validationAProtocol(await freezeValidationA({...v,title:'あ'.repeat(61)})).pr11TitleLengthCompatible,false);
+});
+
+test('legacy detailed prompts remain unchanged on restore and ZIP export and are labelled reference-only',async()=>{
+ const v=input(),legacy=structuredClone(await freezeValidationA(v));legacy.chatgptPrompt='添付写真だけを使い、人物を切り抜き、拡大・再配置してください。';
+ const before=JSON.stringify(legacy),files=await readZip(new Uint8Array(await(await validationAZip(legacy,v.imageDataUrl)).arrayBuffer()));
+ assert.equal(decodeText(files.get('chatgpt-prompt.txt')),legacy.chatgptPrompt);assert.deepEqual(JSON.parse(decodeText(files.get('validation-a.json'))),legacy);assert.equal(JSON.stringify(legacy),before);
+ assert.equal(JSON.parse(decodeText(files.get('comparison-protocol.json'))).comparison,'reference_other_prompt');assert.match(decodeText(files.get('README.txt')),/正式A比較には含めません/);
+ const nodes=[],document={createElement:tag=>{const node={tag,style:{},children:[],textContent:'',setAttribute(){},addEventListener(){},replaceChildren(...children){this.children=children;}};nodes.push(node);return node;}};
+ const app=createValidationA({root:document.createElement('section'),document});app.restore(legacy);assert.deepEqual(app.record(),legacy);assert.match(nodes.find(n=>n.tag==='pre').textContent,/参考記録/);
 });
 
 test('freezing and restoring the A controller switch memory off, persist the snapshot, provide a downloadable ZIP and never generate',async()=>{
@@ -44,7 +66,7 @@ test('freezing never reaches a provider; A header rejects modified input, stale 
   assert.equal((await post('/api/v1/complete-thumbnail',{...input(),consent:true},{'X-Validation-A-Case':'validation-a-'+'0'.repeat(64)})).status,409);assert.equal(calls,0);
   const good=await post('/api/v1/complete-thumbnail',{...input(),consent:true},headers);assert.equal(good.status,200);assert.equal((await good.json()).validationA.feedbackUsed,false);assert.equal(calls,1);
   assert.equal((await post('/api/v1/complete-thumbnail',{...input(),consent:false},headers)).status,400);assert.equal(calls,1);
-  assert.equal((await fetch(url+'/validation-a.js')).status,200);const after=await(await fetch(url+'/api/v1/health')).json();assert.deepEqual(after.completeGeneration,before.completeGeneration);
+  assert.equal((await fetch(url+'/validation-a.js')).status,200);assert.equal((await fetch(url+'/shared/validation-a-baseline.mjs')).status,200);const after=await(await fetch(url+'/api/v1/health')).json();assert.deepEqual(after.completeGeneration,before.completeGeneration);
  }finally{await new Promise(r=>server.close(r));}
 });
 
