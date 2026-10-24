@@ -7,7 +7,7 @@ import {createEditorTools} from './editor-tools.js';
 import {createAttemptHistory} from './attempt-history.js';
 import {createEditorReferences} from './editor-references.js';
 import {createFeedbackMemory,feedbackText} from './feedback-memory.js';
-import {fromDataUrl} from './local-archive.js';
+import {fromDataUrl,hashBytes} from './local-archive.js';
 import {createValidationA} from './validation-a.js';
 let feedbackMemory=null,validationA=null;
 const completeGallery=createCompleteGallery({root:document.querySelector('#complete-comparison'),onRevise:prepareRevision,onRecordsChanged:()=>feedbackMemory?.refresh()});
@@ -141,13 +141,14 @@ document.querySelector('#ai-complete').addEventListener('click',async event=>{
  catch(error){aiStatus.textContent=`生成前の比較保存を確認できません：${error.message} PNGを保存してから再度お試しください。`;control.disabled=false;document.querySelector('#clear-draft').disabled=false;return;}
  aiStatus.textContent='写真から完成画像を生成しています。自動再試行はしません。';
  let attemptId;try{if(typeof attemptHistory!=='undefined')attemptId=await attemptHistory.start({title:payload.title,projectName:selectedProject||payload.title,parentImageId:payload.revision?.parentImageId});}catch(error){aiStatus.textContent='生成試行の履歴を保存できません：'+error.message;control.disabled=false;document.querySelector('#clear-draft').disabled=false;return;}
- const started=performance.now();
- const logAttempt=async(status,error=null)=>{if(!attemptId)return;try{await attemptHistory.finish(attemptId,{status,error,elapsedMs:Math.round(performance.now()-started)});}catch{aiStatus.textContent+=' 生成試行の履歴を更新できませんでした。';}};
+ const started=performance.now();let imageElapsedMs=null,generationVersion=null,imageSha256=null,receivedValidationA;
+ const logAttempt=async(status,error=null)=>{if(!attemptId)return;try{await attemptHistory.finish(attemptId,{status,error,elapsedMs:Math.round(performance.now()-started),imageElapsedMs,generationVersion,imageSha256,...(receivedValidationA!==undefined?{validationA:receivedValidationA}:{})});}catch{aiStatus.textContent+=' 生成試行の履歴を更新できませんでした。';}};
  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),190000);
  updateCompletedResultStatus('working');
  try{const response=await fetch('/api/v1/complete-thumbnail',{method:'POST',headers:{'Content-Type':'application/json',...validationHeaders},body:JSON.stringify(payload),signal:controller.signal});const data=await response.json();if(!response.ok){const failure=new Error(data.error?.message??'生成に失敗しました。');failure.apiError=true;throw failure;}
+  imageElapsedMs=Math.round(performance.now()-started);generationVersion=data.generation_version??null;receivedValidationA=data.validationA;imageSha256=await hashBytes(fromDataUrl(data.imageDataUrl));
   showCompleted(data);scheduleDraft();
-  try{await completeGallery.remember(payload,data,{elapsedMs:Math.round(performance.now()-started),...(attemptId?{id:attemptId}:{}),projectName:selectedProject});aiStatus.textContent='完成画像を比較一覧に保存しました。小さい表示で文字・主役・構図を見比べてください。';await logAttempt('success');}
+  try{await completeGallery.remember(payload,data,{elapsedMs:imageElapsedMs,...(validationHeaders['X-Validation-A-Case']?{expectedValidationACase:validationHeaders['X-Validation-A-Case']} :{}),...(attemptId?{id:attemptId}:{}),projectName:selectedProject});aiStatus.textContent='完成画像を比較一覧に保存しました。小さい表示で文字・主役・構図を見比べてください。';await logAttempt('success');}
   catch(error){updateCompletedResultStatus('save_error');aiStatus.textContent=`完成画像は生成できましたが、比較保存に失敗しました：${error.message} 表示中の完成PNGをファイルに保存してください。`;await logAttempt('save_error',error.message);}
  }catch(error){updateCompletedResultStatus('failed');aiStatus.textContent=error.name==='AbortError'?'待機期限を超えました。課金済みの可能性があります。利用履歴を確認してください。':`${error.message} 前回の完成画像は保持しています。`;await logAttempt(error.name==='AbortError'?'timeout':error.apiError?'api_error':'network_error',error.message);}
  finally{clearTimeout(timer);document.querySelector('#ai-consent').checked=false;document.querySelector('#clear-draft').disabled=false;control.disabled=false;const message=aiStatus.textContent;await checkAIStatus();aiStatus.textContent=message;}
