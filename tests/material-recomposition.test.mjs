@@ -72,8 +72,8 @@ test('shared ZIP and analysis retain per-image design choices in the same compar
  const analysis=createCompleteReviewAnalysis();await analysis.consume(comparisonBundle(state,state.groups[0].id));const dataset=analysis.finish();assert.deepEqual(dataset.images.map(x=>x.design),['auto','recompose']);assert.equal(dataset.progress.completedHumanComparisons,0);assert.equal(dataset.scoringAgreement,null);assert.match(completePreview(dataset),/写真の素材から再構成/);assert.deepEqual(feedbackUsage(dataset.images[1]),{feedbackUsed:false,feedbackUsageKnown:true});
 });
 
-test('A snapshot binds recomposition in both prompts and rejects a changed design before provider dispatch',async t=>{
- const {consent,...value}=input,automatic=await freezeValidationA({...value,design:'auto'}),fixed=await freezeValidationA(value);assert.notEqual(fixed.caseId,automatic.caseId);assert.deepEqual(validationACase(fixed),fixed);await assertValidationAInput(fixed,input);assert.match(fixed.chatgptPrompt,/切り抜き、拡大・再配置/);assert.match(fixed.chatgptPrompt,/同じ人物を複製/);assert.match(fixed.servicePrompt,/MATERIAL RECOMPOSITION/);
+test('A binds service recomposition without copying it into the ordinary baseline and rejects changed design before dispatch',async t=>{
+ const {consent,...value}=input,automatic=await freezeValidationA({...value,design:'auto'}),fixed=await freezeValidationA(value);assert.notEqual(fixed.caseId,automatic.caseId);assert.deepEqual(validationACase(fixed),fixed);await assertValidationAInput(fixed,input);assert.equal(fixed.chatgptPrompt,automatic.chatgptPrompt);assert.doesNotMatch(fixed.chatgptPrompt,/切り抜き|同じ人物を複製/);assert.match(fixed.servicePrompt,/MATERIAL RECOMPOSITION/);
  let paid=0;const server=makeServer({complete:async()=>{paid++;return {imageDataUrl:dataUrl(finished)};}});await new Promise(r=>server.listen(0,'127.0.0.1',r));t.after(()=>new Promise(r=>server.close(r)));
  const response=await fetch(`http://127.0.0.1:${server.address().port}/api/v1/complete-thumbnail`,{method:'POST',headers:{'Content-Type':'application/json','X-Validation-A-Case':automatic.caseId},body:JSON.stringify(input)});assert.equal(response.status,409);assert.equal(paid,0);
 });
@@ -83,7 +83,7 @@ test('all three OpenAPI design enums allow recomposition while existing assessme
 });
 
 test('a 0.9.0 fixed case cannot silently use strengthened 0.9.1 edit instructions; analysis keeps the historical memory status',async()=>{
- const {consent,...value}=input,fixed=await freezeValidationA(value);assert.equal(fixed.service.generationVersion,COMPLETE_GENERATION_VERSION);assert.match(fixed.chatgptPrompt,/少なくとも1つを切り抜き/);assert.match(fixed.chatgptPrompt,/文字追加だけでは/);
+ const {consent,...value}=input,fixed=await freezeValidationA(value);assert.equal(fixed.service.generationVersion,COMPLETE_GENERATION_VERSION);assert.match(fixed.servicePrompt,/isolate at least one/);assert.doesNotMatch(fixed.chatgptPrompt,/少なくとも1つを切り抜き|文字追加だけでは/);
  const prior={...fixed.service,generationVersion:'ai-complete-0.9.0'},oldCaseId='validation-a-'+createHash('sha256').update(JSON.stringify({requestSha256:fixed.requestSha256,service:prior,servicePromptSha256:fixed.servicePromptSha256})).digest('hex');
  const {checkValidationARequest}=await import('../backend/validation-a.mjs');await assert.rejects(()=>checkValidationARequest(input,oldCaseId),error=>error.code==='VALIDATION_A_MISMATCH');
  for(const version of ['ai-complete-0.9.0','ai-complete-0.9.1'])assert.deepEqual(feedbackUsage({result:{generation_version:version}}),{feedbackUsed:false,feedbackUsageKnown:true});assert.equal(feedbackUsage({result:{generation_version:'ai-complete-0.9.2'}}).feedbackUsageKnown,false);

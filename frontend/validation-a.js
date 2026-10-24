@@ -1,6 +1,7 @@
 import {writeZip,utf8,hashBytes,fromDataUrl} from './local-archive.js';
 import {normalizeReferenceContext} from '../shared/thumbnail-references.mjs';
 import {normalizeVisualIntent,normalizeVideoBrief} from '../shared/complete-designs.mjs';
+import {validationAProtocol} from '../shared/validation-a-baseline.mjs';
 
 export function validationACase(value){
  if(value==null)return null;
@@ -36,21 +37,23 @@ export async function validationAZip(value,imageDataUrl){
  if(await hashBytes(utf8(JSON.stringify(fixed.service.files)))!==fixed.service.sourceSha256||'validation-a-'+await hashBytes(utf8(JSON.stringify({requestSha256:fixed.requestSha256,service:fixed.service,servicePromptSha256:fixed.servicePromptSha256})))!==fixed.caseId)throw new Error('A検証の固定IDと生成設定が一致しません。');
  if(photo.length!==fixed.source.bytes||await hashBytes(photo)!==fixed.source.sha256||await hashBytes(utf8(fixed.servicePrompt))!==fixed.servicePromptSha256)throw new Error('A検証の写真または指示のハッシュが一致しません。');
  const references=[];for(const asset of fixed.referenceAssets??[]){const data=fromDataUrl(asset.dataUrl);if(data.length!==asset.bytes||await hashBytes(data)!==asset.sha256)throw new Error('A検証の参考画像のハッシュが一致しません。');references.push({name:asset.path,data});}
+ const protocol={...validationAProtocol(fixed),caseId:fixed.caseId,chatgptPromptSha256:await hashBytes(utf8(fixed.chatgptPrompt))};
  return writeZip([
   ...references,
   {name:'source.png',data:photo},
   {name:'validation-a.json',data:utf8(JSON.stringify(fixed,null,2))},
   {name:'chatgpt-prompt.txt',data:utf8(fixed.chatgptPrompt)},
   {name:'service-prompt.txt',data:utf8(fixed.servicePrompt)},
-  {name:'README.txt',data:utf8('A検証の固定入力です。source.pngをChatGPTの新しい会話へ添付し、chatgpt-prompt.txtをそのまま送ってください。サービスは評価メモなし・修正なし。双方の最初の1枚を保存し、失敗も残します。これらのファイルを保存しただけでは画像生成・比較・許諾確認は行われません。モデル設定と実行コードのSHA-256はvalidation-a.jsonにあります。同一画像の再現を保証するものではありません。写真と入力内容を含むため非公開で扱ってください。完成画像・人の評価・実費は別に記録します。このZIPは入力の照合用で、サイトへの復元用ではありません。下書きの移行には既存の下書きZIPを併せて保存してください。')}
+  {name:'comparison-protocol.json',data:utf8(JSON.stringify(protocol,null,2))},
+  {name:'README.txt',data:utf8(protocol.note+'\n\n'+(protocol.ordinaryBaselineMatched?'source.pngをChatGPTの新しい会話へ添付し、chatgpt-prompt.txtの短い依頼文をそのまま送ってください。サービス内部の詳細指示を足さないでください。':'旧依頼文は変更せず保持しています。正式Aを新しく始める場合は条件を合意して別ケースとして固定してください。')+'\nservice-prompt.txtは実行条件の監査用です。通常のA比較でChatGPTに送る文ではありません。'+(!protocol.pr11TitleLengthCompatible?'\nこのタイトルはPR #11の60文字上限を超えます。正式な比較条件を先に合意し、元のタイトルを勝手に短くしないでください。':'')+'\n\nサービスは評価メモなし・修正なし。双方の最初の1枚を保存し、失敗も残します。固定保存では画像生成・比較・許諾確認は行いません。モデル設定と実行コードのSHA-256はvalidation-a.jsonにあります。同一画像の再現を保証するものではありません。写真と入力内容を含むため非公開で扱ってください。完成画像・人の評価・実費は別に記録します。このZIPは入力の照合用で、サイトへの復元用ではありません。下書きの移行には既存の下書きZIPを併せて保存してください。')}
  ]);
 }
 export function createValidationA({root,capture,download,onChange=()=>{},onFreeze=()=>{},onRelease=()=>{},isBusy=()=>false,document=globalThis.document,fetchImpl=(...args)=>fetch(...args)}){
  const el=(tag,text='')=>{const node=document.createElement(tag);node.textContent=text;return node;},freeze=el('button','A検証の入力を固定してZIP保存（無料）'),release=el('button','固定を解除'),status=el('p'),summary=el('pre');
  freeze.type=release.type='button';summary.style.whiteSpace='pre-wrap';status.setAttribute('role','status');
- root.replaceChildren(el('h3','A検証：最初の1枚を比べる'),el('p','今の写真・タイトル・仕上がりのイメージ・設定を固定し、ChatGPTにも同じ写真と条件を渡します。固定中は評価メモを使いません。固定保存では有料APIを呼びません。'),freeze,release,summary,status);
+ root.replaceChildren(el('h3','A検証：最初の1枚を比べる'),el('p','サービスと、ChatGPTへ普通に短く頼んだ最初の1枚を比べます。同じ写真・タイトル・補足・イメージ・見出し方針を固定します。ChatGPTへサービス内部の詳細指示は渡しません。固定中は評価メモを使わず、固定保存では有料APIを呼びません。'),freeze,release,summary,status);
  let fixed=null;
- function render(){release.disabled=!fixed;summary.textContent=fixed?`固定ID：${fixed.caseId}\n動画タイトル：${fixed.input.title}\n補足：${fixed.input.brief||'なし'}\nイメージ：${fixed.input.visualIntent||'指定なし'}\n見出し：${fixed.input.headlineMode==='auto'?'AIに任せる':fixed.input.headline}\nデザイン：${fixed.input.design} / 構図：${fixed.input.composition}\n${fixed.service.generationVersion} / ${fixed.service.model} / ${fixed.service.quality} / ${fixed.service.size}\n評価メモ：オフ / 固定後の写真・条件変更は生成前に停止します。`:'まだ入力を固定していません。写真と動画タイトルを用意してください。';}
+ function render(){release.disabled=!fixed;const protocol=fixed?validationAProtocol(fixed):null;summary.textContent=fixed?`${protocol.note}${!protocol.pr11TitleLengthCompatible?'\nPR #11のタイトル60文字上限を超えています。正式な条件を確認してください。':''}\n固定ID：${fixed.caseId}\n動画タイトル：${fixed.input.title}\n補足：${fixed.input.brief||'なし'}\nイメージ：${fixed.input.visualIntent||'指定なし'}\n見出し：${fixed.input.headlineMode==='auto'?'AIに任せる':fixed.input.headline}\nサービスのデザイン：${fixed.input.design} / 構図：${fixed.input.composition}\n${fixed.service.generationVersion} / ${fixed.service.model} / ${fixed.service.quality} / ${fixed.service.size}\n評価メモ：オフ / 固定後の写真・条件変更は生成前に停止します。`:'まだ入力を固定していません。写真と動画タイトルを用意してください。';}
  freeze.addEventListener('click',async()=>{
   if(isBusy())return;freeze.disabled=true;
   try{const payload=await capture();if(payload.revision)throw new Error('最初の1枚の検証です。「修正をやめる」で通常生成へ戻してください。');const {consent,...input}=payload;
