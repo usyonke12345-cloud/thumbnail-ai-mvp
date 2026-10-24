@@ -478,6 +478,7 @@
                     },
                     "validationA": {
                       "type": "object",
+                      "description": "Server-side fixed-input check, not an image-quality judgement. New comparison exports preserve this receipt and recheck its source/request hashes; imported JSON is not a signed attestation.",
                       "additionalProperties": false,
                       "required": [
                         "caseId",

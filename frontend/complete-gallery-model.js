@@ -1,6 +1,7 @@
 import {normalizeReferenceContext} from '../shared/thumbnail-references.mjs';
 import {normalizeVisualIntent,normalizeVideoBrief} from '../shared/complete-designs.mjs';
-import {isCompletePngDataUrl,MAX_COMPLETE_PNG_DATA_URL_LENGTH,revisionParent} from '../shared/complete-images.mjs';
+import {isCompletePngDataUrl,MAX_COMPLETE_PNG_DATA_URL_LENGTH,revisionParent,validationAReceipt} from '../shared/complete-images.mjs';
+import {assertValidationAReceiptInput} from './validation-a.js';
 import {isReviewerId} from '../shared/reviewer-id.mjs';
 import {validateSubjectRegions} from './subject-regions.js';
 import {normalizeGenerationFeedback} from '../shared/generation-feedback.mjs';
@@ -23,7 +24,7 @@ const hashPng=value=>hashBytes(Uint8Array.from(atob(value.split(',')[1]),c=>c.ch
 function result(value){
  if(!isCompletePngDataUrl(value?.imageDataUrl))fail('完成PNGは16MiB以下で保存してください。');
  const size=png(value.imageDataUrl,MAX_COMPLETE_PNG_DATA_URL_LENGTH);if(size.width!==1536||size.height!==864)fail('完成PNGは1536×864の画像が必要です。');
- return {apiVersion:'1',mode:'ai_complete',...size,imageDataUrl:value.imageDataUrl,generation_version:typeof value.generation_version==='string'?value.generation_version:null,...(value.referenceContext!==undefined?{referenceContext:normalizeReferenceContext(value.referenceContext)}:{}),...(value.revision!==undefined?{revision:revisionParent(value.revision)}:{}),...(value.feedbackApplied!==undefined?{feedbackApplied:normalizeGenerationFeedback(value.feedbackApplied)}:{}),limitations:Array.isArray(value.limitations)?value.limitations.filter(x=>typeof x==='string').map(x=>x.slice(0,2000)).slice(0,20):['入力条件が不明な以前の完成画像です。未採点です。']};
+ return {apiVersion:'1',mode:'ai_complete',...size,imageDataUrl:value.imageDataUrl,generation_version:typeof value.generation_version==='string'?value.generation_version:null,...(value.referenceContext!==undefined?{referenceContext:normalizeReferenceContext(value.referenceContext)}:{}),...(value.validationA!==undefined?{validationA:validationAReceipt(value.validationA)}:{}),...(value.revision!==undefined?{revision:revisionParent(value.revision)}:{}),...(value.feedbackApplied!==undefined?{feedbackApplied:normalizeGenerationFeedback(value.feedbackApplied)}:{}),limitations:Array.isArray(value.limitations)?value.limitations.filter(x=>typeof x==='string').map(x=>x.slice(0,2000)).slice(0,20):['入力条件が不明な以前の完成画像です。未採点です。']};
 }
 function headlineInput(payload){
  const mode=payload?.headlineMode??'manual';if(!['auto','manual'].includes(mode))fail('見出しの作り方が不正です。');
@@ -49,12 +50,14 @@ export function revisionChecks(images,scope='comparison_bundle'){
  });
 }
 export async function checkGenerationCapacity(state,payload,name){const {input,groupId}=await comparisonInput(payload),existing=state.groups.find(g=>g.id===groupId),project=projectName(name)??(existing?projectOf(existing):input.title);if(state.images.length>=MAX_IMAGES)fail('比較履歴が60枚に達しています。必要な記録を保存してから不要な案件を削除してください。');if(state.images.filter(x=>x.groupId===groupId).length>=MAX_GROUP_IMAGES)fail('この組は12枚に達しています。生成前に整理してください。');const ids=new Set(state.groups.filter(g=>g.id===groupId||projectOf(g)===project).map(g=>g.id));if(state.images.filter(x=>ids.has(x.groupId)).length>=MAX_PROJECT_IMAGES)fail('この案件は24枚に達しています。生成前に整理してください。');}
-export async function createEntry(payload,value,{id=crypto.randomUUID(),capturedAt=new Date().toISOString(),elapsedMs=null,projectName:name,revision}={}){
+export async function createEntry(payload,value,{id=crypto.randomUUID(),capturedAt=new Date().toISOString(),elapsedMs=null,projectName:name,revision,expectedValidationACase}={}){
  const {input,groupId}=await comparisonInput(payload);
  const composition=payload.composition??'auto';if(!Object.hasOwn(COMPOSITIONS,composition))fail('構図の希望が不正です。');
  if(payload.design!==undefined&&!Object.hasOwn(DESIGNS,payload.design))fail('デザインの希望が不正です。');
  if(payload.referenceMode!==undefined&&!['auto','off'].includes(payload.referenceMode))fail('参考資料の指定が不正です。');
  const image=result(value);
+ if(expectedValidationACase&&image.validationA?.caseId!==expectedValidationACase)fail('A検証の固定IDに対応する照合結果がありません。');
+ if(image.validationA){await assertValidationAReceiptInput(image.validationA,payload);if(JSON.stringify(image.validationA.referenceContext)!==JSON.stringify(image.referenceContext))fail('A検証の照合結果と参考資料が一致しません。');}
  const entry={group:{version:1,id:groupId,capturedAt,input,sourceImageDataUrl:payload.imageDataUrl},image:{version:1,id,groupId,capturedAt,composition,...(payload.referenceMode!==undefined?{referenceMode:payload.referenceMode}:{}),...(payload.design!==undefined?{design:payload.design}:{}),elapsedMs,result:image,imageSha256:await hashPng(image.imageDataUrl)}};
  if(payload.feedback!==undefined)entry.image.feedbackContext=normalizeGenerationFeedback(payload.feedback);
  if(image.feedbackApplied&&!entry.image.feedbackContext)fail('生成応答の評価メモに対応する送信記録がありません。');
@@ -113,7 +116,7 @@ export function comparisonBundle(state,groupId){
  const group=state.groups.find(x=>x.id===groupId);if(!group)fail('比較する組がありません。');
  const images=state.images.filter(x=>x.groupId===groupId),review=state.reviews.find(x=>x.groupId===groupId)??null;
  const checks=revisionChecks(images);
- return {version:images.some(x=>x.referenceMode!==undefined||x.result?.referenceContext)?'complete-comparison-1.9.0':images.some(x=>x.feedbackContext||x.result?.feedbackApplied)?'complete-comparison-1.8.0':images.some(x=>x.subjectRegions)?'complete-comparison-1.7.0':group.projectName||checks.length||images.length>6?'complete-comparison-1.6.0':group.input?.brief===''?'complete-comparison-1.5.0':group.input?.visualIntent?'complete-comparison-1.4.0':group.input?.headlineMode==='auto'||images.some(x=>x.design!==undefined)?'complete-comparison-1.3.0':'complete-comparison-1.2.0',kind:'human_quality_review',assessment:null,group,images,review,...(checks.length?{revisionChecks:checks}:{}),reviewCoversAllImages:!!review&&images.length===review.displayWidths.length&&images.every(x=>review.displayWidths.some(w=>w.imageId===x.id)),note:'完成PNGは未採点です。人の選択はモデルの再学習やCTR予測ではありません。評価メモを生成指示に使った場合は画像ごとに記録します。写真・完成画像を含む非公開の比較記録です。'};
+ return {version:images.some(x=>x.result?.validationA)?'complete-comparison-1.10.0':images.some(x=>x.referenceMode!==undefined||x.result?.referenceContext)?'complete-comparison-1.9.0':images.some(x=>x.feedbackContext||x.result?.feedbackApplied)?'complete-comparison-1.8.0':images.some(x=>x.subjectRegions)?'complete-comparison-1.7.0':group.projectName||checks.length||images.length>6?'complete-comparison-1.6.0':group.input?.brief===''?'complete-comparison-1.5.0':group.input?.visualIntent?'complete-comparison-1.4.0':group.input?.headlineMode==='auto'||images.some(x=>x.design!==undefined)?'complete-comparison-1.3.0':'complete-comparison-1.2.0',kind:'human_quality_review',assessment:null,group,images,review,...(checks.length?{revisionChecks:checks}:{}),reviewCoversAllImages:!!review&&images.length===review.displayWidths.length&&images.every(x=>review.displayWidths.some(w=>w.imageId===x.id)),note:'完成PNGは未採点です。人の選択はモデルの再学習やCTR予測ではありません。評価メモを生成指示に使った場合は画像ごとに記録します。写真・完成画像を含む非公開の比較記録です。'};
 }
 export function parseCostUsd(value){
  if(typeof value!=='string')fail('実費はUSDの金額で入力してください。');
@@ -142,7 +145,7 @@ export function gallerySummary(state){
 }
 export function comparisonReport(state,{exportedAt=new Date().toISOString()}={}){
  if(!date(exportedAt))fail('書き出し時刻が不正です。');
- const sets=state.groups.map(g=>comparisonBundle(state,g.id));return {version:state.images.length>6||state.groups.length>6||sets.some(x=>['complete-comparison-1.6.0','complete-comparison-1.7.0','complete-comparison-1.8.0','complete-comparison-1.9.0'].includes(x.version))?'complete-comparison-report-1.1.0':'complete-comparison-report-1.0.0',kind:'human_quality_report',exportedAt,assessment:null,summary:gallerySummary(state),sets,note:'写真・完成PNGを含む非公開データです。SVG比較CSVとは別形式で、許諾済み20タイトルや正式な採点検証件数には自動で加えません。'};
+ const sets=state.groups.map(g=>comparisonBundle(state,g.id));return {version:state.images.length>6||state.groups.length>6||sets.some(x=>['complete-comparison-1.6.0','complete-comparison-1.7.0','complete-comparison-1.8.0','complete-comparison-1.9.0','complete-comparison-1.10.0'].includes(x.version))?'complete-comparison-report-1.1.0':'complete-comparison-report-1.0.0',kind:'human_quality_report',exportedAt,assessment:null,summary:gallerySummary(state),sets,note:'写真・完成PNGを含む非公開データです。SVG比較CSVとは別形式で、許諾済み20タイトルや正式な採点検証件数には自動で加えません。'};
 }
 
 const canonical=value=>Array.isArray(value)?value.map(canonical):value&&typeof value==='object'?Object.fromEntries(Object.keys(value).sort().map(k=>[k,canonical(value[k])])):value;
