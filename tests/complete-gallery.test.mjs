@@ -140,7 +140,7 @@ test('manual cost/save observations survive reload, report all groups, and expos
  storage.rejectReview=true;cost.value='0.02';await form.events.submit({preventDefault(){}});assert.match(form.children.at(-2).textContent,/容量/);assert.equal(storage.state.images[1].observation.costUsd,.01);assert.equal(form.children.find(x=>x.type==='submit').disabled,false);
  await dom.find(x=>x.textContent==='全組の画像・記録・集計JSONを保存').events.click();const report=JSON.parse(downloads[0][1]);assert.equal(report.sets.length,2);assert.equal(report.summary.cost.confirmedTotalUsd,.01);assert.equal(report.summary.pngSave.saved,1);assert.equal(report.summary.pngSave.unknown,1);
 });
-const editor=await readFile(new URL('../frontend/editor.js',import.meta.url),'utf8'),handler=editor.slice(editor.indexOf("function captureAIInput()")).split('// Draft lifecycle')[0];
+const editor=await readFile(new URL('../frontend/editor.js',import.meta.url),'utf8'),handler=editor.slice(editor.indexOf("async function captureAIInput()")).split('// Draft lifecycle')[0];
 test('PNG diagnosis succeeds or explains failure without changing the images, review or manual generation',async()=>{
  const dom=documentFixture(),storage=storageFixture();let calls=0,fail=false;
  const app=createCompleteGallery({...dom,storage,download:()=>{},diagnose:async(b,id)=>{calls++;assert.equal(b.images[0].id,id);if(fail)throw new Error('offline');return {assets:[{assetId:'a',status:'analyzed',width:1536,height:864,luminance:{mean:.2},nearlyUniform:false}],images:[{imageId:id,assetId:'a'}]};}});await app.ready;await app.remember(payload,result,{id:'a'});
