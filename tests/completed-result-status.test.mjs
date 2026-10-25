@@ -7,7 +7,7 @@ import {createAttemptHistory} from '../frontend/attempt-history.js';
 import {png,dataUrl} from './helpers/complete-png.mjs';
 const source=await readFile(new URL('../frontend/editor.js',import.meta.url),'utf8');
 const display=source.slice(source.indexOf('function showCompleted('),source.indexOf('const canvas='));
-const handler=source.slice(source.indexOf('function captureAIInput()')).split('// Draft lifecycle')[0];
+const handler=source.slice(source.indexOf('async function captureAIInput()')).split('// Draft lifecycle')[0];
 const old={imageDataUrl:dataUrl(png()),generation_version:'ai-complete-0.6.1',limitations:[]};
 const latest={imageDataUrl:dataUrl(png(1536,864,[80,100,120,255])),generation_version:'ai-complete-0.7.0',limitations:[]};
 function app(){

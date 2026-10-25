@@ -7,7 +7,7 @@ import {createEditorTools} from './editor-tools.js';
 import {createAttemptHistory} from './attempt-history.js';
 import {createEditorReferences} from './editor-references.js';
 import {createFeedbackMemory,feedbackText} from './feedback-memory.js';
-import {fromDataUrl,hashBytes} from './local-archive.js';
+import {fromDataUrl,toDataUrl,hashBytes} from './local-archive.js';
 import {createValidationA} from './validation-a.js';
 let feedbackMemory=null,validationA=null;
 const completeGallery=createCompleteGallery({root:document.querySelector('#complete-comparison'),onRevise:prepareRevision,onRecordsChanged:()=>feedbackMemory?.refresh()});
@@ -113,11 +113,16 @@ document.querySelector('#save-editor').addEventListener('click',async event=>{
  catch(error){status.textContent=error.name==='AbortError'?'保存をキャンセルしました。':`保存できません：${error.message}`;}finally{button.disabled=false;}
 });
 draw();
-function captureAIInput(){
+async function captureAIInput(){
  if(layout.value!=='single'||!photos[0])throw new Error('「1枚の写真を全面に使う」を選び、「使う写真」から写真を読み込んでください。');
  const source=document.createElement('canvas');source.width=1280;source.height=720;const c=source.getContext('2d'),p=cropPlacement(photos[0].naturalWidth,photos[0].naturalHeight,{x:0,y:0,width:1280,height:720},settings[0].zoom,settings[0].x,settings[0].y);c.drawImage(photos[0],p.x,p.y,p.width,p.height);
  const headlineMode=document.querySelector('#ai-headline-mode').value;
- return {title:document.querySelector('#ai-title').value,brief:document.querySelector('#ai-brief').value,headline:headlineMode==='auto'?null:headline.value,headlineMode,design:document.querySelector('#ai-design').value,visualIntent:document.querySelector('#ai-visual-intent').value,composition:document.querySelector('#ai-composition').value,...(document.querySelector('#ai-reference-mode')?{referenceMode:document.querySelector('#ai-reference-mode').value}:{}),imageDataUrl:activeRevision?.sourceImageDataUrl??source.toDataURL('image/png'),consent:true,...(activeRevision?{revision:{instruction:document.querySelector('#revision-instruction').value,parentImageId:activeRevision.parentImageId,imageDataUrl:activeRevision.imageDataUrl}}:{})};
+ const original=!activeRevision&&typeof storedFiles!=='undefined'&&storedFiles[0]?.type==='image/png'&&photos[0].naturalWidth===1280&&photos[0].naturalHeight===720&&settings[0].zoom===1?storedFiles[0]:null;
+ // Capture text, crop and revision before awaiting the source file. Mid-read edits
+ // must not change the request associated with this click.
+ const payload={title:document.querySelector('#ai-title').value,brief:document.querySelector('#ai-brief').value,headline:headlineMode==='auto'?null:headline.value,headlineMode,design:document.querySelector('#ai-design').value,visualIntent:document.querySelector('#ai-visual-intent').value,composition:document.querySelector('#ai-composition').value,...(document.querySelector('#ai-reference-mode')?{referenceMode:document.querySelector('#ai-reference-mode').value}:{}),imageDataUrl:activeRevision?.sourceImageDataUrl??source.toDataURL('image/png'),consent:true,...(activeRevision?{revision:{instruction:document.querySelector('#revision-instruction').value,parentImageId:activeRevision.parentImageId,imageDataUrl:activeRevision.imageDataUrl}}:{})};
+ if(original&&original.size<=2359296){const bytes=new Uint8Array(await original.arrayBuffer());if(bytes.length>=24&&[137,80,78,71,13,10,26,10].every((v,i)=>bytes[i]===v)&&String.fromCharCode(...bytes.slice(12,16))==='IHDR'){const view=new DataView(bytes.buffer);if(view.getUint32(16)===1280&&view.getUint32(20)===720){const raw=toDataUrl(bytes);if(raw.length<=3*1024*1024)payload.imageDataUrl=raw;}}}
+ return payload;
 }
 function updateCompletedResultStatus(state){
  const notice=document.querySelector('#ai-result-status');if(!completedResult||!notice)return;
@@ -131,7 +136,9 @@ document.querySelector('#ai-complete').addEventListener('click',async event=>{
  const headlineMode=document.querySelector('#ai-headline-mode').value;
  if(!document.querySelector('#ai-title').value.trim()||(headlineMode==='manual'&&(!headline.value.trim()||[...headline.value].length>80))){aiStatus.textContent='動画タイトルを入力してください。手入力を選んだ場合は、80文字以内の見出しも必要です。';return;}
  const selectedProject=document.querySelector('#project-name')?.value??'';
- const payload=captureAIInput();updateCompletedResultStatus('previous');let validationHeaders;control.disabled=true;document.querySelector('#clear-draft').disabled=true;
+ control.disabled=true;document.querySelector('#clear-draft').disabled=true;
+ let payload;try{payload=await captureAIInput();}catch(error){aiStatus.textContent=error.message;control.disabled=false;document.querySelector('#clear-draft').disabled=false;return;}
+ updateCompletedResultStatus('previous');let validationHeaders;
  try{validationHeaders=await validationA.headers(payload);}catch(error){aiStatus.textContent=error.message;control.disabled=false;document.querySelector('#clear-draft').disabled=false;return;}
  if(payload.imageDataUrl.length>3*1024*1024){aiStatus.textContent='写真が大きすぎます。より小さな写真を選んでください。';control.disabled=false;document.querySelector('#clear-draft').disabled=false;return;}
  const sentPhoto=document.createElement('img'),sentLabel=document.createElement('p');sentPhoto.src=payload.imageDataUrl;sentPhoto.alt='今回APIへ送信する入力写真';sentLabel.textContent='今回APIへ送信する写真です。完成画像でもこの人物・素材が保持されているか確認してください。';document.querySelector('#ai-source').replaceChildren(sentLabel,sentPhoto);
