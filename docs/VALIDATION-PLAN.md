@@ -49,7 +49,17 @@ devだけを指示の調整とメモに使う。holdoutに保存した評価は�
 node scripts/prepare-feedback-trials.mjs data/private/complete-analysis r01 data/private/blind-r01
 ```
 
-現在は生成0.6.1、同じ構図・デザイン、修正生成ではない、解析可能なPNGの組だけを対象にする。1組に複数ある場合は、点数や人の選択で選ばず、生成時刻・ID順で最初の組み合わせを使う。0組なら比較条件がまだそろっていない。古い版の画像は以前の品質記録として保持する。
+指定を省いた旧コマンドは生成0.6.1のまま。現行の生成0.10.2で準備する場合は、対象の版を明示する。
+
+```sh
+node scripts/prepare-feedback-trials.mjs data/private/complete-analysis r01 data/private/blind-0.10.2-r01 --generation-version ai-complete-0.10.2
+```
+
+同じ生成版・構図・デザイン・参考資料条件で、修正生成ではなく、元写真と完成画像のPNGが解析可能な組だけを対象にする。参考autoでは送信記録が両方に必要で、ライブラリ・候補・観察ハッシュ・参考画像送信の有無がすべて一致する必要がある。参考offとauto、条件が不明なauto同士は対照にしない。未知の生成版や、holdout除外を入れる前の0.6.0は受け付けない。出力先は新しいフォルダーにし、既存の記入表がある場所には何も書かない。
+
+1組に複数ある場合は、点数や人の選択で選ばず、生成時刻・ID順で最初の組み合わせを使う。0組なら比較条件がまだそろっていない。旧画像・評価・固定条件は書き換えない。明示した版は非公開の対応表へ残し、評価者向けページ・CSVには表示しない。0.6.1以外を指定した対応表はfeedback-blind-trials-1.1.0。公開API・Candidate/Assessment・採点・生成指示の変更はない。
+
+A用に評価メモなしで作ったpair01〜05だけでは、Bのメモあり・なしの対照はそろわない。資料作成ができてもBを実施済みとせず、Aの評価後にdevのメモと新しいholdoutの条件・生成順を決める。
 
 photo-review.htmlとphoto-review.csvは採点側の既存シートを使う。pair-choices.csvには該当する2つのp番号とA/Bだけを書き、本人がA / B / tie / neitherと理由を記入する。条件の対応はprivate-answer-key.jsonに置き、判断を保存するまで見せない。評価者にはそのファイルを渡さない。生成を操作した本人は見た目を覚えているため、本人だけの比較は探索的な参考結果とする。
 
