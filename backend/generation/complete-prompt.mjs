@@ -3,6 +3,7 @@ import {normalizeGenerationFeedback} from '../../shared/generation-feedback.mjs'
 import {headlineInstructions} from './complete-editorial.mjs';
 import {completeReferencePatternInstructions} from './complete-reference-patterns.mjs';
 import {completeReferenceInstructions} from '../references/selection.mjs';
+import {multiPhotoPrompt} from './complete-multi-prompt.mjs';
 // This boundary applies to every design, including references and revisions.
 // It is an edit instruction, not a claim that the output has been verified.
 const peopleSourceRule=[
@@ -17,6 +18,7 @@ const photoMaterialRule=[
  'COLOR AND LIGHT: restrained exposure, white balance, contrast and local color adjustments may emphasize the existing photograph. Keep skin and food natural and retain the scene\'s original character. Do not convert a lighting adjustment into a different time of day, new sun flare, different weather or another environment. Prefer the original source scenery over a neutral graphic backdrop when a coherent composition is possible.'
 ].join('\n');
 export function completePrompt(input){
+ if(input.additionalImageDataUrls?.length)return multiPhotoPrompt(input);
  const feedback=input.feedback?normalizeGenerationFeedback(input.feedback):null;
  const recompose=input.design==='recompose';
  return [

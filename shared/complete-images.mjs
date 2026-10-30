@@ -1,4 +1,5 @@
 import {normalizeReferenceContext} from './thumbnail-references.mjs';
+import {sourcePhotoHashes} from './multi-photo.mjs';
 // The PNG binary and its data URL have different lengths. Keep browser/API limits aligned.
 export const MAX_COMPLETE_PNG_BYTES=16*1024*1024;
 export const MAX_COMPLETE_PNG_DATA_URL_LENGTH=22+4*Math.ceil(MAX_COMPLETE_PNG_BYTES/3);
@@ -13,7 +14,8 @@ export function revisionParent(value){
 }
 // A receipt records a server-side input check, never an output-quality judgement.
 export function validationAReceipt(value){
- const keys=['caseId','requestSha256','sourceSha256','serviceSourceSha256','feedbackUsed','referenceContext'];
+ const keys=['caseId','requestSha256','sourceSha256','serviceSourceSha256','feedbackUsed','referenceContext','additionalSourceSha256s'];
  if(!value||typeof value!=='object'||Array.isArray(value)||Object.keys(value).some(k=>!keys.includes(k))||typeof value.caseId!=='string'||!/^validation-a-[a-f0-9]{64}$/.test(value.caseId)||!['requestSha256','sourceSha256','serviceSourceSha256'].every(k=>typeof value[k]==='string'&&/^[a-f0-9]{64}$/.test(value[k]))||value.feedbackUsed!==false)throw new Error('A検証の照合結果が不正です。');
- return {caseId:value.caseId,requestSha256:value.requestSha256,sourceSha256:value.sourceSha256,serviceSourceSha256:value.serviceSourceSha256,feedbackUsed:false,...(value.referenceContext!==undefined?{referenceContext:normalizeReferenceContext(value.referenceContext)}:{})};
+ const extra=value.additionalSourceSha256s===undefined?[]:Array.isArray(value.additionalSourceSha256s)?sourcePhotoHashes([value.sourceSha256,...value.additionalSourceSha256s]).slice(1):(()=>{throw new Error('A検証の追加写真のSHA-256が不正です。');})();
+ return {caseId:value.caseId,requestSha256:value.requestSha256,sourceSha256:value.sourceSha256,serviceSourceSha256:value.serviceSourceSha256,feedbackUsed:false,...(extra.length?{additionalSourceSha256s:extra}:{}),...(value.referenceContext!==undefined?{referenceContext:normalizeReferenceContext(value.referenceContext)}:{})};
 }

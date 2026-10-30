@@ -6,28 +6,29 @@ import {writeZip} from './local-archive.js';
 const sha=async bytes=>[...new Uint8Array(await crypto.subtle.digest('SHA-256',bytes))].map(x=>x.toString(16).padStart(2,'0')).join('');
 const bytes=url=>Uint8Array.from(atob(url.split(',')[1]),c=>c.charCodeAt(0));
 const fail=message=>{throw new Error(message);};
-const sameInput=(a,b)=>a===null?b===null:!!b&&Object.keys(a).length===Object.keys(b).length&&Object.keys(a).every(k=>Object.hasOwn(b,k)&&a[k]===b[k]);
+const sameInput=(a,b)=>a===null?b===null:!!b&&Object.keys(a).length===Object.keys(b).length&&Object.keys(a).every(k=>Object.hasOwn(b,k)&&(Array.isArray(a[k])?Array.isArray(b[k])&&JSON.stringify(a[k])===JSON.stringify(b[k]):a[k]===b[k]));
 export const MAX_IMPORT_BYTES=70*1024*1024;
 
 // Verify frozen identities again; exported summaries and imported diagnostics are not trusted.
 export async function validateCompleteBundle(value){
- if(!value||!['complete-comparison-1.0.0','complete-comparison-1.1.0','complete-comparison-1.2.0','complete-comparison-1.3.0','complete-comparison-1.4.0','complete-comparison-1.5.0','complete-comparison-1.6.0','complete-comparison-1.7.0','complete-comparison-1.8.0','complete-comparison-1.9.0','complete-comparison-1.10.0'].includes(value.version)||value.kind!=='human_quality_review'||value.assessment!==null||!value.group||!Array.isArray(value.images)||!value.images.length||value.images.length>MAX_GROUP_IMAGES)fail('完成PNGの比較JSONの版・件数が不正です。');
- if(value.images.some(x=>x.referenceMode!==undefined||x.result?.referenceContext!==undefined)&&!['complete-comparison-1.9.0','complete-comparison-1.10.0'].includes(value.version))fail('参考資料の記録には比較形式1.9.0が必要です。');
- if(value.images.some(x=>x.result?.validationA)&&value.version!=='complete-comparison-1.10.0')fail('A検証の照合記録には比較形式1.10.0が必要です。');
+ if(!value||!['complete-comparison-1.0.0','complete-comparison-1.1.0','complete-comparison-1.2.0','complete-comparison-1.3.0','complete-comparison-1.4.0','complete-comparison-1.5.0','complete-comparison-1.6.0','complete-comparison-1.7.0','complete-comparison-1.8.0','complete-comparison-1.9.0','complete-comparison-1.10.0','complete-comparison-1.11.0'].includes(value.version)||value.kind!=='human_quality_review'||value.assessment!==null||!value.group||!Array.isArray(value.images)||!value.images.length||value.images.length>MAX_GROUP_IMAGES)fail('完成PNGの比較JSONの版・件数が不正です。');
+ if(value.images.some(x=>x.referenceMode!==undefined||x.result?.referenceContext!==undefined)&&!['complete-comparison-1.9.0','complete-comparison-1.10.0','complete-comparison-1.11.0'].includes(value.version))fail('参考資料の記録には比較形式1.9.0が必要です。');
+ if(value.images.some(x=>x.result?.validationA)&&!['complete-comparison-1.10.0','complete-comparison-1.11.0'].includes(value.version))fail('A検証の照合記録には比較形式1.10.0が必要です。');
  const group=value.group,images=[];let normalizedInput=null;
+ if((group.additionalImageDataUrls!==undefined||group.input?.additionalSourceSha256s!==undefined||value.images.some(x=>x.result?.sourcePhotoSha256s))&&value.version!=='complete-comparison-1.11.0')fail('複数写真には比較形式1.11.0が必要です。');
  if(group.input===null&&value.images.some(x=>x.feedbackContext!==undefined))fail('入力が不明な以前の画像に送信時の評価メモは付けられません。');
- if(value.images.some(x=>x.feedbackContext!==undefined||x.result?.feedbackApplied!==undefined)&&!['complete-comparison-1.8.0','complete-comparison-1.9.0','complete-comparison-1.10.0'].includes(value.version))fail('生成時の評価メモには比較形式1.8.0が必要です。');
- if(value.images.some(x=>x.subjectRegions!==undefined)&&!['complete-comparison-1.7.0','complete-comparison-1.8.0','complete-comparison-1.9.0','complete-comparison-1.10.0'].includes(value.version))fail('人物範囲の記録には比較形式1.7.0が必要です。');
- if(value.images.length>6&&!['complete-comparison-1.6.0','complete-comparison-1.7.0','complete-comparison-1.8.0','complete-comparison-1.9.0','complete-comparison-1.10.0'].includes(value.version))fail('7枚以上の組には比較形式1.6.0が必要です。');if(group.input===null&&value.images.some(x=>x.revision))fail('入力写真が不明な画像の修正元は復元できません。');
- if((group.projectName!==undefined||value.images.some(x=>x.revision||x.result?.revision))&&!['complete-comparison-1.6.0','complete-comparison-1.7.0','complete-comparison-1.8.0','complete-comparison-1.9.0','complete-comparison-1.10.0'].includes(value.version))fail('案件名と修正の参照には比較形式1.6.0が必要です。');
- if(!['complete-comparison-1.3.0','complete-comparison-1.4.0','complete-comparison-1.5.0','complete-comparison-1.6.0','complete-comparison-1.7.0','complete-comparison-1.8.0','complete-comparison-1.9.0','complete-comparison-1.10.0'].includes(value.version)&&(group.input?.headlineMode!==undefined||value.images.some(x=>x.design!==undefined)))fail('自動見出しとデザイン指定には比較形式1.3.0以上が必要です。');
- if(group.input?.visualIntent!==undefined&&!['complete-comparison-1.4.0','complete-comparison-1.5.0','complete-comparison-1.6.0','complete-comparison-1.7.0','complete-comparison-1.8.0','complete-comparison-1.9.0','complete-comparison-1.10.0'].includes(value.version))fail('仕上がりのイメージには比較形式1.4.0以上が必要です。');
- if(group.input?.brief===''&&!['complete-comparison-1.5.0','complete-comparison-1.6.0','complete-comparison-1.7.0','complete-comparison-1.8.0','complete-comparison-1.9.0','complete-comparison-1.10.0'].includes(value.version))fail('補足なしの入力には比較形式1.5.0が必要です。');
+ if(value.images.some(x=>x.feedbackContext!==undefined||x.result?.feedbackApplied!==undefined)&&!['complete-comparison-1.8.0','complete-comparison-1.9.0','complete-comparison-1.10.0','complete-comparison-1.11.0'].includes(value.version))fail('生成時の評価メモには比較形式1.8.0が必要です。');
+ if(value.images.some(x=>x.subjectRegions!==undefined)&&!['complete-comparison-1.7.0','complete-comparison-1.8.0','complete-comparison-1.9.0','complete-comparison-1.10.0','complete-comparison-1.11.0'].includes(value.version))fail('人物範囲の記録には比較形式1.7.0が必要です。');
+ if(value.images.length>6&&!['complete-comparison-1.6.0','complete-comparison-1.7.0','complete-comparison-1.8.0','complete-comparison-1.9.0','complete-comparison-1.10.0','complete-comparison-1.11.0'].includes(value.version))fail('7枚以上の組には比較形式1.6.0が必要です。');if(group.input===null&&value.images.some(x=>x.revision))fail('入力写真が不明な画像の修正元は復元できません。');
+ if((group.projectName!==undefined||value.images.some(x=>x.revision||x.result?.revision))&&!['complete-comparison-1.6.0','complete-comparison-1.7.0','complete-comparison-1.8.0','complete-comparison-1.9.0','complete-comparison-1.10.0','complete-comparison-1.11.0'].includes(value.version))fail('案件名と修正の参照には比較形式1.6.0が必要です。');
+ if(!['complete-comparison-1.3.0','complete-comparison-1.4.0','complete-comparison-1.5.0','complete-comparison-1.6.0','complete-comparison-1.7.0','complete-comparison-1.8.0','complete-comparison-1.9.0','complete-comparison-1.10.0','complete-comparison-1.11.0'].includes(value.version)&&(group.input?.headlineMode!==undefined||value.images.some(x=>x.design!==undefined)))fail('自動見出しとデザイン指定には比較形式1.3.0以上が必要です。');
+ if(group.input?.visualIntent!==undefined&&!['complete-comparison-1.4.0','complete-comparison-1.5.0','complete-comparison-1.6.0','complete-comparison-1.7.0','complete-comparison-1.8.0','complete-comparison-1.9.0','complete-comparison-1.10.0','complete-comparison-1.11.0'].includes(value.version))fail('仕上がりのイメージには比較形式1.4.0以上が必要です。');
+ if(group.input?.brief===''&&!['complete-comparison-1.5.0','complete-comparison-1.6.0','complete-comparison-1.7.0','complete-comparison-1.8.0','complete-comparison-1.9.0','complete-comparison-1.10.0','complete-comparison-1.11.0'].includes(value.version))fail('補足なしの入力には比較形式1.5.0が必要です。');
  for(const image of value.images){
   if(images.some(x=>x.id===image.id))fail('完成画像IDが重複しています。');
   const options={id:image.id,capturedAt:image.capturedAt,elapsedMs:image.elapsedMs,...(image.revision?{revision:image.revision}:{})};
-  const entry=group.input===null?await createLegacyEntry(image.result,options):await createEntry({...group.input,imageDataUrl:group.sourceImageDataUrl,composition:image.composition,...(image.referenceMode!==undefined?{referenceMode:image.referenceMode}:{}),...(image.design!==undefined?{design:image.design}:{}),...(image.feedbackContext!==undefined?{feedback:image.feedbackContext}:{})},image.result,options);
-  if(entry.group.id!==group.id||entry.group.sourceImageDataUrl!==group.sourceImageDataUrl||entry.image.groupId!==image.groupId||entry.image.imageSha256!==image.imageSha256||!sameInput(entry.group.input,group.input)||entry.image.composition!==image.composition||entry.image.design!==image.design||entry.image.referenceMode!==image.referenceMode||entry.image.elapsedMs!==image.elapsedMs||image.version!==1)fail('画像・入力条件・組ID・SHA-256が一致しません。');
+  const entry=group.input===null?await createLegacyEntry(image.result,options):await createEntry({...group.input,imageDataUrl:group.sourceImageDataUrl,...(group.additionalImageDataUrls!==undefined?{additionalImageDataUrls:group.additionalImageDataUrls}:{}),composition:image.composition,...(image.referenceMode!==undefined?{referenceMode:image.referenceMode}:{}),...(image.design!==undefined?{design:image.design}:{}),...(image.feedbackContext!==undefined?{feedback:image.feedbackContext}:{})},image.result,options);
+  if(entry.group.id!==group.id||entry.group.sourceImageDataUrl!==group.sourceImageDataUrl||JSON.stringify(entry.group.additionalImageDataUrls)!==JSON.stringify(group.additionalImageDataUrls)||entry.image.groupId!==image.groupId||entry.image.imageSha256!==image.imageSha256||!sameInput(entry.group.input,group.input)||entry.image.composition!==image.composition||entry.image.design!==image.design||entry.image.referenceMode!==image.referenceMode||entry.image.elapsedMs!==image.elapsedMs||image.version!==1)fail('画像・入力条件・組ID・SHA-256が一致しません。');
   normalizedInput=entry.group.input;
   if(image.result.width!==entry.image.result.width||image.result.height!==entry.image.result.height)fail('宣言寸法とPNGの寸法が一致しません。');
   images.push({...entry.image,...(image.subjectRegions!==undefined?{subjectRegions:validateSubjectRegions(image.subjectRegions,entry.group,entry.image)}:{}),...(image.observation?{observation:validateObservation(image.observation)}:{})});
@@ -37,7 +38,7 @@ export async function validateCompleteBundle(value){
  if(review){const covered=images.filter(x=>review.displayWidths?.some(w=>w.imageId===x.id));if(!covered.length)fail('比較記録の画像参照が不正です。');validateQualityReview(review,group,covered);review={version:1,groupId:review.groupId,recordedAt:review.recordedAt,decision:review.decision,imageId:review.imageId,reason:review.reason,issues:[...review.issues],displayWidths:review.displayWidths.map(({imageId,width})=>({imageId,width})),...(review.context?{context:validateReviewContext(review.context)}:{})};}
  if(group.projectName!==undefined&&(projectName(group.projectName)!==group.projectName||!Number.isFinite(Date.parse(group.projectUpdatedAt))))fail('案件名の記録が不正です。');
  revisionChecks(images);
- return comparisonBundle({groups:[{version:1,id:group.id,capturedAt:group.capturedAt,input:normalizedInput,sourceImageDataUrl:group.sourceImageDataUrl,...(group.projectName?{projectName:group.projectName,projectUpdatedAt:group.projectUpdatedAt}:{})}],images,reviews:review?[review]:[]},group.id);
+ return comparisonBundle({groups:[{version:1,id:group.id,capturedAt:group.capturedAt,input:normalizedInput,sourceImageDataUrl:group.sourceImageDataUrl,...(group.additionalImageDataUrls?{additionalImageDataUrls:group.additionalImageDataUrls}:{}),...(group.projectName?{projectName:group.projectName,projectUpdatedAt:group.projectUpdatedAt}:{})}],images,reviews:review?[review]:[]},group.id);
 }
 export async function validateCompleteImport(value){
  const sets=value?.kind==='human_quality_review'?[value]:['complete-comparison-report-1.0.0','complete-comparison-report-1.1.0'].includes(value?.version)&&value.kind==='human_quality_report'&&value.assessment===null&&Array.isArray(value.sets)?value.sets:null;
@@ -55,12 +56,13 @@ export async function validateCompleteImport(value){
 }
 export async function diagnosticRequest(bundle,imageIds){
  const checked=await validateCompleteBundle(bundle),images=imageIds?checked.images.filter(x=>imageIds.includes(x.id)):checked.images;
- if(!images.length||images.length>(checked.group.input?3:4)||imageIds&&(new Set(imageIds).size!==imageIds.length||imageIds.length!==images.length))fail('1回の診断は完成PNG3枚と入力写真1枚までです。');
+ if(!images.length||images.length>(checked.group.input?3-(checked.group.additionalImageDataUrls?.length??0):4)||imageIds&&(new Set(imageIds).size!==imageIds.length||imageIds.length!==images.length))fail('1回の診断は入力写真と完成PNGを合わせて4枚までです。');
  const assets=new Map();
  async function asset(dataUrl,role,width,height){const data=bytes(dataUrl),hash=await sha(data),assetId=`${role}-${hash}`;if(!assets.has(assetId))assets.set(assetId,{assetId,role,sha256:hash,mimeType:'image/png',width,height,byteLength:data.length,dataUrl});return assetId;}
  const sourcePhotoAssetId=checked.group.input?await asset(checked.group.sourceImageDataUrl,'source_photo',1280,720):null,refs=[];
- for(const image of images)refs.push({imageId:image.id,assetId:await asset(image.result.imageDataUrl,'complete_thumbnail',1536,864),role:'complete_thumbnail',generationVersion:image.result.generation_version,sourcePhotoAssetId,backgroundAssetId:null,headlineProvided:checked.group.input?.headline??null,renderedTextVerified:false,textRegions:null});
- return {assetVersion:'image-assets-1.0.0',assets:[...assets.values()],images:refs};
+ const additionalSourcePhotoAssetIds=[];for(const url of checked.group.additionalImageDataUrls??[])additionalSourcePhotoAssetIds.push(await asset(url,'source_photo',1280,720));
+ for(const image of images)refs.push({imageId:image.id,assetId:await asset(image.result.imageDataUrl,'complete_thumbnail',1536,864),role:'complete_thumbnail',generationVersion:image.result.generation_version,sourcePhotoAssetId,...(additionalSourcePhotoAssetIds.length?{additionalSourcePhotoAssetIds}:{}),backgroundAssetId:null,headlineProvided:checked.group.input?.headline??null,renderedTextVerified:false,textRegions:null});
+ return {assetVersion:additionalSourcePhotoAssetIds.length?'image-assets-1.1.0':'image-assets-1.0.0',assets:[...assets.values()],images:refs};
 }
 export async function diagnoseComplete(bundle,imageId){
  const request=await diagnosticRequest(bundle,[imageId]),controller=new AbortController(),timer=setTimeout(()=>controller.abort(),30000);
@@ -82,7 +84,7 @@ function sharePreview(report){
   const selected=review?.decision==='none_acceptable'?'全部使わない':review?`案 ${set.images.findIndex(x=>x.id===review.imageId)+1}`:'未記録';
   return `<section><h2>${index+1}：${escapeHtml(input?.title??'入力条件不明の以前の完成画像')}</h2>
   <p>動画内容の補足：${escapeHtml(input?.brief||'補足なし')}<br>仕上がりのイメージ：${escapeHtml(input?.visualIntent??'未指定')}</p>
-  ${input?`<details><summary>入力写真</summary>${picture(input.sourceSha256,'入力写真')}</details>`:''}
+  ${input?`<details><summary>入力写真</summary>${picture(input.sourceSha256,'入力写真')}${(input.additionalSourceSha256s??[]).map((hash,i)=>picture(hash,'追加の写真'+(i+1))).join('')}</details>`:''}
   <div class="images">${set.images.map((image,i)=>`<article><h3>完成案 ${i+1}</h3>${picture(image.imageSha256,`完成案 ${i+1}`)}<p>${escapeHtml(image.result.generation_version??'生成版不明')}・未採点<br>確認済み実費：${escapeHtml(image.observation?.costUsd??'未確認')} USD<br>PNG保存：${escapeHtml(({saved:'確認できた',failed:'できなかった',unknown:'未確認'})[image.observation?.pngSave]??'未確認')}</p></article>`).join('')}</div>
   ${set.images.filter(image=>image.feedbackContext||image.result.feedbackApplied).map(image=>`<p>完成画像 ${escapeHtml(image.id)}：${escapeHtml(feedbackText(image.feedbackContext??image.result.feedbackApplied))}</p>`).join('')}
   ${set.images.filter(image=>image.result.referenceContext).map(image=>`<p>${escapeHtml(referenceContextText(image.result.referenceContext))}</p>`).join('')}
@@ -126,7 +128,7 @@ export async function createCompleteShareZip(value){
  if(report.kind!=='human_quality_report')fail('共有ZIPには全組の比較reportが必要です。');
  const assets=new Map(),urls=new Map(),entries=[];
  for(const set of report.sets){
-  const references=[...(set.group.input?[{url:set.group.sourceImageDataUrl,hash:set.group.input.sourceSha256}]:[]),...set.images.map(image=>({url:image.result.imageDataUrl,hash:image.imageSha256}))];
+  const references=[...(set.group.input?[{url:set.group.sourceImageDataUrl,hash:set.group.input.sourceSha256},...(set.group.additionalImageDataUrls??[]).map((url,i)=>({url,hash:set.group.input.additionalSourceSha256s[i]}))]:[]),...set.images.map(image=>({url:image.result.imageDataUrl,hash:image.imageSha256}))];
   for(const {url,hash}of references){
    if(urls.has(url))continue;
    const binary=atob(url.slice(22));if(btoa(binary)!==url.slice(22))fail('PNGのBase64表記を確認できません。通常の比較JSONで保存してください。');

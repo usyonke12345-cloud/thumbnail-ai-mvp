@@ -37,7 +37,7 @@ test('B preparation explicitly selects a known current version while the legacy 
  assert.equal(JSON.stringify(data),before);
  const old=await fixture({version:'ai-complete-0.6.1'}),legacy=prepareFeedbackTrials(old.data,'r01');
  assert.equal(legacy.pairs.length,1);assert.equal(legacy.version,'feedback-blind-trials-1.0.0');
- for(const generationVersion of ['ai-complete-0.6.0','ai-complete-0.5.2','ai-complete-0.7.1','ai-complete-0.11.0',''])
+ for(const generationVersion of ['ai-complete-0.6.0','ai-complete-0.5.2','ai-complete-0.7.1','ai-complete-0.12.0',''])
   assert.throws(()=>prepareFeedbackTrials(data,'r01',{generationVersion}),/生成版/);
 });
 
