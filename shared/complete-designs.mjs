@@ -5,6 +5,11 @@ export function normalizeVisualIntent(value){
  if(typeof value!=='string'||[...value].length>MAX_VISUAL_INTENT_LENGTH||/[\u0000-\u0009\u000b-\u001f\u007f]/u.test(value))throw new Error('仕上がりのイメージは300文字以内の文章で指定してください。');
  return value.trim();
 }
+export function requireVisualIntent(value){
+ const text=normalizeVisualIntent(value);
+ if(!text)throw new Error('仕上がりのイメージを入力してください。例：落ち着いた旅。自然な写真と穏やかな文字。');
+ return text;
+}
 export function normalizeVideoBrief(value){
  if(value===undefined)return '';
  if(typeof value!=='string'||[...value].length>1000||/[\u0000-\u0009\u000b-\u001f\u007f]/u.test(value))throw new Error('動画内容の補足は1000文字以内の文章で指定してください。');

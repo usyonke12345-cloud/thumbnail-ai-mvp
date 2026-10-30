@@ -27,6 +27,8 @@ function matches(value,s){
   if(Object.keys(value).some(k=>s.properties?.[k]?!matches(value[k],s.properties[k]):s.additionalProperties===false))return false;
  }
  if(s.allOf&&!s.allOf.every(part=>matches(value,part)))return false;
+ if(s.anyOf&&!s.anyOf.some(part=>matches(value,part)))return false;
+ if(s.not&&matches(value,s.not))return false;
  if(s.if&&!matches(value,matches(value,s.if)?s.then??{}:s.else??{}))return false;
  return true;
 }
@@ -81,4 +83,15 @@ test('optional historical feedback agrees with request and response schemas and 
  assert.ok(matches(input,schema));validateComplete(input);const response=await generateComplete(input,{generate:async()=>dataUrl(png())});assert.ok(matches(response,responseSchema));assert.deepEqual(response.feedbackApplied,feedback);
  for(const change of [{version:'unknown'},{scope:'all'},{records:[]},{records:Array(7).fill(feedback.records[0])},{reviewerId:''},{extra:true}]){const invalid={...feedback,...change};assert.equal(matches({...input,feedback:invalid},schema),false);assert.equal(matches({...response,feedbackApplied:invalid},responseSchema),false);assert.throws(()=>validateComplete({...input,feedback:invalid}));}
  for(const change of [{reason:'x'.repeat(501)},{reason:'\u0000bad'},{selectedImageId:'not-null'},{issues:['text','text']},{images:[]}]){const invalid={...feedback,records:[{...feedback.records[0],...change}]};assert.equal(matches({...input,feedback:invalid},schema),false);assert.throws(()=>validateComplete({...input,feedback:invalid}));}
+});
+
+test('required-atmosphere fixture and 100-example provenance agree with OpenAPI and reject missing or invented claims',async()=>{
+ const f=JSON.parse(await readFile(new URL('../docs/fixtures/required-reference-intent.json',import.meta.url),'utf8')),v={...f.input,consent:true},now=new Date('2026-10-31T00:00:00Z');assert.equal(f.source,'synthetic');assert.equal(matches(v,schema),true);
+ const records=Array.from({length:100},(_,i)=>{const videoId='t'+String(i).padStart(10,'0'),sha256=(i+1).toString(16).padStart(64,'0');return {videoId,metadata:{videoId,channelId:'UC'+String(i).padStart(22,'0'),verification:'youtube_data_api',viewCount:'1000001',durationSeconds:400,publishedAt:'2026-10-01T00:00:00Z',checkedAt:now.toISOString()},asset:{sha256},observation:{thumbnailSha256:sha256,genres:['travel'],moods:['calm'],material:'multi_photo',typography:'Synthetic upright serif',layout:'Synthetic layout '+i,when:'Synthetic space',avoid:'No invented people'},imageUse:{generationAllowed:false}};});
+ const references={store:{snapshot:async()=>({catalog:{records}})},now},response=await generateComplete(v,{references,generate:async()=>dataUrl(png())}),responseSchema=spec.paths['/api/v1/complete-thumbnail'].post.responses['200'].content['application/json'].schema;
+ assert.equal(response.generation_version,f.generationVersion);assert.equal(response.referenceContext.poolSize,f.expected.poolSize);assert.equal(matches(response,responseSchema),true);
+ for(const visualIntent of [undefined,'','   ']){const value={...v,visualIntent};if(visualIntent===undefined)delete value.visualIntent;assert.equal(matches(value,schema),false);assert.throws(()=>validateComplete(value));}
+ for(const change of [{poolSize:99},{poolSha256:'bad'},{visualIntentSha256:'bad'},{version:'thumbnail-reference-context-1.0.0'}])assert.equal(matches({...response,referenceContext:{...response.referenceContext,...change}},responseSchema),false);
+ const {consent,...plain}=v,fixed=await freezeValidationA(plain,{references});assert.equal(matches(fixed,{$ref:'#/components/schemas/ValidationACase'}),true);
+ const receipt=await checkValidationARequest(v,fixed.caseId,{references});assert.equal(matches({...response,validationA:receipt},responseSchema),true);
 });

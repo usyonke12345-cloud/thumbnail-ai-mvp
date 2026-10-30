@@ -10,7 +10,7 @@ function supportedVersion(version){
 function referenceIdentity(image){
  const mode=image.referenceMode??'off',context=image.result.referenceContext;
  if(mode==='off')return context===undefined?'off':null;
- if(mode!=='auto'||context===undefined)return null;
+ if(!['auto','required'].includes(mode)||context===undefined)return null;
  try{return 'auto:'+JSON.stringify(normalizeReferenceContext(context));}catch{return null;}
 }
 const compatible=(a,b)=>a.result.generation_version===b.result.generation_version&&(a.design??'auto')===(b.design??'auto')&&(a.composition??'auto')===(b.composition??'auto')&&referenceIdentity(a)===referenceIdentity(b);

@@ -1,5 +1,5 @@
 import {normalizeReferenceContext} from '../shared/thumbnail-references.mjs';
-import {normalizeVisualIntent,normalizeVideoBrief} from '../shared/complete-designs.mjs';
+import {normalizeVisualIntent,normalizeVideoBrief,requireVisualIntent} from '../shared/complete-designs.mjs';
 import {isCompletePngDataUrl,MAX_COMPLETE_PNG_DATA_URL_LENGTH,revisionParent,validationAReceipt} from '../shared/complete-images.mjs';
 import {assertValidationAReceiptInput} from './validation-a.js';
 import {isReviewerId} from '../shared/reviewer-id.mjs';
@@ -55,8 +55,9 @@ export async function createEntry(payload,value,{id=crypto.randomUUID(),captured
  const {input,groupId}=await comparisonInput(payload);
  const composition=payload.composition??'auto';if(!Object.hasOwn(COMPOSITIONS,composition))fail('構図の希望が不正です。');
  if(payload.design!==undefined&&!Object.hasOwn(DESIGNS,payload.design))fail('デザインの希望が不正です。');
- if(payload.referenceMode!==undefined&&!['auto','off'].includes(payload.referenceMode))fail('参考資料の指定が不正です。');
+ if(payload.referenceMode!==undefined&&!['auto','off','required'].includes(payload.referenceMode))fail('参考資料の指定が不正です。');
  const image=result(value);
+ if(payload.referenceMode==='required'){const intent=requireVisualIntent(payload.visualIntent);if(image.referenceContext?.version!=='thumbnail-reference-context-1.1.0'||image.referenceContext.visualIntentSha256!==await hashBytes(new TextEncoder().encode(intent)))fail('100実例の参考記録と仕上がりのイメージが一致しません。');}
  const additional=sourcePhotoInputs(payload).slice(1);
  if(JSON.stringify(image.sourcePhotoSha256s)!==JSON.stringify(additional.length?[input.sourceSha256,...input.additionalSourceSha256s]:undefined))fail('生成応答と送信した写真のSHA-256・順序が一致しません。');
  if(expectedValidationACase&&image.validationA?.caseId!==expectedValidationACase)fail('A検証の固定IDに対応する照合結果がありません。');
@@ -79,8 +80,9 @@ export function validateEntry({group,image}={}){
  if(!group||group.version!==1||!date(group.capturedAt)||!/^((complete|legacy)-[a-f0-9]{64})$/.test(group.id)||!image||image.version!==1||image.groupId!==group.id||!text(image.id,200)||!date(image.capturedAt)||!shaPattern.test(image.imageSha256))fail('完成画像の比較記録が不正です。');
  if(group.projectName!==undefined&&(projectName(group.projectName)!==group.projectName||!date(group.projectUpdatedAt)))fail('案件名の記録が不正です。');if(image.revision)validateRevision(image.revision);if(image.subjectRegions!==undefined)validateSubjectRegions(image.subjectRegions,group,image);
  if(image.revision&&image.result?.revision&&(image.revision.parentImageId!==image.result.revision.parentImageId||image.revision.parentImageSha256!==image.result.revision.parentImageSha256))fail('生成応答と保存記録の修正元が一致しません。');
- if(image.referenceMode!==undefined&&!['auto','off'].includes(image.referenceMode))fail('参考資料の指定が不正です。');
- if(image.result?.referenceContext!==undefined){normalizeReferenceContext(image.result.referenceContext);if(group.input!==null&&image.referenceMode!=='auto')fail('参考資料の応答に対応する送信記録がありません。');}
+ if(image.referenceMode!==undefined&&!['auto','off','required'].includes(image.referenceMode))fail('参考資料の指定が不正です。');
+ if(image.result?.referenceContext!==undefined){normalizeReferenceContext(image.result.referenceContext);if(group.input!==null&&(!['auto','required'].includes(image.referenceMode)||(image.referenceMode==='required')!==(image.result.referenceContext.version==='thumbnail-reference-context-1.1.0')))fail('参考資料の応答に対応する送信記録がありません。');}
+ if(image.referenceMode==='required'&&(!group.input?.visualIntent?.trim()||image.result?.referenceContext?.version!=='thumbnail-reference-context-1.1.0'))fail('100実例と仕上がりのイメージの記録がありません。');
  if(image.feedbackContext!==undefined)normalizeGenerationFeedback(image.feedbackContext);
  if(image.result?.feedbackApplied!==undefined){const applied=normalizeGenerationFeedback(image.result.feedbackApplied);if(group.input!==null&&(!image.feedbackContext||JSON.stringify(applied)!==JSON.stringify(normalizeGenerationFeedback(image.feedbackContext))))fail('生成応答と送信した評価メモが一致しません。');}
  if(group.input===null){if(!group.id.startsWith('legacy-')||group.sourceImageDataUrl!==null||image.composition!==null)fail('以前の画像に入力条件を推測で付けられません。');}
