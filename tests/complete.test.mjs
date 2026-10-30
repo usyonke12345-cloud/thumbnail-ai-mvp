@@ -39,7 +39,7 @@ test('AI button explains missing photo or consent beside the button without a pa
  let callback,calls=0;const nodes=new Map([['#ai-complete',{addEventListener:(type,fn)=>callback=fn}],['#ai-consent',{checked:false}]]),aiStatus={textContent:''};
  const scope={validationA:{record:()=>null,headers:async()=>({})},document:{querySelector:s=>nodes.get(s)},layout:{value:'single'},photos:[null],aiStatus,fetch:()=>{calls++;throw new Error('must not call');}};
  vm.runInNewContext(handler,scope);await callback({currentTarget:{disabled:false}});assert.match(aiStatus.textContent,/写真を読み込んで/);
- scope.photos[0]={};await callback({currentTarget:{disabled:false}});assert.match(aiStatus.textContent,/確認にチェック/);assert.equal(calls,0);
+ scope.photos[0]={};await callback({currentTarget:{disabled:false}});assert.match(aiStatus.textContent,/確認欄にチェック/);assert.equal(calls,0);
 });
 test('health provider state matches public contract and never includes credentials',async()=>{
  const spec=JSON.parse(await readFile(new URL('../shared/openapi.json',import.meta.url),'utf8'));

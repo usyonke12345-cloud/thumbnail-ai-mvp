@@ -24,6 +24,7 @@ export function prepareFeedbackTrials(dataset,reviewerId,{generationVersion=LEGA
   if(groupSplit(group.id)!=='holdout'){skip('not_holdout');continue;}
   if(contaminated.has(group.id)){skip('holdout_previously_used_as_feedback');continue;}
   if(!group.input||!group.sourcePhotoAssetId){skip('unknown_input');continue;}
+  if(group.input.additionalSourceSha256s?.length){skip('multi_photo_review_not_supported');continue;}
   const source=dataset.assets.find(a=>a.assetId===group.sourcePhotoAssetId);
   if(source?.diagnostic?.status!=='analyzed'||source.sha256!==group.input.sourceSha256){skip('source_png_unavailable');continue;}
   const images=dataset.images.filter(x=>x.groupId===group.id&&!x.revision&&!x.result.revision&&x.result.generation_version===generationVersion&&feedbackUsage(x).feedbackUsageKnown).sort((a,b)=>a.capturedAt.localeCompare(b.capturedAt)||a.id.localeCompare(b.id));

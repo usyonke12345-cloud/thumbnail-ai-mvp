@@ -4,6 +4,9 @@ import {readFile} from 'node:fs/promises';
 import {validateComplete,generateComplete,COMPLETE_GENERATION_VERSION} from '../backend/generation/complete.mjs';
 import {bundle,png,dataUrl} from './helpers/complete-png.mjs';
 import {freezeValidationA,checkValidationARequest} from '../backend/validation-a.mjs';
+import {createEntry,comparisonBundle} from '../frontend/complete-gallery-model.js';
+import {diagnosticRequest} from '../frontend/complete-png-transfer.js';
+import {analyzePngAssets} from '../backend/analysis/complete-png.mjs';
 
 const spec=JSON.parse(await readFile(new URL('../shared/openapi.json',import.meta.url),'utf8'));
 const schema=spec.paths['/api/v1/complete-thumbnail'].post.requestBody.content['application/json'].schema;
@@ -12,7 +15,7 @@ const fixture=JSON.parse(await readFile(new URL('../docs/fixtures/complete-gener
 // Checks only keywords used by this request schema; conditional branches are essential here.
 function matches(value,s){
  if(s.$ref)s=spec.components.schemas[s.$ref.split('/').at(-1)];
- if(s.type&&!([s.type].flat().includes(value===null?'null':Array.isArray(value)?'array':typeof value))&&!(s.type==='integer'&&Number.isInteger(value)))return false;
+ if(s.type&&![s.type].flat().some(type=>type==='integer'?Number.isInteger(value):type===(value===null?'null':Array.isArray(value)?'array':typeof value)))return false;
  if(typeof value==='number'&&(s.minimum!==undefined&&value<s.minimum||s.maximum!==undefined&&value>s.maximum))return false;
  if('const'in s&&value!==s.const||s.enum&&!s.enum.includes(value))return false;
  if(typeof value==='string'&&(s.minLength!==undefined&&[...value].length<s.minLength||s.maxLength!==undefined&&[...value].length>s.maxLength))return false;
@@ -27,6 +30,19 @@ function matches(value,s){
  if(s.if&&!matches(value,matches(value,s.if)?s.then??{}:s.else??{}))return false;
  return true;
 }
+
+test('multi-photo fixture, frozen receipt and local diagnostics agree with the expanded contract',async()=>{
+ const f=JSON.parse(await readFile(new URL('../docs/fixtures/multi-photo.json',import.meta.url),'utf8')),v={...f.input,consent:true};assert.equal(f.source,'synthetic');assert.equal(matches(v,schema),true);validateComplete(v);
+ const response=await generateComplete(v,{generate:async()=>dataUrl(png())}),responseSchema=spec.paths['/api/v1/complete-thumbnail'].post.responses['200'].content['application/json'].schema;
+ assert.equal(response.generation_version,f.generationVersion);assert.equal(matches(response,responseSchema),true);
+ const {sourcePhotoSha256s,...missing}=response;assert.equal(matches(missing,responseSchema),false);
+ for(const additionalImageDataUrls of [null,{},[...v.additionalImageDataUrls,v.additionalImageDataUrls[0]],['not a PNG']])assert.equal(matches({...v,additionalImageDataUrls},schema),false);
+ const fixed=await freezeValidationA(f.input);assert.equal(matches(fixed,{$ref:'#/components/schemas/ValidationACase'}),true);const receipt=await checkValidationARequest(v,fixed.caseId);assert.equal(matches({...response,validationA:receipt},responseSchema),true);
+ assert.equal(matches({...fixed,version:'validation-a-case-1.0.0'},{$ref:'#/components/schemas/ValidationACase'}),false);
+ const entry=await createEntry(f.input,response),bundle=comparisonBundle({groups:[entry.group],images:[entry.image],reviews:[]},entry.group.id),request=await diagnosticRequest(bundle),diagnostic=analyzePngAssets(request);
+ assert.equal(matches(request,{$ref:'#/components/schemas/CompleteDiagnosticRequest'}),true);assert.equal(matches(diagnostic,{$ref:'#/components/schemas/CompleteDiagnosticResponse'}),true);
+ assert.equal(matches({...request,assetVersion:'image-assets-1.0.0'},{$ref:'#/components/schemas/CompleteDiagnosticRequest'}),false);
+});
 
 test('synthetic complete requests agree with OpenAPI for manual compatibility and automatic headline choices',()=>{
  assert.equal(fixture.source,'synthetic');assert.equal(fixture.generationVersion,COMPLETE_GENERATION_VERSION);

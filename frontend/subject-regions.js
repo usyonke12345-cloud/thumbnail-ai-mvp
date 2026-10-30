@@ -9,6 +9,7 @@ export function validateSubjectRect(rect,width,height){
  return {x:rect.x,y:rect.y,width:rect.width,height:rect.height};
 }
 export function validateSubjectRegions(value,group,image){
+ if(group.additionalImageDataUrls?.length)throw new Error('複数写真の人物範囲の記録は未対応です。');
  if(!group.input||!keys(value,['version','recordedAt','reviewerId','method','coordinateSystem','sourcePhoto','completeThumbnail'])||!['subject-regions-1.0.0',SUBJECT_REGIONS_VERSION].includes(value.version)||typeof value.recordedAt!=='string'||!Number.isFinite(Date.parse(value.recordedAt))||!isReviewerId(value.reviewerId)||value.method!=='manual'||value.coordinateSystem!=='image_pixels')fail('人物範囲の形式・評価者IDを確認してください（r01のような数字のID）。');
  const legacy=value.version==='subject-regions-1.0.0';
  const pair=[['sourcePhoto',group.input.sourceSha256,1280,720],['completeThumbnail',image.imageSha256,1536,864]],normalized={};

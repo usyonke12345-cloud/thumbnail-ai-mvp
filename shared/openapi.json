@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Thumbnail AI MVP",
-    "version": "0.3.8",
+    "version": "0.3.9",
     "description": "Local SVG layout heuristics, opt-in paid complete PNG generation, and local PNG diagnostics. Complete PNG diagnostics are not a quality or CTR score."
   },
   "servers": [
@@ -251,8 +251,8 @@
     },
     "/api/v1/complete-thumbnail": {
       "post": {
-        "summary": "Opt-in paid complete thumbnail from one photograph",
-        "description": "People must come solely from the original photograph. A person-free source must stay person-free. References and previous thumbnails cannot supply additional people; revisions instruct removal of people absent from the original. This is a prompt constraint, not an automatic output verification or guarantee.",
+        "summary": "Opt-in paid complete thumbnail from one to three photographs",
+        "description": "People and photographic material must come solely from the supplied one to three source photographs. No invented people or combined faces; same person appears once. Previous outputs and style references are not material sources. Single-photo generation remains 0.10.2; multiple-photo generation is 0.11.0. These are prompt constraints, not automatic output verification. JSON body at most 32MiB; one paid edit, no automatic retry.",
         "requestBody": {
           "required": true,
           "content": {
@@ -370,6 +370,17 @@
                       "off"
                     ],
                     "description": "Optional verified reference library, omitted/off retains legacy behavior; editor defaults auto. Code shortlists up to 5 visually recorded examples by text tags and material, not source-photo analysis. Image model checks feasibility in the same edit. Raw reference images only with recorded permission; otherwise generic observations only. Revisions/manual art direction skip retrieval. No model training or measured selection."
+                  },
+                  "additionalImageDataUrls": {
+                    "type": "array",
+                    "maxItems": 2,
+                    "uniqueItems": true,
+                    "items": {
+                      "type": "string",
+                      "maxLength": 3145728,
+                      "pattern": "^data:image/png;base64,[A-Za-z0-9+/]+={0,2}$"
+                    },
+                    "description": "Optional additional source photographs in order, at most two. Each is a distinct 1280x720 PNG data URL of at most 3MiB. Empty or omitted keeps the single-photo path. All supplied source photos are authoritative; each is uploaded as a separate image[] before revision/style references. Duplicate decoded bytes are rejected before provider dispatch."
                   }
                 },
                 "allOf": [
@@ -509,13 +520,54 @@
                         },
                         "referenceContext": {
                           "$ref": "#/components/schemas/ThumbnailReferenceContext"
+                        },
+                        "additionalSourceSha256s": {
+                          "type": "array",
+                          "minItems": 1,
+                          "maxItems": 2,
+                          "uniqueItems": true,
+                          "items": {
+                            "type": "string",
+                            "pattern": "^[a-f0-9]{64}$"
+                          },
+                          "description": "Ordered additional source hashes for a multi-photo fixed input, omitted on single-photo receipts."
                         }
                       }
                     },
                     "referenceContext": {
                       "$ref": "#/components/schemas/ThumbnailReferenceContext"
+                    },
+                    "sourcePhotoSha256s": {
+                      "type": "array",
+                      "minItems": 2,
+                      "maxItems": 3,
+                      "uniqueItems": true,
+                      "items": {
+                        "type": "string",
+                        "pattern": "^[a-f0-9]{64}$"
+                      },
+                      "description": "Present only for multiple source photographs. SHA-256 of the main and additional PNG bytes in exact upload order. This records input identity, not output preservation."
                     }
-                  }
+                  },
+                  "allOf": [
+                    {
+                      "if": {
+                        "required": [
+                          "generation_version"
+                        ],
+                        "properties": {
+                          "generation_version": {
+                            "const": "ai-complete-0.11.0"
+                          }
+                        }
+                      },
+                      "then": {
+                        "required": [
+                          "sourcePhotoSha256s"
+                        ]
+                      }
+                    }
+                  ]
                 }
               }
             }
@@ -602,7 +654,7 @@
     "/api/v1/validation-a/freeze": {
       "post": {
         "operationId": "freezeValidationA",
-        "description": "ローカルの無料処理。写真と入力を検証し、実行コードのハッシュ・生成設定・同条件のChatGPT依頼文を返す。外部送信・保存・有料生成は行わない。consent、feedback、revisionは受け付けない。入力上限4MiB。",
+        "description": "ローカルの無料処理。写真と入力を検証し、実行コードのハッシュ・生成設定・同条件のChatGPT依頼文を返す。外部送信・保存・有料生成は行わない。consent、feedback、revisionは受け付けない。入力上限10MiB。 複数写真はcase 1.1.0で全写真の順序・ハッシュを固定し、正式な1枚写真のA比較とは分ける。",
         "requestBody": {
           "required": true,
           "content": {
@@ -683,6 +735,17 @@
                       "off"
                     ],
                     "description": "Optional verified reference library, omitted/off retains legacy behavior; editor defaults auto. Code shortlists up to 5 visually recorded examples by text tags and material, not source-photo analysis. Image model checks feasibility in the same edit. Raw reference images only with recorded permission; otherwise generic observations only. Revisions/manual art direction skip retrieval. No model training or measured selection."
+                  },
+                  "additionalImageDataUrls": {
+                    "type": "array",
+                    "maxItems": 2,
+                    "uniqueItems": true,
+                    "items": {
+                      "type": "string",
+                      "maxLength": 3145728,
+                      "pattern": "^data:image/png;base64,[A-Za-z0-9+/]+={0,2}$"
+                    },
+                    "description": "Optional additional source photographs in order, at most two. Each is a distinct 1280x720 PNG data URL of at most 3MiB. Empty or omitted keeps the single-photo path. All supplied source photos are authoritative; each is uploaded as a separate image[] before revision/style references. Duplicate decoded bytes are rejected before provider dispatch."
                   }
                 },
                 "allOf": [
@@ -1813,6 +1876,17 @@
           },
           "textRegions": {
             "type": "null"
+          },
+          "additionalSourcePhotoAssetIds": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 2,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "pattern": "^[a-zA-Z0-9_-]{1,200}$"
+            },
+            "description": "Ordered additional source_photo asset IDs. Must be present in assets, distinct from primary and each other; requires image-assets-1.1.0."
           }
         }
       },
@@ -1826,7 +1900,10 @@
         ],
         "properties": {
           "assetVersion": {
-            "const": "image-assets-1.0.0"
+            "enum": [
+              "image-assets-1.0.0",
+              "image-assets-1.1.0"
+            ]
           },
           "assets": {
             "type": "array",
@@ -1844,7 +1921,31 @@
               "$ref": "#/components/schemas/CompleteImageReference"
             }
           }
-        }
+        },
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "assetVersion": {
+                  "const": "image-assets-1.0.0"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "images": {
+                  "items": {
+                    "properties": {
+                      "additionalSourcePhotoAssetIds": {
+                        "type": "null"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ]
       },
       "PngLuminance": {
         "type": [
@@ -2061,6 +2162,17 @@
             "items": {
               "type": "string"
             }
+          },
+          "additionalSourcePhotoAssetIds": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 2,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "pattern": "^[a-zA-Z0-9_-]{1,200}$"
+            },
+            "description": "Ordered additional source_photo asset IDs. Must be present in assets, distinct from primary and each other; requires image-assets-1.1.0."
           }
         }
       },
@@ -2078,7 +2190,10 @@
         ],
         "properties": {
           "analysisVersion": {
-            "const": "complete-png-diagnostics-0.1.1"
+            "enum": [
+              "complete-png-diagnostics-0.1.1",
+              "complete-png-diagnostics-0.1.2"
+            ]
           },
           "kind": {
             "const": "image_diagnostics"
@@ -2336,7 +2451,10 @@
         ],
         "properties": {
           "version": {
-            "const": "validation-a-case-1.0.0"
+            "enum": [
+              "validation-a-case-1.0.0",
+              "validation-a-case-1.1.0"
+            ]
           },
           "caseId": {
             "type": "string",
@@ -2594,8 +2712,69 @@
               }
             },
             "description": "Only actually sent, permission-confirmed reference assets. Runtime verifies count, candidate hash links, ZIP path, byte length and SHA-256."
+          },
+          "additionalSources": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 2,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "path",
+                "sha256",
+                "bytes",
+                "width",
+                "height"
+              ],
+              "properties": {
+                "path": {
+                  "type": "string",
+                  "pattern": "^source-[23]\\.png$"
+                },
+                "sha256": {
+                  "type": "string",
+                  "pattern": "^[a-f0-9]{64}$"
+                },
+                "bytes": {
+                  "type": "integer",
+                  "minimum": 24,
+                  "maximum": 2359296
+                },
+                "width": {
+                  "const": 1280
+                },
+                "height": {
+                  "const": 720
+                }
+              }
+            },
+            "description": "Multi-photo case 1.1.0 only. Ordered source-2.png and optionally source-3.png descriptors. Runtime also checks distinct hashes and exact path ordering."
           }
-        }
+        },
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "version": {
+                  "const": "validation-a-case-1.1.0"
+                }
+              }
+            },
+            "then": {
+              "required": [
+                "additionalSources"
+              ]
+            },
+            "else": {
+              "properties": {
+                "additionalSources": {
+                  "type": "null"
+                }
+              }
+            }
+          }
+        ]
       },
       "ThumbnailReferenceContext": {
         "type": "object",

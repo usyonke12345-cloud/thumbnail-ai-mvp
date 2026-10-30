@@ -21,6 +21,8 @@ assets.set('/shared/reviewer-id.mjs',['../shared/reviewer-id.mjs','text/javascri
 assets.set('/shared/evaluation-split.mjs',['../shared/evaluation-split.mjs','text/javascript; charset=utf-8']);
 assets.set('/shared/validation-a-baseline.mjs',['../shared/validation-a-baseline.mjs','text/javascript; charset=utf-8']);
 assets.set('/subject-regions.js',['subject-regions.js','text/javascript; charset=utf-8']);
+assets.set('/multi-photo.js',['multi-photo.js','text/javascript; charset=utf-8']);
+assets.set('/shared/multi-photo.mjs',['../shared/multi-photo.mjs','text/javascript; charset=utf-8']);
 for(const file of ['local-archive.js','editor-tools.js','attempt-history.js','editor-backup.js','image-save.js'])assets.set('/'+file,[file,'text/javascript; charset=utf-8']);
 assets.set('/editor-design-guide.js',['editor-design-guide.js','text/javascript; charset=utf-8']);
 assets.set('/shared/complete-designs.mjs',['../shared/complete-designs.mjs','text/javascript; charset=utf-8']);
@@ -43,7 +45,7 @@ export function makeServer({complete=generateComplete,referenceLibrary=reference
       if(req.method!=='POST') {res.setHeader('Allow','POST');return send(405,{error:{code:'METHOD_NOT_ALLOWED',message:'POSTを使用してください。'}});}
       if(req.headers['content-type']?.split(';')[0].trim()!=='application/json') throw new ApiError(415,'UNSUPPORTED_MEDIA_TYPE','application/jsonを指定してください。');
       let size=0;const chunks=[];
-      for await (const chunk of req) {size+=chunk.length;if(size>(path==='/api/v1/complete-diagnostics'?MAX_JSON_BYTES:path==='/api/v1/validation-a/freeze'?4*1024*1024:path==='/api/v1/complete-thumbnail'?28*1024*1024:16384)) throw new ApiError(413,'BODY_TOO_LARGE','入力が大きすぎます。');chunks.push(chunk);}
+      for await (const chunk of req) {size+=chunk.length;if(size>(path==='/api/v1/complete-diagnostics'?MAX_JSON_BYTES:path==='/api/v1/validation-a/freeze'?10*1024*1024:path==='/api/v1/complete-thumbnail'?32*1024*1024:16384)) throw new ApiError(413,'BODY_TOO_LARGE','入力が大きすぎます。');chunks.push(chunk);}
       let body;try {body=JSON.parse(Buffer.concat(chunks).toString('utf8'));}catch {throw new ApiError(400,'INVALID_JSON','JSONが不正です。');}
       if(path==='/api/v1/reference-library/collect'){if(!body||Array.isArray(body)||Object.keys(body).length)throw new ApiError(400,'INVALID_INPUT','収集の入力は空のオブジェクトにしてください。');return send(200,await referenceLibrary.collect());}
       if(path==='/api/v1/reference-library/observe')return send(200,await referenceLibrary.observe(body));
