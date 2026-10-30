@@ -69,7 +69,10 @@ test('draft ZIP retains original files, normalized inputs, crop and source prove
  const value=draft(),zip=await createDraftBackup(value),bytes=new Uint8Array(await zip.arrayBuffer()),restored=await readDraftBackup(bytes);
  assert.equal(restored.consent,undefined);assert.equal(restored.apiKey,undefined);assert.deepEqual(restored.settings,value.settings);assert.deepEqual(restored.result.sourcePhotoSha256s,photos.map(sha));
  for(let i=0;i<2;i++){assert.equal(restored.additionalPhotos[i].imageDataUrl,urls[i+1]);assert.equal(restored.additionalPhotos[i].file.name,value.additionalPhotos[i].file.name);assert.equal(await restored.additionalPhotos[i].file.text(),'original-'+i);}
- assert.deepEqual(validateDraft(structuredClone(restored)).additionalPhotos,restored.additionalPhotos);
+ // Node 22 clones File as Blob. Compare persisted bytes, MIME and input identity,
+ // independently of the runtime's File wrapper; ZIP filenames are checked above.
+ const reloaded=validateDraft(structuredClone(restored));assert.equal(reloaded.additionalPhotos.length,2);
+ for(let i=0;i<2;i++){assert.equal(reloaded.additionalPhotos[i].imageDataUrl,restored.additionalPhotos[i].imageDataUrl);assert.equal(reloaded.additionalPhotos[i].file.type,restored.additionalPhotos[i].file.type);assert.deepEqual(await reloaded.additionalPhotos[i].file.arrayBuffer(),await restored.additionalPhotos[i].file.arrayBuffer());}
  const files=await readZip(bytes),key=[...files.keys()].find(x=>x.startsWith('additional-input-'));files.set(key,utf8('changed'));
  const broken=await writeZip([...files].map(([name,data])=>({name,data})));await assert.rejects(async()=>readDraftBackup(new Uint8Array(await broken.arrayBuffer())),/破損/);
 });
