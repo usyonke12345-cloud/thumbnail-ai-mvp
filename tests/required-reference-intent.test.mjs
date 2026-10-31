@@ -16,6 +16,9 @@ import {readComparisonFile} from '../frontend/local-archive.js';
 import {createDraftBackup,readDraftBackup} from '../frontend/editor-backup.js';
 import {createCompleteReviewAnalysis} from '../backend/analysis/complete-review.mjs';
 import {makeServer} from '../backend/server.mjs';
+import {completePrompt} from '../backend/generation/complete-prompt.mjs';
+import {completePhotoFinishInstructions} from '../backend/generation/complete-photo-finish.mjs';
+import {feedbackUsage} from '../backend/analysis/feedback-audit.mjs';
 import {png,dataUrl} from './helpers/complete-png.mjs';
 
 const now=new Date('2026-10-31T00:00:00Z'),sha=x=>createHash('sha256').update(x).digest('hex');
@@ -48,7 +51,7 @@ test('one mocked multi-photo edit receives atmosphere-first observations, source
  const records=structuredClone(rows);for(const row of records)row.imageUse.generationAllowed=true;
  const v={...input(),additionalImageDataUrls:[dataUrl(png(1280,720,[1,2,3,255]))],revision:{parentImageId:'synthetic-parent',instruction:'文字を穏やかに',imageDataUrl:dataUrl(png())}};let calls=0;
  const provider=createOpenAIBackgroundProvider({env:{OPENAI_API_KEY:'synthetic',OPENAI_IMAGE_ENABLED:'true'},fetchImpl:async(url,{body})=>{calls++;const prompt=body.get('prompt');assert.match(prompt,/100 recently qualified/);assert.match(prompt,/primary style brief/);assert.match(prompt,/Images 1 through 2 are the only photographic material/);assert.match(prompt,/Reference image 4 illustrates candidate 1/);assert.doesNotMatch(prompt,/Never copy this source wording/);assert.ok(prompt.length<30000);assert.equal(body.getAll('image[]').length,8);assert.equal(body.get('n'),'1');assert.equal(body.get('model'),'gpt-image-2.5-flare');assert.equal(body.get('quality'),'medium');return new Response(JSON.stringify({data:[{b64_json:png().toString('base64')}]}));}});
- const result=await generateComplete(v,{generate:provider,references:settings(records)});assert.equal(calls,1);assert.equal(result.generation_version,'ai-complete-0.12.0');assert.equal(result.sourcePhotoSha256s.length,2);assert.equal(result.referenceContext.poolSize,100);
+ const result=await generateComplete(v,{generate:provider,references:settings(records)});assert.equal(calls,1);assert.equal(result.generation_version,'ai-complete-0.12.1');assert.equal(result.sourcePhotoSha256s.length,2);assert.equal(result.referenceContext.poolSize,100);
 });
 
 test('the 100-example receipt and atmosphere survive JSON, ZIP, analysis, draft and fixed inputs, while changed intent is rejected',async()=>{
@@ -56,7 +59,7 @@ test('the 100-example receipt and atmosphere survive JSON, ZIP, analysis, draft 
  await assert.rejects(()=>createEntry({...v,visualIntent:'Different feeling'},result),/イメージ/);
  const shared=await createCompleteShareZip(comparisonReport(state)),restored=await readComparisonFile(new File([shared.blob],'synthetic.zip'));assert.deepEqual(restored.sets[0].images[0].result.referenceContext,result.referenceContext);
  const analysis=createCompleteReviewAnalysis();await analysis.consume(bundle);assert.deepEqual(analysis.finish().images[0].result.referenceContext,result.referenceContext);
- const {consent,...plain}=v,fixed=await freezeValidationA(plain,{references:settings()});assert.equal(validationACase(fixed).input.referenceMode,'required');assert.equal(fixed.service.generationVersion,'ai-complete-0.12.0');await validationAZip(fixed,v.imageDataUrl);
+ const {consent,...plain}=v,fixed=await freezeValidationA(plain,{references:settings()});assert.equal(validationACase(fixed).input.referenceMode,'required');assert.equal(fixed.service.generationVersion,'ai-complete-0.12.1');await validationAZip(fixed,v.imageDataUrl);
  const receipt=await checkValidationARequest(v,fixed.caseId,{references:settings()});assert.equal(receipt.referenceContext.poolSize,100);
  const changed=structuredClone(rows);changed[0].observation.layout='Changed unselected example';let calls=0;await assert.rejects(()=>generateComplete(v,{references:settings(changed),expectedReferenceContext:fixed.service.referenceContext,generate:async()=>{calls++;}}),e=>e.code==='VALIDATION_A_MISMATCH');assert.equal(calls,0);
  const draft={version:1,layout:'single',settings:[{zoom:1,x:.5,y:.5},{zoom:1,x:.5,y:.5}],files:[new Blob([png(1280,720)],{type:'image/png'}),null],title:v.title,referenceMode:'required',visualIntent:v.visualIntent,result,validationA:fixed};const backup=await readDraftBackup(new Uint8Array(await(await createDraftBackup(draft)).arrayBuffer()));assert.equal(backup.referenceMode,'required');assert.deepEqual(backup.result.referenceContext,result.referenceContext);assert.equal(backup.consent,undefined);
@@ -79,4 +82,21 @@ test('free required preview and freeze use the same atmosphere and pool; a defic
  try{const v=input(),body={title:v.title,visualIntent:v.visualIntent,referenceMode:'required'},r=await fetch(base+'/api/v1/reference-library/preview',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});assert.equal(r.status,200);const preview=await r.json();assert.equal(preview.context.poolSize,100);assert.equal(preview.candidates.length,5);assert.equal(calls,0);
   const bad=await fetch(base+'/api/v1/reference-library/preview',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...body,visualIntent:''})});assert.equal(bad.status,400);assert.equal(calls,0);
  }finally{await new Promise(r=>server.close(r));}
+});
+
+test('natural photo finishing applies to every required-reference design while explicit photo panels avoid a forced cutout',()=>{
+ for(const design of ['auto','photo_focus','editorial','impact','recompose'])for(const multi of [false,true]){
+  const v=validateComplete({...input(),design,...(multi?{additionalImageDataUrls:[dataUrl(png(1280,720,[1,2,3,255]))]}:{}),visualIntent:'写真を3枚横に等間隔。人物を中央、上に見出し。'}),prompt=completePrompt(v);
+  assert.match(prompt,/NATURAL PHOTO FINISH/);assert.match(prompt,/slightly soft original must remain naturally soft/);assert.match(prompt,/Do not transfer their color grade/);assert.match(prompt,/only small corrections/);assert.match(prompt,/Do not force a separate subject cutout/);assert.ok(prompt.length<30000);
+  if(multi&&design==='recompose')assert.doesNotMatch(prompt,/Isolate at least one existing person/);
+ }
+ for(const referenceMode of ['auto','off',undefined])assert.equal(completePhotoFinishInstructions({...input(),referenceMode}),'');
+});
+
+test('historical 0.12.0 outputs remain importable and distinguishable after the gentle 0.12.1 change',async()=>{
+ const v=input(),current=await generateComplete(v,{references:settings(),generate:async()=>dataUrl(png())});assert.equal(current.generation_version,'ai-complete-0.12.1');
+ const old={...current,generation_version:'ai-complete-0.12.0'},entry=await createEntry(v,old,{id:'synthetic-old-0120'}),bundle=comparisonBundle(addToGallery({groups:[],images:[],reviews:[]},entry),entry.group.id),restored=await validateCompleteBundle(bundle);assert.equal(restored.images[0].result.generation_version,'ai-complete-0.12.0');
+ for(const result of [current,old])assert.equal(feedbackUsage({result}).feedbackUsageKnown,true);
+ const {consent,...plain}=v,fixed=await freezeValidationA(plain,{references:settings()});assert.equal(fixed.service.generationVersion,'ai-complete-0.12.1');assert.ok(fixed.service.files.some(x=>x.path==='backend/generation/complete-photo-finish.mjs'));
+ const {referenceMode,...legacy}=v,single=await generateComplete(legacy,{generate:async()=>dataUrl(png())});assert.equal(single.generation_version,'ai-complete-0.10.2');assert.doesNotMatch(completePrompt(validateComplete(legacy)),/NATURAL PHOTO FINISH/);
 });

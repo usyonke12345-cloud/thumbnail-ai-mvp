@@ -252,7 +252,7 @@
     "/api/v1/complete-thumbnail": {
       "post": {
         "summary": "Opt-in paid complete thumbnail from one to three photographs",
-        "description": "People and photographic material must come solely from the supplied one to three source photographs. No invented people or combined faces; same person appears once. Previous outputs and style references are not material sources. Single-photo generation remains 0.10.2; multiple-photo generation is 0.11.0. These are prompt constraints, not automatic output verification. JSON body at most 32MiB; one paid edit, no automatic retry.",
+        "description": "People and photographic material must come solely from the supplied one to three source photographs. No invented people or combined faces; same person appears once. Previous outputs and style references are not material sources. Single-photo generation remains 0.10.2; multiple-photo generation is 0.11.0. These are prompt constraints, not automatic output verification. JSON body at most 32MiB; one paid edit, no automatic retry. Required-reference generation 0.12.1 asks for minimal photo processing, original skin/camera softness and typography/composition-only reference use; requested whole-photo panels override forced cutout recipes. This remains a prompt constraint, not pixel-identical compositing.",
         "requestBody": {
           "required": true,
           "content": {
@@ -600,7 +600,10 @@
                         ],
                         "properties": {
                           "generation_version": {
-                            "const": "ai-complete-0.12.0"
+                            "enum": [
+                              "ai-complete-0.12.0",
+                              "ai-complete-0.12.1"
+                            ]
                           }
                         }
                       },

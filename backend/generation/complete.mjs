@@ -10,7 +10,7 @@ import {referenceContextText} from '../../shared/thumbnail-references.mjs';
 import {sourcePhotoInputs} from '../../shared/multi-photo.mjs';
 export const COMPLETE_GENERATION_VERSION='ai-complete-0.10.2';
 export const MULTI_COMPLETE_GENERATION_VERSION='ai-complete-0.11.0';
-export const completeGenerationVersion=input=>input.referenceMode==='required'?'ai-complete-0.12.0':input.additionalImageDataUrls?.length?MULTI_COMPLETE_GENERATION_VERSION:COMPLETE_GENERATION_VERSION;
+export const completeGenerationVersion=input=>input.referenceMode==='required'?'ai-complete-0.12.1':input.additionalImageDataUrls?.length?MULTI_COMPLETE_GENERATION_VERSION:COMPLETE_GENERATION_VERSION;
 export function validateComplete(value){
  if(!value||typeof value!=='object'||Array.isArray(value)||Object.keys(value).some(k=>!['title','brief','headline','headlineMode','design','visualIntent','imageDataUrl','additionalImageDataUrls','consent','composition','revision','feedback','referenceMode'].includes(k)))throw new ApiError(400,'INVALID_INPUT','完成画像の入力形式が不正です。');
  if(value.consent!==true)throw new ApiError(400,'CONSENT_REQUIRED','写真のAPI送信と有料生成を確認してください。');
