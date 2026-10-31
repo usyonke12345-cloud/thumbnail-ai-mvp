@@ -1,5 +1,7 @@
 # v1 API / 生成と評価の境界
 
+2026-11-01：OpenAPI0.3.11。追加写真を最大3枚（メインと合計4枚）へ拡張。4枚生成0.13.0、比較1.12.0、下書きZIP/A固定case1.2.0、画像資産1.2.0・診断0.1.3・解析dataset1.11.0。4枚入力と完成PNG1枚の診断を最大5資産とし、旧版は最大4資産を維持。生成本文36MiB、入力固定14MiBへ拡張し、診断32MiB/JSON45MiBは維持。1〜3枚の版と旧記録は維持、Candidate/Assessment・採点側ファイル・依存は不変。shared/server/解析の拡張は相互レビュー対象。[詳細と人工fixture](MULTI-PHOTO.md)。
+
 2026-11-01：referenceMode requiredの生成を0.12.1へ更新。写真の小さい補正と元の肌・ピントの質感を優先し、実例の色調を写真へ転写しない指示を追加。明示された写真パネルは強制的な切り抜きより優先する。旧APIの生成指示・保存画像とOpenAPI0.3.10の構造は維持し、版の説明と人工fixtureを更新。新指示ファイルもA固定のコードハッシュへ含める。shared/解析互換性は相互レビュー対象。[詳細](NATURAL-PHOTO-FINISH.md)。
 
 2026-10-31：OpenAPI0.3.10。`referenceMode: required`を通常エディターへ追加し、空欄でないvisualIntentと観察済み100件を生成前に必須確認する。生成0.12.0、参考記録1.1.0にpoolSize/poolSha256/visualIntentSha256を追加。参考プレビューと無料入力固定も同じ条件で選ぶ。旧off/auto/省略のAPIと旧記録は維持。shared/server/解析の互換性は相互レビュー対象。Candidate/Assessment、採点側ファイル、pipeline、依存は維持。[詳細・人工fixture・限界](REQUIRED-REFERENCES.md)。

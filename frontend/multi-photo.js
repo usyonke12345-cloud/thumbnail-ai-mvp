@@ -1,4 +1,4 @@
-import {additionalPhotoInputs,additionalPhotoDrafts} from '../shared/multi-photo.mjs';
+import {additionalPhotoInputs,additionalPhotoDrafts,MAX_ADDITIONAL_PHOTOS} from '../shared/multi-photo.mjs';
 import {toDataUrl} from './local-archive.js';
 
 export async function normalizeAdditionalPhoto(file,{document=globalThis.document,Image=globalThis.Image,URL=globalThis.URL}={}){
@@ -19,12 +19,12 @@ export async function normalizeAdditionalPhoto(file,{document=globalThis.documen
 async function verifyPhoto(url){const image=new Image();image.src=url;await image.decode();if(image.naturalWidth!==1280||image.naturalHeight!==720)throw new Error('追加写真の実寸法が不正です。');}
 export function createMultiPhotoInput({root,document=globalThis.document,decode=file=>normalizeAdditionalPhoto(file,{document}),verify=verifyPhoto,isBusy=()=>false,onChange=()=>{}}){
  const el=(tag,text='')=>{const n=document.createElement(tag);n.textContent=text;return n;};
- const input=el('input'),label=el('label','追加の写真（任意・2枚まで）'),note=el('p','人物・料理・風景など、同じサムネイルに使いたい写真を追加できます。追加写真は全体を素材として渡し、AIが配置を考えます。下の無料編集のプレビューはメイン写真です。'),list=el('div'),status=el('p');
+ const input=el('input'),label=el('label','追加の写真（任意・3枚まで）'),note=el('p','人物・料理・風景など、同じサムネイルに使いたい写真を追加できます。追加写真は全体を素材として渡し、AIが配置を考えます。下の無料編集のプレビューはメイン写真です。'),list=el('div'),status=el('p');
  input.type='file';input.multiple=true;input.accept='image/png,image/jpeg,image/webp';input.setAttribute('aria-label','AI生成に使う追加写真');status.setAttribute('role','status');status.setAttribute('aria-live','polite');label.append(input);root.replaceChildren(label,note,list,status);
  let entries=[],loading=false,locked=false,version=0;
  const blocked=()=>locked||isBusy();
  function render(){
-  list.replaceChildren();input.disabled=loading||blocked()||entries.length===2;
+  list.replaceChildren();input.disabled=loading||blocked()||entries.length>=MAX_ADDITIONAL_PHOTOS;
   for(const [index,item]of entries.entries()){
    const card=el('article'),image=el('img'),name=el('p',item.file.name||'追加の写真 '+(index+1)),remove=el('button','この写真を外す');
    image.src=item.imageDataUrl;image.alt='追加の写真 '+(index+1);image.style.width='min(100%,240px)';remove.type='button';remove.disabled=loading||blocked();
@@ -36,7 +36,7 @@ export function createMultiPhotoInput({root,document=globalThis.document,decode=
   if(loading||blocked())return;const selected=Array.from(input.files??[]);if(!selected.length)return;
   const current=++version;loading=true;render();status.textContent='追加の写真を読み込んでいます…';
   try{
-   if(entries.length+selected.length>2)throw new Error('追加の写真は2枚までです。先に不要な写真を外してください。');
+   if(entries.length+selected.length>MAX_ADDITIONAL_PHOTOS)throw new Error('追加の写真は3枚までです。先に不要な写真を外してください。');
    const added=[];for(const file of selected)added.push(await decode(file));if(current!==version)return;
    entries=additionalPhotoDrafts([...entries,...added]);status.textContent=`メイン写真と追加${entries.length}枚を使います。`;onChange();
   }catch(error){if(current===version)status.textContent='追加写真を読み込めません：'+error.message+' 前の写真は保持しています。';}

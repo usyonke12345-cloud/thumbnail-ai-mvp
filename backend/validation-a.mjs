@@ -28,7 +28,7 @@ export async function freezeValidationA(value,{references}={}){
  const caseId='validation-a-'+hash(JSON.stringify({requestSha256,service,servicePromptSha256}));
  const chatgptPrompt=ordinaryChatgptPrompt(input,{sourcePhotoCount:1+additionalSources.length});
  const referenceAssets=frozenReferenceAssets(v);
- return {version:additionalSources.length?'validation-a-case-1.1.0':'validation-a-case-1.0.0',caseId,createdAt:new Date().toISOString(),hypothesis:'A',input,source,...(additionalSources.length?{additionalSources}:{}),requestSha256,service,servicePromptSha256,servicePrompt,chatgptPrompt,...(referenceAssets.length?{referenceAssets}:{})};
+ return {version:additionalSources.length===3?'validation-a-case-1.2.0':additionalSources.length?'validation-a-case-1.1.0':'validation-a-case-1.0.0',caseId,createdAt:new Date().toISOString(),hypothesis:'A',input,source,...(additionalSources.length?{additionalSources}:{}),requestSha256,service,servicePromptSha256,servicePrompt,chatgptPrompt,...(referenceAssets.length?{referenceAssets}:{})};
 }
 
 export async function checkValidationARequest(body,caseId,options={}){

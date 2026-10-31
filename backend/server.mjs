@@ -45,7 +45,7 @@ export function makeServer({complete=generateComplete,referenceLibrary=reference
       if(req.method!=='POST') {res.setHeader('Allow','POST');return send(405,{error:{code:'METHOD_NOT_ALLOWED',message:'POSTを使用してください。'}});}
       if(req.headers['content-type']?.split(';')[0].trim()!=='application/json') throw new ApiError(415,'UNSUPPORTED_MEDIA_TYPE','application/jsonを指定してください。');
       let size=0;const chunks=[];
-      for await (const chunk of req) {size+=chunk.length;if(size>(path==='/api/v1/complete-diagnostics'?MAX_JSON_BYTES:path==='/api/v1/validation-a/freeze'?10*1024*1024:path==='/api/v1/complete-thumbnail'?32*1024*1024:16384)) throw new ApiError(413,'BODY_TOO_LARGE','入力が大きすぎます。');chunks.push(chunk);}
+      for await (const chunk of req) {size+=chunk.length;if(size>(path==='/api/v1/complete-diagnostics'?MAX_JSON_BYTES:path==='/api/v1/validation-a/freeze'?14*1024*1024:path==='/api/v1/complete-thumbnail'?36*1024*1024:16384)) throw new ApiError(413,'BODY_TOO_LARGE','入力が大きすぎます。');chunks.push(chunk);}
       let body;try {body=JSON.parse(Buffer.concat(chunks).toString('utf8'));}catch {throw new ApiError(400,'INVALID_JSON','JSONが不正です。');}
       if(path==='/api/v1/reference-library/collect'){if(!body||Array.isArray(body)||Object.keys(body).length)throw new ApiError(400,'INVALID_INPUT','収集の入力は空のオブジェクトにしてください。');return send(200,await referenceLibrary.collect());}
       if(path==='/api/v1/reference-library/observe')return send(200,await referenceLibrary.observe(body));

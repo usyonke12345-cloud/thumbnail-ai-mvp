@@ -7,7 +7,7 @@ import {validationAReceipt} from '../shared/complete-images.mjs';
 
 export function validationACase(value){
  if(value==null)return null;
- if(!['validation-a-case-1.0.0','validation-a-case-1.1.0'].includes(value.version)||!/^validation-a-[a-f0-9]{64}$/.test(value.caseId)||!Number.isFinite(Date.parse(value.createdAt))||value.hypothesis!=='A'||!value.input||!value.source||!value.service||value.service.feedbackUsed!==false||value.service.revisionUsed!==false||typeof value.servicePrompt!=='string'||value.servicePrompt.length>30000||typeof value.chatgptPrompt!=='string'||value.chatgptPrompt.length>5000||value.source.path!=='source.png'||value.source.width!==1280||value.source.height!==720||![value.requestSha256,value.source.sha256,value.service.sourceSha256,value.servicePromptSha256].every(x=>/^[a-f0-9]{64}$/.test(x)))throw new Error('A検証の固定記録が不正です。固定し直してください。');
+ if(!['validation-a-case-1.0.0','validation-a-case-1.1.0','validation-a-case-1.2.0'].includes(value.version)||!/^validation-a-[a-f0-9]{64}$/.test(value.caseId)||!Number.isFinite(Date.parse(value.createdAt))||value.hypothesis!=='A'||!value.input||!value.source||!value.service||value.service.feedbackUsed!==false||value.service.revisionUsed!==false||typeof value.servicePrompt!=='string'||value.servicePrompt.length>30000||typeof value.chatgptPrompt!=='string'||value.chatgptPrompt.length>5000||value.source.path!=='source.png'||value.source.width!==1280||value.source.height!==720||![value.requestSha256,value.source.sha256,value.service.sourceSha256,value.servicePromptSha256].every(x=>/^[a-f0-9]{64}$/.test(x)))throw new Error('A検証の固定記録が不正です。固定し直してください。');
  const pick=(object,keys)=>Object.fromEntries(keys.map(key=>[key,object[key]])),input=pick(value.input,['title','brief','visualIntent','headlineMode','headline','design','composition']);
  if(value.input.referenceMode!==undefined){if(!['auto','off','required'].includes(value.input.referenceMode))throw new Error('A検証の参考資料指定が不正です。');input.referenceMode=value.input.referenceMode;}
  if(typeof input.title!=='string'||!input.title.trim()||[...input.title].length>120||!['auto','manual'].includes(input.headlineMode)||!['auto','photo_focus','editorial','impact','recompose'].includes(input.design)||!['auto','text_left','text_right','text_top'].includes(input.composition)||input.headlineMode==='auto'&&input.headline!==null||input.headlineMode==='manual'&&(typeof input.headline!=='string'||!input.headline.trim()||[...input.headline].length>80)||!Number.isInteger(value.source.bytes)||value.source.bytes<24||value.source.bytes>2359296)throw new Error('A検証の固定入力が不正です。');
@@ -19,12 +19,12 @@ export function validationACase(value){
  if(['auto','required'].includes(input.referenceMode)&&!service.referenceContext)throw new Error('A検証の参考資料記録がありません。');
  const referenceAssets=referenceAssetRecords(value.referenceAssets,service.referenceContext);
  const additionalSources=additionalSourceRecords(value.additionalSources,value.source.sha256);
- if((value.version==='validation-a-case-1.1.0')!==!!additionalSources.length)throw new Error('複数写真の固定形式と写真件数が一致しません。');
+ if(value.version!==(additionalSources.length===3?'validation-a-case-1.2.0':additionalSources.length?'validation-a-case-1.1.0':'validation-a-case-1.0.0'))throw new Error('複数写真の固定形式と写真件数が一致しません。');
  // Whitelist nested properties too: draft transfers never retain credentials.
  return {version:value.version,caseId:value.caseId,createdAt:value.createdAt,hypothesis:'A',input,source:pick(value.source,['path','sha256','bytes','width','height']),...(additionalSources.length?{additionalSources}:{}),requestSha256:value.requestSha256,service,servicePromptSha256:value.servicePromptSha256,servicePrompt:value.servicePrompt,chatgptPrompt:value.chatgptPrompt,...(referenceAssets.length?{referenceAssets}:{})};
 }
 function additionalSourceRecords(value,primaryHash){
- if(value===undefined)return [];if(!Array.isArray(value)||!value.length||value.length>2)throw new Error('追加写真の固定記録が不正です。');
+ if(value===undefined)return [];if(!Array.isArray(value)||!value.length||value.length>3)throw new Error('追加写真の固定記録が不正です。');
  sourcePhotoHashes([primaryHash,...value.map(x=>x?.sha256)]);return value.map((x,i)=>{if(x.path!==`source-${i+2}.png`||x.width!==1280||x.height!==720||!Number.isInteger(x.bytes)||x.bytes<24||x.bytes>2359296)throw new Error('追加写真の固定寸法・上限が不正です。');return {path:x.path,sha256:x.sha256,bytes:x.bytes,width:x.width,height:x.height};});
 }
 function referenceAssetRecords(value,context){

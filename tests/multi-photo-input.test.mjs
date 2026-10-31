@@ -18,15 +18,16 @@ test('native PNG keeps exact bytes and portrait normalization contains the whole
 });
 test('photo picker limits total count, removes one photo and guards loading, busy and paid generation snapshots',async()=>{
  const d=dom(),wait=deferred();let count=0,busy=false,changes=0;
- const app=createMultiPhotoInput({...d,decode:async()=>{count++;return count===1?await wait.promise:entry(1);},verify:async()=>{},isBusy:()=>busy,onChange:()=>changes++}),input=d.nodes.find(n=>n.tag==='input');
+ const app=createMultiPhotoInput({...d,decode:async()=>{count++;return count===1?await wait.promise:entry(count-1);},verify:async()=>{},isBusy:()=>busy,onChange:()=>changes++}),input=d.nodes.find(n=>n.tag==='input');
  input.files=[entry(0).file];const loading=input.events.change();assert.equal(input.disabled,true);assert.throws(()=>app.capture(),/読み込み/);wait.resolve(entry(0));await loading;assert.equal(changes,1);
- busy=true;input.files=[entry(1).file];await input.events.change();assert.equal(count,1);busy=false;await input.events.change();assert.equal(app.capture().length,2);assert.equal(input.disabled,true);
- input.files=[entry(2).file];await input.events.change();assert.equal(app.capture().length,2);assert.equal(count,2);
- let remove=d.nodes.filter(n=>n.tag==='button').at(-1);app.setLocked(true);await remove.events.click();assert.equal(app.capture().length,2);app.setLocked(false);remove=d.nodes.filter(n=>n.tag==='button').at(-1);await remove.events.click();assert.equal(app.capture().length,1);assert.equal(input.disabled,false);
+ busy=true;input.files=[entry(1).file];await input.events.change();assert.equal(count,1);busy=false;await input.events.change();assert.equal(app.capture().length,2);assert.equal(input.disabled,false);
+ input.files=[entry(2).file];await input.events.change();assert.equal(app.capture().length,3);assert.equal(count,3);assert.equal(input.disabled,true);
+ input.files=[entry(0).file];await input.events.change();assert.equal(app.capture().length,3);assert.equal(count,3);
+ let remove=d.nodes.filter(n=>n.tag==='button').at(-1);app.setLocked(true);await remove.events.click();assert.equal(app.capture().length,3);app.setLocked(false);remove=d.nodes.filter(n=>n.tag==='button').at(-1);await remove.events.click();assert.equal(app.capture().length,2);assert.equal(input.disabled,false);
  app.clear();assert.equal(app.capture().length,0);
 });
 test('a failed multi-file selection preserves the previous photo and commits none of the new selection',async()=>{
- const d=dom();let n=0;const app=createMultiPhotoInput({...d,verify:async()=>{},decode:async()=>{if(++n===2)throw Error('bad second file');return entry(1);}});const input=d.nodes.find(x=>x.tag==='input');
+ const d=dom();let n=0;const app=createMultiPhotoInput({...d,verify:async()=>{},decode:async()=>{if(++n%2===0)throw Error('bad second file');return entry(1);}});const input=d.nodes.find(x=>x.tag==='input');
  input.files=[entry(1).file,entry(2).file];await input.events.change();assert.equal(app.capture().length,0);assert.match(d.nodes.at(6)?.textContent??d.nodes.find(x=>x.tag==='p'&&x.textContent.includes('bad second'))?.textContent??'',/bad second/);
  await app.restore([entry(0)]);input.files=[entry(1).file,entry(2).file];await input.events.change();assert.equal(app.capture()[0].imageDataUrl,entry(0).imageDataUrl);
 });
