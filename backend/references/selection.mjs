@@ -13,7 +13,7 @@ export function requiredReferencePool(catalog,now=new Date()){
  return pool.slice(0,100);
 }
 export function selectRequiredReferenceRows(input,pool){
- const intent=requireVisualIntent(input.visualIntent).toLowerCase(),moods=tags(intent,moodWords),genres=tags((input.title+' '+(input.brief??'')).toLowerCase(),genreWords),multi=!!input.additionalImageDataUrls?.length;
+ const intent=requireVisualIntent(input.visualIntent).toLowerCase(),moods=tags(intent,moodWords),genres=tags((input.title+' '+(input.brief??'')).toLowerCase(),genreWords),multi=!!input.additionalImageDataUrls?.length||(input.sourcePhotoCount??1)>1;
  const ranked=pool.map(row=>{const observation=row.observation,moodMatches=observation.moods.filter(x=>moods.includes(x)).length,opposed=moods.includes('calm')&&observation.moods.includes('energetic')&&!observation.moods.includes('calm')||moods.includes('energetic')&&observation.moods.includes('calm')&&!observation.moods.includes('energetic');return {row,rank:moodMatches*16-(opposed?24:0)+observation.genres.filter(x=>genres.includes(x)).length*3+(observation.material===(multi?'multi_photo':input.design==='recompose'?'cutout':'scene')?4:0)-(observation.material==='illustration'?12:0)};}).sort((a,b)=>b.rank-a.rank||a.row.videoId.localeCompare(b.row.videoId));
  const selected=[],channels=new Set(),hashes=new Set(),families=new Map();for(const {row}of ranked){const family=row.observation.layout;if(channels.has(row.metadata.channelId)||hashes.has(row.asset.sha256)||(families.get(family)??0)>=2)continue;selected.push(row);channels.add(row.metadata.channelId);hashes.add(row.asset.sha256);families.set(family,(families.get(family)??0)+1);if(selected.length===5)break;}return selected;
 }

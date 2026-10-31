@@ -81,6 +81,8 @@ test('free required preview and freeze use the same atmosphere and pool; a defic
  let calls=0;const server=makeServer({referenceLibrary:store(),referenceClock:()=>now,complete:async()=>{calls++;}});await new Promise(r=>server.listen(0,'127.0.0.1',r));const base='http://127.0.0.1:'+server.address().port;
  try{const v=input(),body={title:v.title,visualIntent:v.visualIntent,referenceMode:'required'},r=await fetch(base+'/api/v1/reference-library/preview',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});assert.equal(r.status,200);const preview=await r.json();assert.equal(preview.context.poolSize,100);assert.equal(preview.candidates.length,5);assert.equal(calls,0);
   const bad=await fetch(base+'/api/v1/reference-library/preview',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...body,visualIntent:''})});assert.equal(bad.status,400);assert.equal(calls,0);
+  const multi=await fetch(base+'/api/v1/reference-library/preview',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...body,sourcePhotoCount:4})});assert.equal(multi.status,200);const multiPreview=await multi.json(),actual=await prepareCompleteReferences(validateComplete({...v,additionalImageDataUrls:[10,40,70].map(c=>dataUrl(png(1280,720,[c,c+1,c+2,255])))}),settings());assert.deepEqual(multiPreview.context.candidates,actual._references.context.candidates);
+  for(const sourcePhotoCount of [0,5,1.5]){const badCount=await fetch(base+'/api/v1/reference-library/preview',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...body,sourcePhotoCount})});assert.equal(badCount.status,400);}assert.equal(calls,0);
  }finally{await new Promise(r=>server.close(r));}
 });
 

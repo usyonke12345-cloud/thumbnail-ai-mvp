@@ -1138,6 +1138,13 @@
                       "required"
                     ],
                     "default": "auto"
+                  },
+                  "sourcePhotoCount": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 4,
+                    "default": 1,
+                    "description": "Source photo count only; no source image bytes are sent to this free preview. Multiple sources use the same material preference as generation."
                   }
                 },
                 "allOf": [
