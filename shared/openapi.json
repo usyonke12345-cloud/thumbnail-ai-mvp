@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Thumbnail AI MVP",
-    "version": "0.3.9",
+    "version": "0.3.10",
     "description": "Local SVG layout heuristics, opt-in paid complete PNG generation, and local PNG diagnostics. Complete PNG diagnostics are not a quality or CTR score."
   },
   "servers": [
@@ -367,9 +367,10 @@
                     "type": "string",
                     "enum": [
                       "auto",
-                      "off"
+                      "off",
+                      "required"
                     ],
-                    "description": "Optional verified reference library, omitted/off retains legacy behavior; editor defaults auto. Code shortlists up to 5 visually recorded examples by text tags and material, not source-photo analysis. Image model checks feasibility in the same edit. Raw reference images only with recorded permission; otherwise generic observations only. Revisions/manual art direction skip retrieval. No model training or measured selection."
+                    "description": "Optional verified reference library, omitted/off retains legacy behavior; editor defaults auto. Code shortlists up to 5 visually recorded examples by text tags and material, not source-photo analysis. Image model checks feasibility in the same edit. Raw reference images only with recorded permission; otherwise generic observations only. Revisions/manual art direction skip retrieval. No model training or measured selection. required is the normal editor path: a nonblank visualIntent and a pool of 100 fresh, visually observed references are mandatory; unavailable libraries stop before paid dispatch. Omitted/off/auto preserve historical API behavior."
                   },
                   "additionalImageDataUrls": {
                     "type": "array",
@@ -413,6 +414,31 @@
                         "headline": {
                           "type": "string",
                           "minLength": 1
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "if": {
+                      "required": [
+                        "referenceMode"
+                      ],
+                      "properties": {
+                        "referenceMode": {
+                          "const": "required"
+                        }
+                      }
+                    },
+                    "then": {
+                      "required": [
+                        "visualIntent"
+                      ],
+                      "properties": {
+                        "visualIntent": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 300,
+                          "pattern": "\\S"
                         }
                       }
                     }
@@ -566,6 +592,32 @@
                           "sourcePhotoSha256s"
                         ]
                       }
+                    },
+                    {
+                      "if": {
+                        "required": [
+                          "generation_version"
+                        ],
+                        "properties": {
+                          "generation_version": {
+                            "const": "ai-complete-0.12.0"
+                          }
+                        }
+                      },
+                      "then": {
+                        "required": [
+                          "referenceContext"
+                        ],
+                        "properties": {
+                          "referenceContext": {
+                            "properties": {
+                              "version": {
+                                "const": "thumbnail-reference-context-1.1.0"
+                              }
+                            }
+                          }
+                        }
+                      }
                     }
                   ]
                 }
@@ -588,7 +640,7 @@
             "description": "Provider network or response error"
           },
           "503": {
-            "description": "Missing key, disabled paid requests or provider auth"
+            "description": "Missing key, disabled paid requests or provider auth REFERENCE_LIBRARY_INCOMPLETE: required pool has fewer than 100 fresh visual observations; no provider call."
           },
           "504": {
             "description": "Provider deadline exceeded"
@@ -732,9 +784,10 @@
                     "type": "string",
                     "enum": [
                       "auto",
-                      "off"
+                      "off",
+                      "required"
                     ],
-                    "description": "Optional verified reference library, omitted/off retains legacy behavior; editor defaults auto. Code shortlists up to 5 visually recorded examples by text tags and material, not source-photo analysis. Image model checks feasibility in the same edit. Raw reference images only with recorded permission; otherwise generic observations only. Revisions/manual art direction skip retrieval. No model training or measured selection."
+                    "description": "Optional verified reference library, omitted/off retains legacy behavior; editor defaults auto. Code shortlists up to 5 visually recorded examples by text tags and material, not source-photo analysis. Image model checks feasibility in the same edit. Raw reference images only with recorded permission; otherwise generic observations only. Revisions/manual art direction skip retrieval. No model training or measured selection. required is the normal editor path: a nonblank visualIntent and a pool of 100 fresh, visually observed references are mandatory; unavailable libraries stop before paid dispatch. Omitted/off/auto preserve historical API behavior."
                   },
                   "additionalImageDataUrls": {
                     "type": "array",
@@ -778,6 +831,31 @@
                         "headline": {
                           "type": "string",
                           "minLength": 1
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "if": {
+                      "required": [
+                        "referenceMode"
+                      ],
+                      "properties": {
+                        "referenceMode": {
+                          "const": "required"
+                        }
+                      }
+                    },
+                    "then": {
+                      "required": [
+                        "visualIntent"
+                      ],
+                      "properties": {
+                        "visualIntent": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 300,
+                          "pattern": "\\S"
                         }
                       }
                     }
@@ -1027,8 +1105,42 @@
                   },
                   "revision": {
                     "type": "boolean"
+                  },
+                  "referenceMode": {
+                    "enum": [
+                      "auto",
+                      "required"
+                    ],
+                    "default": "auto"
                   }
-                }
+                },
+                "allOf": [
+                  {
+                    "if": {
+                      "required": [
+                        "referenceMode"
+                      ],
+                      "properties": {
+                        "referenceMode": {
+                          "const": "required"
+                        }
+                      }
+                    },
+                    "then": {
+                      "required": [
+                        "visualIntent"
+                      ],
+                      "properties": {
+                        "visualIntent": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 300,
+                          "pattern": "\\S"
+                        }
+                      }
+                    }
+                  }
+                ]
               }
             }
           }
@@ -2540,11 +2652,39 @@
                 "type": "string",
                 "enum": [
                   "auto",
-                  "off"
+                  "off",
+                  "required"
                 ],
                 "description": "Optional verified reference library, omitted/off retains legacy behavior; editor defaults auto. Code shortlists up to 5 visually recorded examples by text tags and material, not source-photo analysis. Image model checks feasibility in the same edit. Raw reference images only with recorded permission; otherwise generic observations only. Revisions/manual art direction skip retrieval. No model training or measured selection."
               }
-            }
+            },
+            "allOf": [
+              {
+                "if": {
+                  "required": [
+                    "referenceMode"
+                  ],
+                  "properties": {
+                    "referenceMode": {
+                      "const": "required"
+                    }
+                  }
+                },
+                "then": {
+                  "required": [
+                    "visualIntent"
+                  ],
+                  "properties": {
+                    "visualIntent": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 300,
+                      "pattern": "\\S"
+                    }
+                  }
+                }
+              }
+            ]
           },
           "source": {
             "type": "object",
@@ -2789,7 +2929,10 @@
         ],
         "properties": {
           "version": {
-            "const": "thumbnail-reference-context-1.0.0"
+            "enum": [
+              "thumbnail-reference-context-1.0.0",
+              "thumbnail-reference-context-1.1.0"
+            ]
           },
           "status": {
             "enum": [
@@ -2811,7 +2954,10 @@
             "pattern": "^[a-f0-9]{64}$"
           },
           "selectionMethod": {
-            "const": "content_tags_then_image_model"
+            "enum": [
+              "content_tags_then_image_model",
+              "visual_intent_then_content_tags_then_image_model"
+            ]
           },
           "candidates": {
             "type": "array",
@@ -2843,9 +2989,78 @@
                 }
               }
             }
+          },
+          "poolSize": {
+            "const": 100
+          },
+          "poolSha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "visualIntentSha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
           }
         },
-        "description": "Supplied candidates are not evidence of the model's chosen layout or improved output. No API view/date statistics copied to long-lived generation results."
+        "description": "Supplied candidates are not evidence of the model's chosen layout or improved output. No API view/date statistics copied to long-lived generation results. Version 1.1.0 binds the 100-example considered pool and normalized atmosphere by SHA-256. Only shortlisted generic observations and permission-approved images are supplied; no training or output-quality claim.",
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "version": {
+                  "const": "thumbnail-reference-context-1.1.0"
+                }
+              }
+            },
+            "then": {
+              "required": [
+                "poolSize",
+                "poolSha256",
+                "visualIntentSha256"
+              ],
+              "properties": {
+                "status": {
+                  "const": "supplied"
+                },
+                "reason": {
+                  "const": "matched"
+                },
+                "selectionMethod": {
+                  "const": "visual_intent_then_content_tags_then_image_model"
+                },
+                "candidates": {
+                  "minItems": 1
+                }
+              }
+            },
+            "else": {
+              "properties": {
+                "selectionMethod": {
+                  "const": "content_tags_then_image_model"
+                }
+              },
+              "not": {
+                "anyOf": [
+                  {
+                    "required": [
+                      "poolSize"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "poolSha256"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "visualIntentSha256"
+                    ]
+                  }
+                ]
+              }
+            }
+          }
+        ]
       },
       "ReferenceObservationInput": {
         "type": "object",

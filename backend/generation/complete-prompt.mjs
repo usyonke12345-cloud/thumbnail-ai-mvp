@@ -36,7 +36,7 @@ export function completePrompt(input){
   ]),
   headlineInstructions(input.headlineMode),
   completeDesignInstructions(input.design??'auto',input.composition??'auto',{revision:!!input.revision}),
-  input._references?.rows?.length?completeReferenceInstructions(input._references):completeReferencePatternInstructions(input),
+  input._references?.rows?.length?completeReferenceInstructions(input._references,{revision:!!input.revision}):completeReferencePatternInstructions(input),
   `DESIRED ATMOSPHERE: visualIntent in the context data describes the requested feeling, not new facts or permission to ${recompose?'invent photographic material':'alter the photograph'}. Translate that feeling into readable typography, scale, spacing and hierarchy. Honor explicit design or placement constraints when provided. Do not render the atmosphere notes as extra headline text. If no atmosphere is supplied, infer it from the video topic and brief.`,
   'OPTIONAL VIDEO BRIEF: if brief is empty, use the video title as the only stated content context and the attached photograph as visual material. Choose a concise honest headline without inventing missing video details, activities, results or claims. Extra content notes are not required.',
   'Keep the visual energy consistent with the video: calm everyday/lifestyle content should feel calm, with restrained saturation. Preserve the photographic color balance. Do not substitute palette changes for the requested letterforms or headline placement. Do not add decorative objects merely because a place name occurs in the title.',

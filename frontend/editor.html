@@ -11,10 +11,10 @@
 <h2>AIが完成画像を作る</h2>
 <label>動画タイトル<input id="ai-title" placeholder="例：バリで過ごす、ゆっくりした一日" maxlength="120"></label>
 <details><summary>案件名を付ける（任意）</summary><label>動画・案件名<input id="project-name" maxlength="80" placeholder="空欄なら動画タイトルで分類"></label></details>
-<p>サムネ内の短い見出し・字体・構成はAIが考えます。写真と動画タイトルだけで生成できます。</p>
+<p>写真・動画タイトル・仕上がりのイメージを共有してください。100件の実例からイメージに合う字体・構成を参考に、AIが見出しと配置を考えます。</p>
 <details id="ai-content-notes"><summary>動画内容を補足する（任意）</summary><label>動画内容の補足<textarea id="ai-brief" maxlength="1000" placeholder="タイトルだけでは伝わらない内容があれば入力"></textarea></label></details>
-<label>仕上がりのイメージ（任意）<textarea id="ai-visual-intent" maxlength="300" rows="3" placeholder="例：落ち着いた旅の雰囲気。写真を自然に見せたい。文字は穏やかに、派手な装飾は避けたい。"></textarea></label>
-<p>希望する雰囲気を一言書くか、下の例を選べます。空欄なら動画タイトルからAIに任せます。</p>
+<label>仕上がりのイメージ（必須）<textarea id="ai-visual-intent" maxlength="300" rows="3" required aria-required="true" placeholder="例：落ち着いた旅の雰囲気。写真を自然に見せたい。文字は穏やかに、派手な装飾は避けたい。"></textarea></label>
+<p>希望する雰囲気を一言書くか、下の例を選んでください。このイメージを優先して100件の実例から参考を選びます。</p>
 <details id="ai-advanced-headline"><summary>サムネ内の文字を自分で指定する（任意）</summary>
 <label>見出しの作り方<select id="ai-headline-mode"><option value="auto">AIに短い見出しを考えてもらう</option><option value="manual">自分の見出しを使う</option></select></label>
 <div id="manual-headline-control" hidden><label>サムネ内の見出し（改行できます）<textarea id="headline" rows="3" maxlength="100" disabled></textarea></label><p>AI生成では80文字以内。下の無料編集では100文字以内です。</p></div>
@@ -24,7 +24,7 @@
 <label>デザインの方向<select id="ai-design"><option value="auto">写真と内容からAIが決める</option><option value="recompose">写真の素材から再構成（実験）</option><option value="photo_focus">写真を主役にする</option><option value="editorial">落ち着いた誌面風</option><option value="impact">文字を大きく見せる</option></select></label>
 <label>AI完成画像の構図<select id="ai-composition"><option value="auto">写真と内容に合わせてAIが決める</option><option value="text_left">文字を左・主役を右</option><option value="text_right">文字を右・主役を左</option><option value="text_top">見出しを上・主役を大きく</option></select></label>
 </details>
-<label>参考サムネイル<select id="ai-reference-mode"><option value="auto">分析済みの実例から参考を選ぶ</option><option value="off">参考ライブラリを使わない</option></select></label>
+<input id="ai-reference-mode" type="hidden" value="required"><p>観察済み100件の実例をもとに生成します。イメージに合う参考を最大5件選び、字体・構成の特徴を使います。</p>
 <section id="editor-references" aria-label="生成に使う参考資料"></section>
 <section id="ai-design-guide" aria-label="AI完成画像の字体と配置の指定"></section>
 <p>写真1枚では通常は写真全体を生かし、「写真の素材から再構成」では人物・小物の切り抜きや再配置を指示します。追加写真がある場合は、選んだ写真すべての素材を組み合わせます。デザイン・構図の指定は優先します。AI編集で描き直しが起きる場合があるため、完成画像で文字・人物・素材を確認してください。</p>

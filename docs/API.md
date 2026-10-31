@@ -1,5 +1,7 @@
 # v1 API / 生成と評価の境界
 
+2026-10-31：OpenAPI0.3.10。`referenceMode: required`を通常エディターへ追加し、空欄でないvisualIntentと観察済み100件を生成前に必須確認する。生成0.12.0、参考記録1.1.0にpoolSize/poolSha256/visualIntentSha256を追加。参考プレビューと無料入力固定も同じ条件で選ぶ。旧off/auto/省略のAPIと旧記録は維持。shared/server/解析の互換性は相互レビュー対象。Candidate/Assessment、採点側ファイル、pipeline、依存は維持。[詳細・人工fixture・限界](REQUIRED-REFERENCES.md)。
+
 2026-10-31：OpenAPI 0.3.9。完成生成と無料入力固定に任意の`additionalImageDataUrls`（最大2枚）を追加。複数写真は生成0.11.0と順序付き`sourcePhotoSha256s`、画像資産1.1.0と`additionalSourcePhotoAssetIds`、比較1.11.0・解析dataset1.10.0・A固定case1.1.0へ対応します。生成本文32MiB、固定10MiB、診断は合計4資産を維持。1枚写真・Candidate/Assessment・pipeline・採点側ファイル・依存は維持。shared/server/解析の変更は相互レビュー対象。[全契約・移行・未対応範囲](MULTI-PHOTO.md#共有契約への影響と限界)。
 
 2026-10-25：1280×720・拡大切り取りなし・上限内のPNGは、元のバイトをそのまま送信する。固定時と生成時は同じ取得処理を使い、PNGの再圧縮による比較写真のハッシュ変更を避ける。別サイズ・JPEG・切り取り・修正元は従来の処理を維持。非同期読込より前に生成ボタンをロックし、そのクリック時点の入力を保持する。API構造・OpenAPI 0.3.8・生成指示・版0.10.2・依存は不変。

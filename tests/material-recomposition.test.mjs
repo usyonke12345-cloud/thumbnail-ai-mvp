@@ -79,7 +79,7 @@ test('A binds service recomposition without copying it into the ordinary baselin
 });
 
 test('all three OpenAPI design enums allow recomposition while existing assessment and image contracts remain separate',async()=>{
- const schema=JSON.parse(await readFile(new URL('../shared/openapi.json',import.meta.url),'utf8'));let count=0;function visit(value){if(!value||typeof value!=='object')return;if(value.properties?.design?.description?.includes('not pixel-identical segmentation')){assert.ok(value.properties.design.enum.includes('recompose'));assert.match(value.properties.design.description,/not pixel-identical segmentation/);count++;}for(const child of Object.values(value))visit(child);}visit(schema);assert.equal(count,3);assert.equal(schema.info.version,'0.3.9');
+ const schema=JSON.parse(await readFile(new URL('../shared/openapi.json',import.meta.url),'utf8'));let count=0;function visit(value){if(!value||typeof value!=='object')return;if(value.properties?.design?.description?.includes('not pixel-identical segmentation')){assert.ok(value.properties.design.enum.includes('recompose'));assert.match(value.properties.design.description,/not pixel-identical segmentation/);count++;}for(const child of Object.values(value))visit(child);}visit(schema);assert.equal(count,3);assert.equal(schema.info.version,'0.3.10');
 });
 
 test('a 0.9.0 fixed case cannot silently use strengthened 0.9.1 edit instructions; analysis keeps the historical memory status',async()=>{
