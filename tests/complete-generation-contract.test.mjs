@@ -95,3 +95,12 @@ test('required-atmosphere fixture and 100-example provenance agree with OpenAPI 
  const {consent,...plain}=v,fixed=await freezeValidationA(plain,{references});assert.equal(matches(fixed,{$ref:'#/components/schemas/ValidationACase'}),true);
  const receipt=await checkValidationARequest(v,fixed.caseId,{references});assert.equal(matches({...response,validationA:receipt},responseSchema),true);
 });
+
+test('four-photo fixture, case1.2 and five-asset diagnostics agree with OpenAPI while legacy caps remain enforced',async()=>{
+ const f=JSON.parse(await readFile(new URL('../docs/fixtures/four-photos.json',import.meta.url),'utf8')),v={...f.input,consent:true};assert.equal(f.source,'synthetic');assert.equal(matches(v,schema),true);validateComplete(v);
+ const bad={...v,additionalImageDataUrls:[...v.additionalImageDataUrls,dataUrl(png(1280,720,[1,2,3,255]))]};assert.equal(matches(bad,schema),false);assert.throws(()=>validateComplete(bad));
+ const response=await generateComplete(v,{generate:async()=>dataUrl(png())}),responseSchema=spec.paths['/api/v1/complete-thumbnail'].post.responses['200'].content['application/json'].schema;assert.equal(response.generation_version,f.generationVersion);assert.equal(matches(response,responseSchema),true);assert.equal(matches({...response,sourcePhotoSha256s:response.sourcePhotoSha256s.slice(1)},responseSchema),false);
+ const fixed=await freezeValidationA(f.input);assert.equal(fixed.version,f.expected.fixedVersion);assert.equal(matches(fixed,{$ref:'#/components/schemas/ValidationACase'}),true);assert.equal(matches({...fixed,version:'validation-a-case-1.1.0'},{$ref:'#/components/schemas/ValidationACase'}),false);
+ const entry=await createEntry(f.input,response),bundle=comparisonBundle({groups:[entry.group],images:[entry.image],reviews:[]},entry.group.id),request=await diagnosticRequest(bundle),diagnostic=analyzePngAssets(request);assert.equal(matches(request,{$ref:'#/components/schemas/CompleteDiagnosticRequest'}),true);assert.equal(matches(diagnostic,{$ref:'#/components/schemas/CompleteDiagnosticResponse'}),true);
+ assert.equal(matches({...request,assetVersion:'image-assets-1.1.0'},{$ref:'#/components/schemas/CompleteDiagnosticRequest'}),false);assert.equal(matches({...diagnostic,analysisVersion:'complete-png-diagnostics-0.1.2'},{$ref:'#/components/schemas/CompleteDiagnosticResponse'}),false);
+});

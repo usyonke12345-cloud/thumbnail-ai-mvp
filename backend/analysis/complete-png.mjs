@@ -5,7 +5,8 @@ import {ApiError} from '../../shared/contracts.mjs';
 
 export const ANALYSIS_VERSION='complete-png-diagnostics-0.1.1';
 export const MULTI_ANALYSIS_VERSION='complete-png-diagnostics-0.1.2';
-export const MAX_ASSETS=4, MAX_ASSET_BYTES=32*1024*1024, MAX_JSON_BYTES=45*1024*1024;
+export const FOUR_PHOTO_ANALYSIS_VERSION='complete-png-diagnostics-0.1.3';
+export const MAX_ASSETS=5, MAX_ASSET_BYTES=32*1024*1024, MAX_JSON_BYTES=45*1024*1024;
 export const UNEVALUATED=['rendered_text','readability','text_fit','text_contrast','subject_preservation','composition_quality'];
 const invalid=message=>{throw new ApiError(400,'INVALID_DIAGNOSTIC_INPUT',message);};
 const object=value=>!!value&&typeof value==='object'&&!Array.isArray(value);
@@ -15,7 +16,7 @@ const nullableText=(value,max)=>value===null||typeof value==='string'&&[...value
 
 // Local diagnostics only. Images are never passed to generation or external services.
 export function analyzePngAssets(body,{decode=decodePng,stats=regionStats,cache=new Map()}={}){
- if(!keys(body,['assetVersion','assets','images'])||!['image-assets-1.0.0','image-assets-1.1.0'].includes(body.assetVersion)||!Array.isArray(body.assets)||body.assets.length<1||body.assets.length>MAX_ASSETS||!Array.isArray(body.images)||body.images.length<1||body.images.length>MAX_ASSETS)invalid('画像資産の版・件数を確認してください（最大4資産）。');
+ if(!keys(body,['assetVersion','assets','images'])||!['image-assets-1.0.0','image-assets-1.1.0','image-assets-1.2.0'].includes(body.assetVersion)||!Array.isArray(body.assets)||body.assets.length<1||body.assets.length>(body.assetVersion==='image-assets-1.2.0'?MAX_ASSETS:4)||!Array.isArray(body.images)||body.images.length<1||body.images.length>4)invalid('画像資産の版・件数を確認してください（旧版は最大4資産、画像資産1.2.0は最大5資産）。');
  const assets=new Map(),images=new Set();let totalBytes=0;
  for(const asset of body.assets){
   if(!keys(asset,['assetId','role','sha256','mimeType','width','height','byteLength','dataUrl'])||!id(asset.assetId)||assets.has(asset.assetId)||!['source_photo','complete_thumbnail'].includes(asset.role)||asset.mimeType!=='image/png'||!/^[a-f0-9]{64}$/.test(asset.sha256)||![asset.width,asset.height].every(n=>Number.isInteger(n)&&n>0&&n<=4096)||!Number.isInteger(asset.byteLength)||asset.byteLength<24||asset.byteLength>MAX_INPUT_BYTES||typeof asset.dataUrl!=='string'||asset.dataUrl.length>Math.ceil(MAX_INPUT_BYTES/3)*4+22||!/^data:image\/png;base64,[A-Za-z0-9+/]+={0,2}$/.test(asset.dataUrl))invalid('画像資産の形式・寸法・上限が不正です。');
@@ -27,7 +28,7 @@ export function analyzePngAssets(body,{decode=decodePng,stats=regionStats,cache=
  const referenced=new Set();
  for(const image of body.images){
   if(!keys(image,['imageId','assetId','role','generationVersion','sourcePhotoAssetId','additionalSourcePhotoAssetIds','backgroundAssetId','headlineProvided','renderedTextVerified','textRegions'])||!id(image.imageId)||images.has(image.imageId)||image.role!=='complete_thumbnail'||assets.get(image.assetId)?.asset.role!=='complete_thumbnail'||!nullableText(image.generationVersion,100)||!nullableText(image.headlineProvided,80)||image.backgroundAssetId!==null||image.renderedTextVerified!==false||image.textRegions!==null||!(image.sourcePhotoAssetId===null||assets.get(image.sourcePhotoAssetId)?.asset.role==='source_photo'))invalid('完成PNGの参照・役割を確認してください。文字なし背景や検出した文字は推測で指定できません。');
-  if(image.additionalSourcePhotoAssetIds!==undefined){const extra=image.additionalSourcePhotoAssetIds;if(body.assetVersion!=='image-assets-1.1.0'||image.sourcePhotoAssetId===null||!Array.isArray(extra)||!extra.length||extra.length>2||new Set(extra).size!==extra.length||extra.includes(image.sourcePhotoAssetId)||extra.some(x=>assets.get(x)?.asset.role!=='source_photo'))invalid('追加写真の参照と画像資産1.1.0を確認してください。');for(const id of extra)referenced.add(id);}
+  if(image.additionalSourcePhotoAssetIds!==undefined){const extra=image.additionalSourcePhotoAssetIds;if(!['image-assets-1.1.0','image-assets-1.2.0'].includes(body.assetVersion)||image.sourcePhotoAssetId===null||!Array.isArray(extra)||!extra.length||extra.length>(body.assetVersion==='image-assets-1.2.0'?3:2)||new Set(extra).size!==extra.length||extra.includes(image.sourcePhotoAssetId)||extra.some(x=>assets.get(x)?.asset.role!=='source_photo'))invalid('追加写真の参照と対応する画像資産の版を確認してください。');for(const id of extra)referenced.add(id);}
   images.add(image.imageId);referenced.add(image.assetId);if(image.sourcePhotoAssetId!==null)referenced.add(image.sourcePhotoAssetId);
  }
  if(referenced.size!==assets.size)invalid('参照されていない画像資産があります。');
@@ -48,5 +49,5 @@ export function analyzePngAssets(body,{decode=decodePng,stats=regionStats,cache=
   results.push({assetId:asset.assetId,sha256:asset.sha256,role:asset.role,byteLength:asset.byteLength,...value,...(value.status==='analyzed'&&!matches?{status:'unavailable',luminance:null,nearlyUniform:null,reasons:['宣言寸法と実際のPNG寸法が一致しません。']}:{} )});
  }
  const byId=new Map(results.map(x=>[x.assetId,x]));
- return {analysisVersion:body.assetVersion==='image-assets-1.1.0'?MULTI_ANALYSIS_VERSION:ANALYSIS_VERSION,kind:'image_diagnostics',assessment:null,assets:results,images:body.images.map(image=>({imageId:image.imageId,assetId:image.assetId,sourcePhotoAssetId:image.sourcePhotoAssetId,...(image.additionalSourcePhotoAssetIds?{additionalSourcePhotoAssetIds:[...image.additionalSourcePhotoAssetIds]}:{}),backgroundAssetId:null,headlineProvided:image.headlineProvided,status:byId.get(image.assetId).status,qualityScore:null,renderedText:null,unevaluated:[...UNEVALUATED],reasons:['見出しは生成指示で、画像内の文字として検証していません。','入力写真を文字なし背景として代用しません。'],limitations:['輝度やほぼ単色という兆候だけで、品質・文字の読みやすさ・人物の保持を採点しません。','輝度は画素値をsRGBと仮定した間引き統計です。色プロファイル変換は行いません。']})),decodedImages,note:'ローカルの画像診断です。外部API送信・追加料金なし。完成PNGの品質スコアとCTR予測は未実装です。'};
+ return {analysisVersion:body.assetVersion==='image-assets-1.2.0'?FOUR_PHOTO_ANALYSIS_VERSION:body.assetVersion==='image-assets-1.1.0'?MULTI_ANALYSIS_VERSION:ANALYSIS_VERSION,kind:'image_diagnostics',assessment:null,assets:results,images:body.images.map(image=>({imageId:image.imageId,assetId:image.assetId,sourcePhotoAssetId:image.sourcePhotoAssetId,...(image.additionalSourcePhotoAssetIds?{additionalSourcePhotoAssetIds:[...image.additionalSourcePhotoAssetIds]}:{}),backgroundAssetId:null,headlineProvided:image.headlineProvided,status:byId.get(image.assetId).status,qualityScore:null,renderedText:null,unevaluated:[...UNEVALUATED],reasons:['見出しは生成指示で、画像内の文字として検証していません。','入力写真を文字なし背景として代用しません。'],limitations:['輝度やほぼ単色という兆候だけで、品質・文字の読みやすさ・人物の保持を採点しません。','輝度は画素値をsRGBと仮定した間引き統計です。色プロファイル変換は行いません。']})),decodedImages,note:'ローカルの画像診断です。外部API送信・追加料金なし。完成PNGの品質スコアとCTR予測は未実装です。'};
 }

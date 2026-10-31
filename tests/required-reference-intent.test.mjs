@@ -81,6 +81,8 @@ test('free required preview and freeze use the same atmosphere and pool; a defic
  let calls=0;const server=makeServer({referenceLibrary:store(),referenceClock:()=>now,complete:async()=>{calls++;}});await new Promise(r=>server.listen(0,'127.0.0.1',r));const base='http://127.0.0.1:'+server.address().port;
  try{const v=input(),body={title:v.title,visualIntent:v.visualIntent,referenceMode:'required'},r=await fetch(base+'/api/v1/reference-library/preview',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});assert.equal(r.status,200);const preview=await r.json();assert.equal(preview.context.poolSize,100);assert.equal(preview.candidates.length,5);assert.equal(calls,0);
   const bad=await fetch(base+'/api/v1/reference-library/preview',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...body,visualIntent:''})});assert.equal(bad.status,400);assert.equal(calls,0);
+  const multi=await fetch(base+'/api/v1/reference-library/preview',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...body,sourcePhotoCount:4})});assert.equal(multi.status,200);const multiPreview=await multi.json(),actual=await prepareCompleteReferences(validateComplete({...v,additionalImageDataUrls:[10,40,70].map(c=>dataUrl(png(1280,720,[c,c+1,c+2,255])))}),settings());assert.deepEqual(multiPreview.context.candidates,actual._references.context.candidates);
+  for(const sourcePhotoCount of [0,5,1.5]){const badCount=await fetch(base+'/api/v1/reference-library/preview',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...body,sourcePhotoCount})});assert.equal(badCount.status,400);}assert.equal(calls,0);
  }finally{await new Promise(r=>server.close(r));}
 });
 
@@ -99,4 +101,10 @@ test('historical 0.12.0 outputs remain importable and distinguishable after the 
  for(const result of [current,old])assert.equal(feedbackUsage({result}).feedbackUsageKnown,true);
  const {consent,...plain}=v,fixed=await freezeValidationA(plain,{references:settings()});assert.equal(fixed.service.generationVersion,'ai-complete-0.12.1');assert.ok(fixed.service.files.some(x=>x.path==='backend/generation/complete-photo-finish.mjs'));
  const {referenceMode,...legacy}=v,single=await generateComplete(legacy,{generate:async()=>dataUrl(png())});assert.equal(single.generation_version,'ai-complete-0.10.2');assert.doesNotMatch(completePrompt(validateComplete(legacy)),/NATURAL PHOTO FINISH/);
+});
+
+test('four photos retain required atmosphere, the 100-example pool and natural finishing in generation 0.13.0',async()=>{
+ const v={...input(),additionalImageDataUrls:[10,40,70].map(c=>dataUrl(png(1280,720,[c,c+1,c+2,255])))};let calls=0;
+ const result=await generateComplete(v,{references:settings(),generate:async value=>{calls++;const prompt=completePrompt(value);assert.match(prompt,/Images 1 through 4 are the only photographic material/);assert.match(prompt,/NATURAL PHOTO FINISH/);assert.match(prompt,/100 recently qualified/);assert.equal(value.additionalImageDataUrls.length,3);return dataUrl(png());}});assert.equal(calls,1);assert.equal(result.generation_version,'ai-complete-0.13.0');assert.equal(result.referenceContext.poolSize,100);assert.equal(result.sourcePhotoSha256s.length,4);
+ const {consent,...plain}=v,fixed=await freezeValidationA(plain,{references:settings()});assert.equal(fixed.version,'validation-a-case-1.2.0');assert.equal(fixed.service.generationVersion,'ai-complete-0.13.0');assert.equal(fixed.additionalSources[2].path,'source-4.png');await validationAZip(fixed,v.imageDataUrl,v.additionalImageDataUrls);
 });

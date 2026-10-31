@@ -38,7 +38,7 @@ test('multi source response records all ordered input hashes without changing si
  assert.match(completePrompt(validateComplete(single)),/image 1, the original photograph, is the only authority/);
 });
 test('bad photo counts, dimensions, formats, duplicates and limits are rejected before provider dispatch',async()=>{
- for(const additionalImageDataUrls of [null,{},[...input.additionalImageDataUrls,dataUrl(png(1280,720,[2,3,4,255]))],[input.imageDataUrl],[input.additionalImageDataUrls[0],input.additionalImageDataUrls[0]],['data:image/jpeg;base64,YQ=='],[dataUrl(png(50,50))],['data:image/png;base64,'+'A'.repeat(3*1024*1024)]]){
+ for(const additionalImageDataUrls of [null,{},[...input.additionalImageDataUrls,dataUrl(png(1280,720,[2,3,4,255])),dataUrl(png(1280,720,[5,6,7,255]))],[input.imageDataUrl],[input.additionalImageDataUrls[0],input.additionalImageDataUrls[0]],['data:image/jpeg;base64,YQ=='],[dataUrl(png(50,50))],['data:image/png;base64,'+'A'.repeat(3*1024*1024)]]){
   let calls=0;await assert.rejects(()=>generateComplete({...input,additionalImageDataUrls},{generate:async()=>{calls++;return dataUrl(png());}}),e=>e.code==='INVALID_IMAGE');assert.equal(calls,0);
  }
  assert.deepEqual(additionalPhotoInputs(undefined),[]);assert.throws(()=>sourcePhotoHashes(['x']));assert.throws(()=>sourcePhotoHashes(['a'.repeat(64),'a'.repeat(64)]));
