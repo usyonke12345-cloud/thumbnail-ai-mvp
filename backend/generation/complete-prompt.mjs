@@ -5,6 +5,7 @@ import {completeReferencePatternInstructions} from './complete-reference-pattern
 import {completeReferenceInstructions} from '../references/selection.mjs';
 import {multiPhotoPrompt} from './complete-multi-prompt.mjs';
 import {completePhotoFinishInstructions} from './complete-photo-finish.mjs';
+import {completeEmphasisInstructions} from './complete-emphasis.mjs';
 // This boundary applies to every design, including references and revisions.
 // It is an edit instruction, not a claim that the output has been verified.
 const peopleSourceRule=[
@@ -36,6 +37,7 @@ export function completePrompt(input){
    'CHANGE ONLY: add the requested headline typography and its local readability treatment, with the restrained color/light adjustments allowed above. Whole-photo crop or scale is allowed to fit the chosen layout. Do not isolate or reposition a person, repaint skin, replace the environment or redraw the scene. If the video context is unrelated to the photograph, retain the photograph rather than replace it.'
   ]),
   headlineInstructions(input.headlineMode),
+  ...(input.referenceMode==='required'?[completeEmphasisInstructions(input)]:[]),
   completeDesignInstructions(input.design??'auto',input.composition??'auto',{revision:!!input.revision}),
   input._references?.rows?.length?completeReferenceInstructions(input._references,{revision:!!input.revision}):completeReferencePatternInstructions(input),
   ...(input.referenceMode==='required'?[completePhotoFinishInstructions(input)]:[]),

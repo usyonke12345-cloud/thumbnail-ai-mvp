@@ -12,6 +12,13 @@ const spec=JSON.parse(await readFile(new URL('../shared/openapi.json',import.met
 const schema=spec.paths['/api/v1/complete-thumbnail'].post.requestBody.content['application/json'].schema;
 const fixture=JSON.parse(await readFile(new URL('../docs/fixtures/complete-generation-options.json',import.meta.url),'utf8'));
 
+test('optional text-emphasis observations agree with the shared contract, including uniform and uncertain counterexamples',async()=>{
+ const f=JSON.parse(await readFile(new URL('../docs/fixtures/text-emphasis.json',import.meta.url),'utf8')),schema={$ref:'#/components/schemas/ThumbnailTextEmphasis'};
+ assert.equal(f.source,'synthetic');assert.ok(matches(f.observation,schema));
+ for(const mode of ['uniform','no_text','uncertain'])assert.ok(matches({...f.observation,mode,spans:[]},schema));
+ for(const change of [{mode:'uniform'},{spans:[]},{spans:Array(4).fill(f.observation.spans[0])},{relationship:' '},{extra:true},{spans:[{...f.observation.spans[0],role:'ctr_winner'}]},{spans:[{...f.observation.spans[0],treatments:['color','color']}]},{spans:[{...f.observation.spans[0],text:'x'.repeat(51)}]}])assert.equal(matches({...f.observation,...change},schema),false);
+});
+
 // Checks only keywords used by this request schema; conditional branches are essential here.
 function matches(value,s){
  if(s.$ref)s=spec.components.schemas[s.$ref.split('/').at(-1)];
