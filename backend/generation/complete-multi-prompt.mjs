@@ -3,6 +3,7 @@ import {normalizeGenerationFeedback} from '../../shared/generation-feedback.mjs'
 import {headlineInstructions} from './complete-editorial.mjs';
 import {completeReferenceInstructions} from '../references/selection.mjs';
 import {completePhotoFinishInstructions} from './complete-photo-finish.mjs';
+import {completeEmphasisInstructions} from './complete-emphasis.mjs';
 
 function designInstructions(input){
  const recipe=COMPLETE_DESIGNS[input.design],zone={text_left:'Place the headline on the left and photographic subjects to the right.',text_right:'Place the headline on the right and photographic subjects to the left.',text_top:'Place the headline above the photographic subjects.'}[input.composition];
@@ -27,6 +28,7 @@ export function multiPhotoPrompt(input){
    `REVISION: image ${previous} is the previous completed thumbnail, a reference for layout and typography only. Apply the requested design change while recovering people, objects and scenery from source images 1 through ${count}. Remove any unsupported person or object from the previous thumbnail. Preserve unrequested design features where practical. Replace old lettering with the one current headline; never stack the old and new headline.`
   ]:[]),
   headlineInstructions(input.headlineMode),
+  completeEmphasisInstructions(input),
   designInstructions(input),
   completeReferenceInstructions(input._references,{sourceCount:count,revision:!!input.revision}),
   completePhotoFinishInstructions(input),

@@ -3,6 +3,7 @@ import {createHash} from 'node:crypto';
 import {ApiError} from '../../shared/contracts.mjs';
 import {referenceCriteria,qualifiesReference,thumbnailUrl,collectYouTubeReferences,createYouTubeClient} from './youtube.mjs';
 import {youtubeApiKey} from './settings.mjs';
+import {normalizeReferenceEmphasis} from '../../shared/reference-emphasis.mjs';
 export const REFERENCE_ROOT=new URL('../../data/private/recent-thumbnail-library/',import.meta.url);
 const hash=bytes=>createHash('sha256').update(bytes).digest('hex'),idPattern=/^[A-Za-z0-9_-]{11}$/,shaPattern=/^[a-f0-9]{64}$/;
 export const REFERENCE_GENRES=['travel','daily_life','routine','experience','explanation','cooking','fitness','beauty'];
@@ -10,10 +11,11 @@ export const REFERENCE_MOODS=['calm','friendly','energetic','refined','cinematic
 export const REFERENCE_MATERIALS=['scene','cutout','multi_photo','illustration'];
 const text=(value,max)=>typeof value==='string'&&!!value.trim()&&[...value].length<=max&&!/[\u0000-\u001f\u007f]/u.test(value);
 export function validateReferenceObservation(value){
- if(!value||Object.keys(value).some(key=>!['videoId','thumbnailSha256','genres','moods','material','typography','layout','when','avoid','generationAllowed','permissionBasis','observer'].includes(key))||!idPattern.test(value.videoId??'')||!shaPattern.test(value.thumbnailSha256??'')||value.observer!==undefined&&!['human','assistant'].includes(value.observer))throw new ApiError(400,'INVALID_REFERENCE','出典と確認した画像を指定してください。');
+ if(!value||Object.keys(value).some(key=>!['videoId','thumbnailSha256','genres','moods','material','typography','layout','when','avoid','generationAllowed','permissionBasis','observer','emphasis'].includes(key))||!idPattern.test(value.videoId??'')||!shaPattern.test(value.thumbnailSha256??'')||value.observer!==undefined&&!['human','assistant'].includes(value.observer))throw new ApiError(400,'INVALID_REFERENCE','出典と確認した画像を指定してください。');
  for(const [key,allowed]of [['genres',REFERENCE_GENRES],['moods',REFERENCE_MOODS]])if(!Array.isArray(value[key])||value[key].length<1||value[key].length>allowed.length||new Set(value[key]).size!==value[key].length||value[key].some(x=>!allowed.includes(x)))throw new ApiError(400,'INVALID_REFERENCE','ジャンルと雰囲気を選んでください。');
  if(!REFERENCE_MATERIALS.includes(value.material)||['typography','layout','when','avoid'].some(key=>!text(value[key],500))||typeof value.generationAllowed!=='boolean'||value.generationAllowed&&!text(value.permissionBasis,300))throw new ApiError(400,'INVALID_REFERENCE','実画像で確認した字体・配置・使う条件・避ける条件を記録してください。画像送信を許可する場合は根拠も必要です。');
- return {videoId:value.videoId,thumbnailSha256:value.thumbnailSha256,observer:value.observer??'human',genres:[...value.genres],moods:[...value.moods],material:value.material,typography:value.typography.trim(),layout:value.layout.trim(),when:value.when.trim(),avoid:value.avoid.trim(),generationAllowed:value.generationAllowed,permissionBasis:value.generationAllowed?value.permissionBasis.trim():null};
+ let emphasis;try{if(value.emphasis!==undefined)emphasis=normalizeReferenceEmphasis(value.emphasis);}catch(error){throw new ApiError(400,'INVALID_REFERENCE',error.message);}
+ return {videoId:value.videoId,thumbnailSha256:value.thumbnailSha256,observer:value.observer??'human',genres:[...value.genres],moods:[...value.moods],material:value.material,typography:value.typography.trim(),layout:value.layout.trim(),when:value.when.trim(),avoid:value.avoid.trim(),...(emphasis?{emphasis}:{}),generationAllowed:value.generationAllowed,permissionBasis:value.generationAllowed?value.permissionBasis.trim():null};
 }
 export function imageHeader(bytes,mime){
  if(mime==='image/png'&&bytes.length>=24&&bytes.subarray(0,8).toString('hex')==='89504e470d0a1a0a'&&bytes.toString('ascii',12,16)==='IHDR')return {width:bytes.readUInt32BE(16),height:bytes.readUInt32BE(20),extension:'png'};

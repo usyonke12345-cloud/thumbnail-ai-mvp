@@ -1,0 +1,16 @@
+{
+  "source": "synthetic",
+  "generationVersion": "ai-complete-0.14.0",
+  "observation": {
+    "version": "thumbnail-text-emphasis-1.0.0",
+    "mode": "selective",
+    "spans": [{"text": "42分台", "role": "number_or_result", "treatments": ["color", "size"], "appearance": "黄色、補足は白"}],
+    "relationship": "記録を単位・範囲の語と一緒に強調し、一般的な一日の説明は従属させる。"
+  },
+  "cases": [
+    {"title": "国際大会出場選手の休日", "semanticFocusToCheckInOutput": "国際大会出場選手", "context": "休日"},
+    {"title": "10km42分台ランナーの一日", "semanticFocusToCheckInOutput": "10km42分台", "context": "一日"},
+    {"title": "港食堂で朝ごはんを食べる", "semanticFocusToCheckInOutput": "港食堂", "context": "朝ごはん"}
+  ],
+  "note": "人工の編集例。正しい強調の実画像検証・本人評価・学習データではない。数字の意味や優先順位は現動画の入力で判断する。"
+}

@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Thumbnail AI MVP",
-    "version": "0.3.11",
+    "version": "0.3.12",
     "description": "Local SVG layout heuristics, opt-in paid complete PNG generation, and local PNG diagnostics. Complete PNG diagnostics are not a quality or CTR score."
   },
   "servers": [
@@ -252,7 +252,7 @@
     "/api/v1/complete-thumbnail": {
       "post": {
         "summary": "Opt-in paid complete thumbnail from one to four photographs",
-        "description": "People and photographic material must come solely from the supplied one to four source photographs. No invented people or combined faces; same person appears once. Previous outputs and style references are not material sources. Legacy single-photo generation remains 0.10.2 and legacy two-/three-photo generation remains 0.11.0. These are prompt constraints, not automatic output verification. JSON body at most 36MiB; one paid edit, no automatic retry. Required-reference generation 0.12.1 asks for minimal photo processing, original skin/camera softness and typography/composition-only reference use; requested whole-photo panels override forced cutout recipes. This remains a prompt constraint, not pixel-identical compositing. Four-photo generation uses 0.13.0; up to three photographs may accompany the main photograph. Other photo counts retain their versions and natural-photo rules.",
+        "description": "People and photographic material must come solely from the supplied one to four source photographs. No invented people or combined faces; same person appears once. Previous outputs and style references are not material sources. Legacy single-photo generation remains 0.10.2 and legacy two-/three-photo generation remains 0.11.0. These are prompt constraints, not automatic output verification. JSON body at most 36MiB; one paid edit, no automatic retry. Required-reference generation 0.14.0 asks for minimal photo processing, original skin/camera softness and typography/composition-only reference use; requested whole-photo panels override forced cutout recipes. This remains a prompt constraint, not pixel-identical compositing. Required-reference generation 0.14.0 uses semantic text emphasis for every photo count (1–4). Four-photo off/auto generation remains 0.13.0. It chooses the distinctive supported subject/result/action before typography and color, using optional observed text-emphasis relationships. Actual rendered emphasis is unverified.",
         "requestBody": {
           "required": true,
           "content": {
@@ -602,7 +602,8 @@
                           "generation_version": {
                             "enum": [
                               "ai-complete-0.12.0",
-                              "ai-complete-0.12.1"
+                              "ai-complete-0.12.1",
+                              "ai-complete-0.14.0"
                             ]
                           }
                         }
@@ -3298,9 +3299,124 @@
               "null"
             ],
             "maxLength": 300
+          },
+          "emphasis": {
+            "$ref": "#/components/schemas/ThumbnailTextEmphasis"
           }
         },
         "description": "Generic visual observations, not human preference labels. Permission basis required when generationAllowed=true. Saves only against the current cached thumbnail hash; mismatches return 409."
+      },
+      "ThumbnailTextEmphasis": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "version",
+          "mode",
+          "spans",
+          "relationship"
+        ],
+        "properties": {
+          "version": {
+            "const": "thumbnail-text-emphasis-1.0.0"
+          },
+          "mode": {
+            "enum": [
+              "selective",
+              "uniform",
+              "no_text",
+              "uncertain"
+            ]
+          },
+          "spans": {
+            "type": "array",
+            "maxItems": 3,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "text",
+                "role",
+                "treatments",
+                "appearance"
+              ],
+              "properties": {
+                "text": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 50,
+                  "pattern": "^(?=.*\\S)[^\\u0000-\\u001f\\u007f]+$"
+                },
+                "role": {
+                  "enum": [
+                    "distinctive_subject",
+                    "number_or_result",
+                    "action_or_change",
+                    "problem_or_surprise",
+                    "place_or_product",
+                    "contrast",
+                    "context"
+                  ]
+                },
+                "treatments": {
+                  "type": "array",
+                  "minItems": 1,
+                  "maxItems": 5,
+                  "uniqueItems": true,
+                  "items": {
+                    "enum": [
+                      "color",
+                      "size",
+                      "weight",
+                      "backdrop",
+                      "outline"
+                    ]
+                  }
+                },
+                "appearance": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 100,
+                  "pattern": "^(?=.*\\S)[^\\u0000-\\u001f\\u007f]+$"
+                }
+              }
+            }
+          },
+          "relationship": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 300,
+            "pattern": "^(?=.*\\S)[^\\u0000-\\u001f\\u007f]+$"
+          }
+        },
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "mode": {
+                  "const": "selective"
+                }
+              },
+              "required": [
+                "mode"
+              ]
+            },
+            "then": {
+              "properties": {
+                "spans": {
+                  "minItems": 1
+                }
+              }
+            },
+            "else": {
+              "properties": {
+                "spans": {
+                  "maxItems": 0
+                }
+              }
+            }
+          }
+        ],
+        "description": "Optional hash-bound visual observation of text hierarchy. Role is an observer interpretation, not creator intent, CTR or a user preference. no_text excludes packaging, watermarks and game UI. Uncertain observations contain no guessed spans. Current input meaning overrides example copy and colors."
       }
     }
   }
