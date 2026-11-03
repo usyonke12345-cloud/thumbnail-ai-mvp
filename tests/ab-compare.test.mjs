@@ -71,7 +71,30 @@ test('[P2] no pooled p-value across reviewers; per-reviewer tests and pair-level
   assert.equal(s.signTestP, undefined, '全票をまとめたp値は出さない'); assert.equal('signTestP' in s.preferred, false);
   assert.deepEqual(Object.keys(s.byReviewer), ['r01', 'r02', 'r03']);
   assert.equal(s.byReviewer.r01.signTestP, 2 / 32, '評価者ごとは5組で5対0');
-  assert.deepEqual(s.pairLevel, { service: 5, chatgpt: 0, undecided: 0 }, '組ごとの多数決は5組＝5票');
+  assert.deepEqual(s.pairLevel, { service: 5, chatgpt: 0, same: 0, neither: 0, undecided: 0 }, '組ごとの結論は5組＝5票');
+  assert.deepEqual(s.pairRelative, { service: 5, chatgpt: 0, tied: 0 }); assert.deepEqual(s.missing, []);
+});
+
+test('a pair concludes only with a majority of valid answers, counting same and neither', () => {
+  const ids = ['p1', 'p2', 'p3', 'p4', 'p5'], keys = Object.fromEntries(['r02', 'r03', 'r04'].map(r => [r, assign(ids, r)]));
+  const votes = { p1: ['service', 'neither', 'neither'], p2: ['service', 'service', 'neither'], p3: ['service', 'chatgpt', 'same'], p4: ['same', 'same', 'chatgpt'], p5: ['chatgpt', 'chatgpt', 'chatgpt'] };
+  const rows = Object.entries(keys).flatMap(([r, key], i) => key.map(t => { const v = votes[t.pairId][i]; return row(t, r, ['same', 'neither'].includes(v) ? v : pick(t, v)); }));
+  const s = summarizeAb(rows, keys);
+  assert.deepEqual(s.pairLevel, { service: 1, chatgpt: 1, same: 1, neither: 1, undecided: 1 });
+  assert.equal(s.pairDetail.find(p => p.pair_id === 'p1').conclusion, 'neither', '1対0対2はサービスの勝ちにしない');
+  assert.equal(s.pairDetail.find(p => p.pair_id === 'p3').conclusion, 'undecided', '過半数なしは未決');
+  assert.deepEqual(s.pairRelative, { service: 2, chatgpt: 2, tied: 1 }, '票の多さは参考として別に残す');
+  assert.deepEqual(s.pairDetail.find(p => p.pair_id === 'p2'), { pair_id: 'p2', n: 3, service: 2, chatgpt: 0, same: 0, neither: 1, conclusion: 'service' });
+  const sum = s.byMethod.service.photoPreserved, rate = s.byMethod.service.photoPreservedRate;
+  assert.equal(sum.yes + sum.partly + sum.no, 15); assert.equal(rate.yes + rate.partly + rate.no, 1);
+});
+
+test('two tied answers are undecided, one answer stands alone, and missing answers are reported', () => {
+  const ids = ['p1', 'p2'], keys = { r02: assign(ids, 'r02'), r03: assign(ids, 'r03') };
+  const at = (r, p) => keys[r].find(t => t.pairId === p);
+  const s = summarizeAb([row(at('r02', 'p1'), 'r02', pick(at('r02', 'p1'), 'service')), row(at('r03', 'p1'), 'r03', pick(at('r03', 'p1'), 'chatgpt')), row(at('r02', 'p2'), 'r02', pick(at('r02', 'p2'), 'service'))], keys);
+  assert.deepEqual(s.pairLevel, { service: 1, chatgpt: 0, same: 0, neither: 0, undecided: 1 });
+  assert.deepEqual(s.missing, [{ reviewer_id: 'r03', pair_id: 'p2' }]);
 });
 
 test('[P2] creator records must be a non-negative time and 0-3 revisions (or gave_up); invalid ones are excluded and reported', () => {

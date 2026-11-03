@@ -93,7 +93,7 @@ export function creatorErrors(m) {
 
 /**
  * 記入済みCSVと対応表から集計する。不正・未記入・重複（同じ評価者×同じ組の2回目以降）の行は数えずに報告する。
- * 検定は評価者ごと（その人の中で組は独立）と、組ごとの多数決（1組1票）に分けて出す。複数人の全票をまとめたp値は出さない（同じ組を複数人が評価した票は独立ではないため）。
+ * 検定は評価者ごと（その人の中で組は独立）に出し、組ごとの結論（有効回答の過半数、1組1票）とは分ける。複数人の全票をまとめたp値は出さない（同じ組を複数人が評価した票は独立ではないため）。
  */
 export function summarizeAb(rows, keys, meta = {}) {
   const invalid = [], used = [], seen = new Set();
@@ -121,6 +121,7 @@ export function summarizeAb(rows, keys, meta = {}) {
       n, wouldUseRate: n ? c(x => x.use) / n : null,
       fixCounts: Object.fromEntries([...FIX, 'none'].map(f => [f, c(x => x.fix.includes(f))])),
       photoPreserved: Object.fromEntries(['yes', 'partly', 'no'].map(k => [k, c(x => x.photo === k)])),
+      photoPreservedRate: Object.fromEntries(['yes', 'partly', 'no'].map(k => [k, n ? c(x => x.photo === k) / n : null])),
       textMoodFitMean: n ? v.reduce((a, x) => a + x.mood, 0) / n : null,
       creator: { firstSecondsMedian: median(times), revisionsToUsable: { recorded: revs.filter(Number.isInteger).length, median: median(revs), gaveUp: revs.filter(x => x === 'gave_up').length } },
     };
@@ -128,19 +129,27 @@ export function summarizeAb(rows, keys, meta = {}) {
 
   const reviewers = [...new Set(used.map(r => r.reviewer_id))].sort();
   const byReviewer = Object.fromEntries(reviewers.map(id => { const t = tally(used.filter(r => r.reviewer_id === id)); return [id, { ...t, signTestP: signTestP(t.service, t.chatgpt) }]; }));
-  // 組ごとの多数決：その組で service と chatgpt のどちらが多く選ばれたか（同数・same/neither だけなら決まらない）
+  // 組ごとの結論：same・neither を含む有効回答の過半数がある場合だけ結論にする（同数・過半数なしは undecided）。
+  // service と chatgpt だけの票の多さは pairRelative に参考として分ける
   const pairs = [...new Set(used.map(r => r.pair_id))].sort();
-  const pairLevel = { service: 0, chatgpt: 0, undecided: 0 };
-  for (const p of pairs) { const t = tally(used.filter(r => r.pair_id === p)); pairLevel[t.service > t.chatgpt ? 'service' : t.chatgpt > t.service ? 'chatgpt' : 'undecided']++; }
+  const pairLevel = { service: 0, chatgpt: 0, same: 0, neither: 0, undecided: 0 }, pairRelative = { service: 0, chatgpt: 0, tied: 0 };
+  const pairDetail = pairs.map(p => {
+    const list = used.filter(r => r.pair_id === p), t = tally(list), conclusion = Object.keys(t).find(k => t[k] * 2 > list.length) ?? 'undecided';
+    pairLevel[conclusion]++; pairRelative[t.service > t.chatgpt ? 'service' : t.chatgpt > t.service ? 'chatgpt' : 'tied']++;
+    return { pair_id: p, n: list.length, ...t, conclusion };
+  });
+  // 対応表にあるのに有効な回答がない組（未記入・不正を含む）
+  const missing = [...new Set(rows.map(r => r.reviewer_id))].filter(id => keys[id]).sort()
+    .flatMap(id => keys[id].filter(t => !seen.has(`${id}|${t.pairId}`)).map(t => ({ reviewer_id: id, pair_id: t.pairId })));
 
   return {
     trials: used.length, reviewers: reviewers.length, pairs: pairs.length,
     preferred: tally(used), // 全票の件数（記述のみ。p値は出さない）
-    byReviewer, pairLevel,
+    byReviewer, pairLevel, pairRelative, pairDetail, missing,
     byMethod: { service: per('service'), chatgpt: per('chatgpt') },
     reasons: used.map(r => ({ pair_id: r.pair_id, reviewer_id: r.reviewer_id, chose: chose(r), reason: r.reason, serviceFix: r[letterOf(r, 'service') + '_fix_note'], chatgptFix: r[letterOf(r, 'chatgpt') + '_fix_note'] })),
     invalid, metaInvalid,
-    note: '少数の人による最初の1枚の比較で、参考値。preferred は全票の件数で、複数人の票は独立ではないためp値は出さない。byReviewer.signTestP は評価者ごとの両側二項検定（same・neither を除く）、pairLevel は組ごとの多数決。作成時間・修正回数は作成者の記録（不正な値は metaInvalid に出して除外）。CTRや品質の保証ではない。',
+    note: '少数の人による最初の1枚の比較で、参考値。preferred は全票の件数で、複数人の票は独立ではないためp値は出さない。byReviewer.signTestP は評価者ごとの両側二項検定（same・neither を除く）、pairLevel は same・neither を含む有効回答の過半数による組ごとの結論（過半数なしは undecided）、pairRelative は service と chatgpt の票の多さだけの参考。作成時間・修正回数は作成者の記録（不正な値は metaInvalid に出して除外）。CTRや品質の保証ではない。',
   };
 }
 
