@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Thumbnail AI MVP",
-    "version": "0.3.12",
+    "version": "0.3.13",
     "description": "Local SVG layout heuristics, opt-in paid complete PNG generation, and local PNG diagnostics. Complete PNG diagnostics are not a quality or CTR score."
   },
   "servers": [
@@ -1271,6 +1271,56 @@
             "description": "Missing or ineligible/stale metadata"
           }
         }
+      }
+    },
+    "/api/v1/complete-thumbnail-batch": {
+      "post": {
+        "summary": "Opt-in paid complete thumbnail from one to four photographs",
+        "description": "Create exactly three independent complete PNG variants concurrently. Reserves three manual image attempts atomically and blocks other image requests until all three finish. JSON at most 36MiB. Uses the same photos, title, brief, atmosphere, headline and feedback. Automatic design/composition use three directions; explicit settings take priority. Returns successes and failures individually, with no retry. X-Validation-A-Case is rejected before provider dispatch. Each successful result uses the existing single-image contract.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/paths/~1api~1v1~1complete-thumbnail/post/requestBody/content/application~1json/schema"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Ordered results for A, B and C, including partial failures",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CompleteBatchResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input or missing consent"
+          },
+          "409": {
+            "description": "VALIDATION_A_MISMATCH: 固定入力または実行版の不一致。生成しない。"
+          },
+          "413": {
+            "description": "Input too large"
+          },
+          "429": {
+            "description": "Concurrent request or shared call limit"
+          },
+          "502": {
+            "description": "Provider network or response error"
+          },
+          "503": {
+            "description": "Missing key, disabled paid requests or provider auth REFERENCE_LIBRARY_INCOMPLETE: required pool has fewer than 100 fresh visual observations; no provider call."
+          },
+          "504": {
+            "description": "Provider deadline exceeded"
+          }
+        },
+        "operationId": "completeThumbnailBatch"
       }
     }
   },
@@ -3417,6 +3467,126 @@
           }
         ],
         "description": "Optional hash-bound visual observation of text hierarchy. Role is an observer interpretation, not creator intent, CTR or a user preference. no_text excludes packaging, watermarks and game UI. Uncertain observations contain no guessed spans. Current input meaning overrides example copy and colors."
+      },
+      "CompleteBatchResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "apiVersion",
+          "mode",
+          "items"
+        ],
+        "properties": {
+          "apiVersion": {
+            "const": "1"
+          },
+          "mode": {
+            "const": "ai_complete_batch"
+          },
+          "items": {
+            "type": "array",
+            "minItems": 3,
+            "maxItems": 3,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "index",
+                "label",
+                "settings",
+                "elapsedMs"
+              ],
+              "properties": {
+                "index": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 2
+                },
+                "label": {
+                  "type": "string",
+                  "maxLength": 100
+                },
+                "settings": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "design",
+                    "composition"
+                  ],
+                  "properties": {
+                    "design": {
+                      "enum": [
+                        "auto",
+                        "photo_focus",
+                        "editorial",
+                        "impact",
+                        "recompose"
+                      ]
+                    },
+                    "composition": {
+                      "enum": [
+                        "auto",
+                        "text_left",
+                        "text_right",
+                        "text_top"
+                      ]
+                    }
+                  }
+                },
+                "elapsedMs": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
+                  "minimum": 0
+                },
+                "result": {
+                  "$ref": "#/paths/~1api~1v1~1complete-thumbnail/post/responses/200/content/application~1json/schema"
+                },
+                "error": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "code",
+                    "message"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "maxLength": 100
+                    },
+                    "message": {
+                      "type": "string",
+                      "maxLength": 2000
+                    }
+                  }
+                }
+              },
+              "anyOf": [
+                {
+                  "required": [
+                    "result"
+                  ],
+                  "not": {
+                    "required": [
+                      "error"
+                    ]
+                  }
+                },
+                {
+                  "required": [
+                    "error"
+                  ],
+                  "not": {
+                    "required": [
+                      "result"
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        }
       }
     }
   }

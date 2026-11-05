@@ -6,6 +6,7 @@ import { runPipeline } from './pipeline.mjs';
 import { ApiError } from '../shared/contracts.mjs';
 import { generationMode } from './generation/index.mjs';
 import {generateComplete} from './generation/complete.mjs';
+import {generateCompleteBatch} from './generation/complete-batch.mjs';
 import {generateBackground} from './generation/openai.mjs';
 import {analyzePngAssets,MAX_JSON_BYTES} from './analysis/complete-png.mjs';
 import {freezeValidationA,checkValidationARequest} from './validation-a.mjs';
@@ -22,6 +23,7 @@ assets.set('/shared/evaluation-split.mjs',['../shared/evaluation-split.mjs','tex
 assets.set('/shared/validation-a-baseline.mjs',['../shared/validation-a-baseline.mjs','text/javascript; charset=utf-8']);
 assets.set('/subject-regions.js',['subject-regions.js','text/javascript; charset=utf-8']);
 assets.set('/multi-photo.js',['multi-photo.js','text/javascript; charset=utf-8']);
+assets.set('/complete-batch.js',['complete-batch.js','text/javascript; charset=utf-8']);
 assets.set('/shared/multi-photo.mjs',['../shared/multi-photo.mjs','text/javascript; charset=utf-8']);
 for(const file of ['local-archive.js','editor-tools.js','attempt-history.js','editor-backup.js','image-save.js'])assets.set('/'+file,[file,'text/javascript; charset=utf-8']);
 assets.set('/editor-design-guide.js',['editor-design-guide.js','text/javascript; charset=utf-8']);
@@ -29,7 +31,7 @@ assets.set('/shared/complete-designs.mjs',['../shared/complete-designs.mjs','tex
 assets.set('/shared/complete-images.mjs',['../shared/complete-images.mjs','text/javascript; charset=utf-8']);
 assets.set('/shared/thumbnail-references.mjs',['../shared/thumbnail-references.mjs','text/javascript; charset=utf-8']);
 for(const path of ['reference-library.html','reference-library.js','editor-references.js'])assets.set(path.endsWith('.html')?'/reference-library':'/'+path,[path,path.endsWith('.html')?'text/html; charset=utf-8':'text/javascript; charset=utf-8']);
-export function makeServer({complete=generateComplete,referenceLibrary=referenceStore,referenceClock=()=>new Date()}={}) {
+export function makeServer({complete=generateComplete,batchComplete=generateCompleteBatch,referenceLibrary=referenceStore,referenceClock=()=>new Date()}={}) {
   const server=createServer(async(req,res)=> {
     const send=(status,value)=>{res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'});res.end(JSON.stringify(value));};
     try {
@@ -41,11 +43,11 @@ export function makeServer({complete=generateComplete,referenceLibrary=reference
         const [file,mime]=assets.get(path), content=await readFile(new URL(`../frontend/${file}`,import.meta.url));
         res.writeHead(200,{'Content-Type':mime,'X-Content-Type-Options':'nosniff','Cache-Control':'no-store'});return res.end(content);
       }
-      if(!['/api/v1/thumbnails','/api/v1/complete-thumbnail','/api/v1/complete-diagnostics','/api/v1/validation-a/freeze','/api/v1/reference-library/collect','/api/v1/reference-library/observe','/api/v1/reference-library/preview'].includes(path)) return send(404,{error:{code:'NOT_FOUND',message:'ページがありません。'}});
+      if(!['/api/v1/thumbnails','/api/v1/complete-thumbnail','/api/v1/complete-thumbnail-batch','/api/v1/complete-diagnostics','/api/v1/validation-a/freeze','/api/v1/reference-library/collect','/api/v1/reference-library/observe','/api/v1/reference-library/preview'].includes(path)) return send(404,{error:{code:'NOT_FOUND',message:'ページがありません。'}});
       if(req.method!=='POST') {res.setHeader('Allow','POST');return send(405,{error:{code:'METHOD_NOT_ALLOWED',message:'POSTを使用してください。'}});}
       if(req.headers['content-type']?.split(';')[0].trim()!=='application/json') throw new ApiError(415,'UNSUPPORTED_MEDIA_TYPE','application/jsonを指定してください。');
       let size=0;const chunks=[];
-      for await (const chunk of req) {size+=chunk.length;if(size>(path==='/api/v1/complete-diagnostics'?MAX_JSON_BYTES:path==='/api/v1/validation-a/freeze'?14*1024*1024:path==='/api/v1/complete-thumbnail'?36*1024*1024:16384)) throw new ApiError(413,'BODY_TOO_LARGE','入力が大きすぎます。');chunks.push(chunk);}
+      for await (const chunk of req) {size+=chunk.length;if(size>(path==='/api/v1/complete-diagnostics'?MAX_JSON_BYTES:path==='/api/v1/validation-a/freeze'?14*1024*1024:['/api/v1/complete-thumbnail','/api/v1/complete-thumbnail-batch'].includes(path)?36*1024*1024:16384)) throw new ApiError(413,'BODY_TOO_LARGE','入力が大きすぎます。');chunks.push(chunk);}
       let body;try {body=JSON.parse(Buffer.concat(chunks).toString('utf8'));}catch {throw new ApiError(400,'INVALID_JSON','JSONが不正です。');}
       if(path==='/api/v1/reference-library/collect'){if(!body||Array.isArray(body)||Object.keys(body).length)throw new ApiError(400,'INVALID_INPUT','収集の入力は空のオブジェクトにしてください。');return send(200,await referenceLibrary.collect());}
       if(path==='/api/v1/reference-library/observe')return send(200,await referenceLibrary.observe(body));
@@ -54,6 +56,10 @@ export function makeServer({complete=generateComplete,referenceLibrary=reference
         const value=await prepareCompleteReferences({...body,referenceMode:body.referenceMode??'auto'},{store:referenceLibrary,now:referenceClock()});return send(200,{context:value._references.context,candidates:value._references.rows.map(row=>({videoId:row.videoId,url:row.metadata.url,thumbnailSha256:row.asset.sha256,observation:row.observation,imageSent:value._references.context.candidates.find(x=>x.videoId===row.videoId).imageSent})),note:'文章のタグから候補を絞りました。写真との適合と実際の採用は未確認です。生成・OpenAIへの送信は行っていません。'});
       }
       if(path==='/api/v1/validation-a/freeze')return send(200,await freezeValidationA(body,{references:{store:referenceLibrary,now:referenceClock()}}));
+      if(path==='/api/v1/complete-thumbnail-batch'){
+        if(req.headers['x-validation-a-case']!==undefined)throw new ApiError(400,'INVALID_VALIDATION_A','A検証の入力固定は1枚生成で使用してください。');
+        return send(200,await batchComplete(body,{references:{store:referenceLibrary,now:referenceClock()}}));
+      }
       if(path==='/api/v1/complete-thumbnail'){
         const validationA=req.headers['x-validation-a-case']===undefined?null:await checkValidationARequest(body,req.headers['x-validation-a-case'],{references:{store:referenceLibrary,now:referenceClock()}});
         return send(200,{...await complete(body,{references:{store:referenceLibrary,now:referenceClock()},expectedReferenceContext:validationA?.referenceContext}),...(validationA?{validationA}:{})});

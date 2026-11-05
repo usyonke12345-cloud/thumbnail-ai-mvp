@@ -10,17 +10,19 @@ function integer(value,fallback,min,max) {
   if(!Number.isInteger(n)||n<min||n>max) throw new ApiError(503,'PROVIDER_CONFIG','生成APIの制限設定を確認してください。');
   return n;
 }
-// One instance per process: no retry, one image per request, one concurrent call.
+// A batch reserves three slots atomically and shares the exclusive provider lock.
 export function createOpenAIBackgroundProvider({env=process.env,fetchImpl=(...args)=>globalThis.fetch(...args)}={}) {
   let busy=false, calls=0;
-  const generate=async function generateBackground(input) {
+  const run=async function runImageRequest(input,reserved=false) {
     if(!env.OPENAI_API_KEY?.trim()) throw new ApiError(503,'API_KEY_MISSING','PC内の.envにOPENAI_API_KEYを設定してください。');
     if(env.OPENAI_IMAGE_ENABLED!=='true') throw new ApiError(503,'PAID_GENERATION_DISABLED','実画像生成は未有効です。設定手順を確認してください。');
     const maxCalls=integer(env.OPENAI_MAX_CALLS,1,1,100);
     const timeoutMs=integer(env.OPENAI_TIMEOUT_MS,120000,1000,180000);
-    if(busy) throw new ApiError(429,'GENERATION_BUSY','別の画像を生成中です。完了してから再試行してください。');
-    if(calls>=maxCalls) throw new ApiError(429,'GENERATION_LIMIT','この起動中の生成回数上限に達しました。');
-    busy=true;calls++;
+    if(!reserved){
+      if(busy) throw new ApiError(429,'GENERATION_BUSY','別の画像を生成中です。完了してから再試行してください。');
+      if(calls>=maxCalls) throw new ApiError(429,'GENERATION_LIMIT','この起動中の生成回数上限に達しました。');
+      busy=true;calls++;
+    }
     const controller=new AbortController();
     const timer=setTimeout(()=>controller.abort(),timeoutMs);
     try {
@@ -56,7 +58,25 @@ export function createOpenAIBackgroundProvider({env=process.env,fetchImpl=(...ar
       if(error instanceof ApiError) throw error;
       if(controller.signal.aborted) throw new ApiError(504,'PROVIDER_TIMEOUT','生成の待ち時間を超えました。課金された可能性があるため、利用履歴を確認してください。');
       throw new ApiError(502,'PROVIDER_NETWORK','画像APIに接続できませんでした。');
-    } finally {clearTimeout(timer);busy=false;}
+    } finally {clearTimeout(timer);if(!reserved)busy=false;}
+  };
+  const generate=input=>run(input);
+  generate.batch=async inputs=>{
+    if(!Array.isArray(inputs)||inputs.length!==3||inputs.some(input=>input.complete!==true))throw new ApiError(400,'INVALID_INPUT','完成画像3案の入力を確認してください。');
+    if(!env.OPENAI_API_KEY?.trim())throw new ApiError(503,'API_KEY_MISSING','PC内の.envにOPENAI_API_KEYを設定してください。');
+    if(env.OPENAI_IMAGE_ENABLED!=='true')throw new ApiError(503,'PAID_GENERATION_DISABLED','実画像生成は未有効です。');
+    const maxCalls=integer(env.OPENAI_MAX_CALLS,1,1,100);
+    integer(env.OPENAI_TIMEOUT_MS,120000,1000,180000);
+    if(busy)throw new ApiError(429,'GENERATION_BUSY','別の画像を生成中です。完了してから再試行してください。');
+    if(calls+3>maxCalls)throw new ApiError(429,'GENERATION_LIMIT','3案には生成枠が3枚分必要です。残りの生成枠を確認してください。');
+    busy=true;
+    calls+=3;
+    try{return await Promise.all(inputs.map(async input=>{
+      const started=performance.now();
+      try{return {status:'fulfilled',value:await run(input,true),elapsedMs:Math.round(performance.now()-started)};}
+      catch(reason){return {status:'rejected',reason,elapsedMs:Math.round(performance.now()-started)};}
+    }));}
+    finally{busy=false;}
   };
   generate.getStatus=()=>({enabled:env.OPENAI_IMAGE_ENABLED==='true',keyConfigured:!!env.OPENAI_API_KEY?.trim(),busy,calls,maxCalls:integer(env.OPENAI_MAX_CALLS,1,1,100)});
   return generate;
