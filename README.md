@@ -1,6 +1,6 @@
 # サムネ工房 — 2人開発スターター
 
-2026-11-07：OpenAI認証エラーで、期限切れ・無効なキー・アクセス拒否を区別して表示。Windowsでは `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/set-openai-key.ps1` で新しいキーを非表示入力し、PC内の.envへ保存できます。保存後は使用回数を引き継いでサーバーを再起動します。API応答の生のエラー文やキーは画面へ出しません。
+2026-11-07：OpenAI認証エラーで、期限切れ・無効なキー・アクセス拒否を区別して表示。Windowsでは `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/set-openai-key.ps1` で新しいキーを非表示入力できます。特定の接頭辞や固定長で判定せず、無料のGET /v1/modelsで認証を確認してからPC内の.envへ保存します。確認できない場合は既存設定を保ちます。保存後は使用回数を引き継いでサーバーを再起動します。API応答の生のエラー文やキーは画面へ出しません。
 
 2026-11-06：完成PNGを3案まとめて生成する選択を追加。3枚分の枠を確保して並行生成し、成功画像と失敗を案ごとに保存・表示します。自動設定では写真重視・誌面風・文字と写真の対比を指定。[操作と契約](docs/THREE-VARIANTS.md)。
 
