@@ -33,6 +33,24 @@ test('provider errors do not expose upstream messages or retry',async()=> {
    await assert.rejects(generate({title:'x'}),e=>e.code===code&&!e.message.includes(env.OPENAI_API_KEY));assert.equal(calls,1);
  }
 });
+
+test('expired and invalid credentials have actionable messages without leaking upstream secrets or retrying',async()=>{
+ for(const [status,code,expected] of [[401,'expired_secret_key',/有効期限/],[401,'invalid_api_key',/無効/],[403,'permission_denied',/利用権限/],[401,'unknown',/認証に失敗/]]){
+  let calls=0;
+  const generate=createOpenAIBackgroundProvider({env,fetchImpl:async()=>{calls++;return Response.json({error:{code,message:env.OPENAI_API_KEY}},{status});}});
+  await assert.rejects(generate({title:'x'}),error=>error.code==='PROVIDER_AUTH'&&error.status===503&&expected.test(error.message)&&!error.message.includes(env.OPENAI_API_KEY));
+  assert.equal(calls,1);assert.equal(generate.getStatus().busy,false);assert.equal(generate.getStatus().calls,1);
+ }
+});
+
+test('oversized authentication responses are cancelled and never echoed to the client',async()=>{
+ let cancelled=false;
+ const bytes=new TextEncoder().encode(JSON.stringify({error:{code:'expired_secret_key',message:env.OPENAI_API_KEY+'x'.repeat(9000)}}));
+ const body=new ReadableStream({start(controller){controller.enqueue(bytes);},cancel(){cancelled=true;}});
+ const generate=createOpenAIBackgroundProvider({env,fetchImpl:async()=>new Response(body,{status:401})});
+ await assert.rejects(generate({title:'x'}),error=>error.code==='PROVIDER_AUTH'&&!error.message.includes(env.OPENAI_API_KEY)&&!error.message.includes('有効期限'));
+ assert.equal(cancelled,true);assert.equal(generate.getStatus().busy,false);
+});
 test('empty, malformed or wrong-sized PNG responses fail',async()=> {
  for(const value of [{data:[]},{data:[{b64_json:'notbase64'}]},{data:[{b64_json:Buffer.from('not PNG').toString('base64')}]}]) {
    const generate=createOpenAIBackgroundProvider({env,fetchImpl:async()=>new Response(JSON.stringify(value))});

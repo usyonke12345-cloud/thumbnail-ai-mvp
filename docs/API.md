@@ -1,5 +1,7 @@
 # v1 API / 生成と評価の境界
 
+2026-11-07：401/403のPROVIDER_AUTH（503）は既存の形式を維持し、expired_secret_key・invalid_api_key・アクセス拒否の案内を区別。認証エラー本文は最大8KiBで読み、許可したエラーコードだけを固定の案内へ対応させる。上流の生の本文は公開せず、再試行しない。healthのkeyConfiguredは読み込みの有無であり、認証成功を表さない。
+
 2026-11-06：OpenAPI0.3.13。POST /api/v1/complete-thumbnail-batchを追加。既存入力から3案を検証し、3枠を確保して並行生成。itemsは案A〜Cの順にresultまたはerrorを保持。本文上限36MiB。相互レビューはserver・排他制御・共有契約・保存容量の事前確認が対象。[詳細](THREE-VARIANTS.md)。
 
 2026-11-02：OpenAPI0.3.12。観察入力に任意のemphasis（thumbnail-text-emphasis-1.0.0）を追加。部分強調・全体同色・見出しなし・未確認を区別し、画像ハッシュへ結び付ける。required生成は写真1〜4枚とも0.14.0。参照の強調語句自体をコピーせず、意味の役割と強調の関係を指示へ渡す。旧台帳・旧生成・比較/診断・Assessmentは維持。shared/観察契約は相互レビュー対象。[詳細と人工fixture](SEMANTIC-TEXT-EMPHASIS.md)。

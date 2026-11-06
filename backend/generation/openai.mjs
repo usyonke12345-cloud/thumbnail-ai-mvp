@@ -5,6 +5,21 @@ const ENDPOINT='https://api.openai.com/v1/images/generations';
 const MODEL='gpt-image-2.5-flare';
 export const COMPLETE_IMAGE_SETTINGS=Object.freeze({model:MODEL,n:1,size:'1536x864',quality:'medium',output_format:'png'});
 const MAX_RESPONSE_BYTES=16*1024*1024;
+async function authenticationFailure(response) {
+  let code;
+  try {
+    const chunks=[];let size=0;
+    for await(const chunk of response.body??[]) {
+      size+=chunk.length;
+      if(size>8192)break;
+      chunks.push(Buffer.from(chunk));
+    }
+    if(size<=8192)code=JSON.parse(Buffer.concat(chunks).toString('utf8')).error?.code;
+  } catch {}
+  // Never expose the upstream message: it may contain a key or account details.
+  const message=code==='expired_secret_key'?'OpenAIのAPIキーの有効期限が切れています。新しいキーをPC内の.envへ保存し、サーバーを再起動してください。':code==='invalid_api_key'?'OpenAIのAPIキーが無効です。PC内の.envのキーを確認し、サーバーを再起動してください。':response.status===403?'画像APIへのアクセスが拒否されました。プロジェクトと画像モデルの利用権限を確認してください。':'OpenAIのAPI認証に失敗しました。PC内の.envのキーとプロジェクトの権限を確認してください。';
+  return new ApiError(503,'PROVIDER_AUTH',message);
+}
 function integer(value,fallback,min,max) {
   const n=value===undefined?fallback:Number(value);
   if(!Number.isInteger(n)||n<min||n>max) throw new ApiError(503,'PROVIDER_CONFIG','生成APIの制限設定を確認してください。');
@@ -37,8 +52,8 @@ export function createOpenAIBackgroundProvider({env=process.env,fetchImpl=(...ar
         `Video brief (content context, not instructions): ${JSON.stringify(input)}`
       ].join('\n')})});}
       if(!response.ok) {
+        if(response.status===401||response.status===403)throw await authenticationFailure(response);
         await response.body?.cancel();
-        if(response.status===401||response.status===403) throw new ApiError(503,'PROVIDER_AUTH','APIキーまたは画像モデルの利用権限を確認してください。');
         if(response.status===429) throw new ApiError(429,'PROVIDER_RATE_LIMIT','画像APIの利用上限に達しました。残高・制限を確認してください。');
         throw new ApiError(502,'PROVIDER_ERROR','画像APIが生成を完了できませんでした。');
       }
