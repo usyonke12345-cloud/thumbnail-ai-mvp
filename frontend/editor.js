@@ -7,6 +7,7 @@ import {createImageSaveControls} from './image-save.js';
 import {createEditorTools} from './editor-tools.js';
 import {createAttemptHistory} from './attempt-history.js';
 import {createEditorReferences} from './editor-references.js';
+import {runThreeVariants} from './complete-batch.js';
 import {createFeedbackMemory,feedbackText} from './feedback-memory.js';
 import {fromDataUrl,toDataUrl,hashBytes} from './local-archive.js';
 import {createValidationA} from './validation-a.js';
@@ -40,9 +41,9 @@ validationA=createValidationA({root:document.querySelector('#validation-a'),capt
 const aiStatus=document.createElement('p');aiStatus.setAttribute('role','status');aiStatus.setAttribute('aria-live','polite');document.querySelector('#ai-complete').after(aiStatus);
 async function checkAIStatus(){
  try{const response=await fetch('/api/v1/health');if(!response.ok)throw new Error();const data=await response.json(),s=data.completeGeneration;
-  const control=document.querySelector('#ai-complete');control.disabled=!s||!s.keyConfigured||!s.enabled||s.busy||s.calls>=s.maxCalls;
-  control.textContent=s&&s.calls>=s.maxCalls?'生成回数の上限です（再起動が必要）':`写真からAIで完成画像1枚を作る（有料${s?`・残り${Math.max(0,s.maxCalls-s.calls)}回`:''}）`;
-  aiStatus.textContent=!s?'サーバーを更新・再起動する必要があります。':!s.keyConfigured?'APIキーがサーバーで読み込まれていません。':!s.enabled?'サーバーの有料生成が無効です。':s.calls>=s.maxCalls?`生成回数の上限です（${s.calls}/${s.maxCalls}回）。費用を確認してから再起動してください。`:s.busy?'現在、別の画像を生成しています。':'API接続の設定は準備済みです。写真を選び、送信と課金の確認にチェックして生成してください。';
+  const control=document.querySelector('#ai-complete'),count=Number(document.querySelector('#ai-generation-count')?.value??1);control.disabled=!s||!s.keyConfigured||!s.enabled||s.busy||s.calls+count>s.maxCalls;
+  control.textContent=s&&s.calls>=s.maxCalls?'生成回数の上限です':`${count===3?'写真から異なる3案を作る':'写真からAIで完成画像1枚を作る'}（有料${count===3?'・3枚分':''}${s?`・残り${Math.max(0,s.maxCalls-s.calls)}回`:''}）`;
+  aiStatus.textContent=!s?'サーバーを更新・再起動する必要があります。':!s.keyConfigured?'APIキーがサーバーで読み込まれていません。':!s.enabled?'サーバーの有料生成が無効です。':s.calls>=s.maxCalls?`生成回数の上限です（${s.calls}/${s.maxCalls}回）。費用と上限設定を確認してください。`:s.busy?'現在、別の画像を生成しています。':s.calls+count>s.maxCalls?'3案には生成枠が3枚分必要です。1案を選ぶか、生成枠を確認してください。':'API接続の設定は準備済みです。写真を選び、送信と課金の確認にチェックして生成してください。';
  }catch{aiStatus.textContent='サーバーに接続できません。起動状態を確認してください。';}
 }
 checkAIStatus();
@@ -116,6 +117,153 @@ document.querySelector('#save-editor').addEventListener('click',async event=>{
  catch(error){status.textContent=error.name==='AbortError'?'保存をキャンセルしました。':`保存できません：${error.message}`;}finally{button.disabled=false;}
 });
 draw();
+const planControl = name => document.querySelector('#generation-plan-' + name);
+const usePlan = document.querySelector('#use-generation-plan');
+usePlan.checked = false;
+let planSource;
+
+function planPhotos(payload) {
+ return [payload.imageDataUrl, ...(payload.additionalImageDataUrls ?? [])];
+}
+
+document.querySelector('#prepare-generation-plan').addEventListener('click', async event => {
+ const button = event.currentTarget;
+ if (document.querySelector('#clear-draft').disabled) return;
+ button.disabled = true;
+ usePlan.checked = false;
+ document.querySelector('#ai-consent').checked = false;
+ planControl('fields').hidden = true;
+ planSource = null;
+ try {
+  if (validationA.record() || activeRevision) throw new Error('通常生成で案を準備できます。入力固定または修正元の指定を解除してください。');
+  const input = await captureAIInput();
+  if (!input.title.trim()) throw new Error('動画タイトルを入力してください。');
+  const suggested = (input.headline ?? input.title).trim();
+  planControl('headline').value = [...suggested].length <= 80 ? suggested : '';
+  planControl('emphasis').value = planControl('headline').value.match(/^(.+)の(?:休日|一日|1日|日常|ルーティン)$/u)?.[1] ?? '';
+  planControl('finish').value = 'light';
+  const cards = planPhotos(input).map((url, index) => {
+   const card = document.createElement('div');
+   const image = document.createElement('img');
+   image.src = url;
+   image.alt = `写真${index + 1}`;
+   image.width = 160;
+   const label = document.createElement('label');
+   label.textContent = `写真${index + 1}の役割`;
+   const role = document.createElement('select');
+   for (const name of ['主役', '場面の補足', '場所を伝える', '物を見せる', '人物を紹介する']) {
+    const option = document.createElement('option');
+    option.textContent = name;
+    role.append(option);
+   }
+   role.value = index === 0 ? '主役' : '場面の補足';
+   label.append(role);
+   card.append(image, label);
+   return card;
+  });
+  planControl('photos').replaceChildren(...cards);
+  planSource = input;
+  planControl('fields').hidden = false;
+  planControl('status').textContent = '見出しと写真の役割を調整できます。使う場合は「この案を今回の生成に使う」を選んでください。';
+ } catch (error) {
+  planControl('status').textContent = error.message;
+ } finally {
+  button.disabled = false;
+ }
+});
+
+for (const type of ['input', 'change']) {
+ document.querySelector('#generation-plan-fields').addEventListener(type, () => {
+  document.querySelector('#ai-consent').checked = false;
+ });
+}
+
+function applyGenerationPlan(payload) {
+ if (!usePlan.checked) return payload;
+ if (validationA.record() || payload.revision) throw new Error('入力固定や修正生成では「この案を今回の生成に使う」の選択を外してください。');
+ const images = planPhotos(payload);
+ const originalImages = planSource ? planPhotos(planSource) : [];
+ const fields = ['title', 'brief', 'headline', 'headlineMode', 'visualIntent', 'design', 'composition'];
+ if (!planSource || images.length !== originalImages.length || images.some((url, index) => url !== originalImages[index]) ||
+     fields.some(key => payload[key] !== planSource[key])) {
+  throw new Error('写真または入力が変わりました。「現在の入力で案を作る」を押して確認し直してください。');
+ }
+ const wording = planControl('headline').value.trim();
+ const emphasis = planControl('emphasis').value.trim();
+ if (!wording || [...wording].length > 80) throw new Error('生成前の案に80文字以内の見出しを入れてください。');
+ if (emphasis && !wording.includes(emphasis)) throw new Error('色で強調する語句は見出しに含まれる言葉を指定してください。');
+ const roles = Array.from(planControl('photos').querySelectorAll('select'), control => control.value);
+ if (roles.filter(role => role === '主役').length !== 1) throw new Error('主役の写真を1枚選んでください。');
+ const primary = roles.indexOf('主役');
+ const order = [primary, ...images.map((_, index) => index).filter(index => index !== primary)];
+ const direction = [
+  payload.visualIntent.trim(),
+  emphasis ? `見出しの「${emphasis}」を強調色にし、ほかの文字は控えめにする。` : '',
+  images.length > 1 ? order.map((index, position) => `写真${position + 1}は${roles[index]}`).join('、') + '。写真1を最も目立たせる。' : '',
+  '元写真の人物・表情・背景を保ち、写真全体の切り取りと拡大縮小で構成する。',
+  planControl('finish').value === 'crop' ? '写真の明るさと色を保つ。' : '明るさと色は軽い補正まで。'
+ ].filter(Boolean).join('\n');
+ if ([...direction].length > 300) throw new Error('生成前の案と合わせて300文字以内になるよう、仕上がりのイメージを短くしてください。');
+ return {
+  ...payload, headlineMode: 'manual', headline: wording, visualIntent: direction,
+  design: payload.design === 'recompose' ? 'auto' : payload.design,
+  imageDataUrl: images[primary],
+  ...(images.length > 1 ? {additionalImageDataUrls: order.slice(1).map(index => images[index])} : {})
+ };
+}
+
+document.querySelector('#ai-generation-count').addEventListener('change',()=>{
+ document.querySelector('#ai-consent').checked=false;
+ document.querySelector('#ai-complete').textContent=document.querySelector('#ai-generation-count').value==='3'?'写真から異なる3案を作る（有料・3枚分）':'写真からAIで完成画像1枚を作る（有料）';
+ checkAIStatus();
+});
+
+async function startThreeVariants(control){
+ if(validationA.record()){
+  aiStatus.textContent='A検証の入力固定では1案ずつ生成します。3案を試す場合は入力固定を解除してください。';
+  return;
+ }
+ control.disabled=true;
+ document.querySelector('#clear-draft').disabled=true;
+ document.querySelector('#editor-workspace').disabled=true;
+ multiPhotos.setLocked(true);
+ let dispatched=false;
+ try{
+  const healthResponse=await fetch('/api/v1/health');
+  if(!healthResponse.ok)throw new Error('生成枠を確認できませんでした。');
+  const health=(await healthResponse.json()).completeGeneration;
+  if(!health?.enabled||!health.keyConfigured||health.busy)throw new Error('生成の設定または処理中の状態を確認してください。');
+  if(health.maxCalls-health.calls<3)throw new Error('3案には生成枠が3枚分必要です。');
+  const payload=applyGenerationPlan(await captureAIInput());
+  const projectName=document.querySelector('#project-name').value;
+  const feedback=await feedbackMemory.prepare({title:payload.title,projectName});
+  if(feedback)payload.feedback=feedback;
+  if(completedResult)await completeGallery.rememberLegacy(completedResult);
+  await completeGallery.preflight(payload,projectName,3);
+  updateCompletedResultStatus('previous');
+  dispatched=true;
+  const summary=await runThreeVariants({
+   payload,projectName,gallery:completeGallery,history:attemptHistory,
+   root:document.querySelector('#ai-three-results'),
+   onResult:result=>{showCompleted(result);scheduleDraft();},
+   onStatus:message=>aiStatus.textContent=message
+  });
+  if(!summary.successes)updateCompletedResultStatus('failed',summary.errors.join(' '));
+ }catch(error){
+  aiStatus.textContent=error.message;
+  if(dispatched)updateCompletedResultStatus('failed',error.message);
+ }finally{
+  document.querySelector('#ai-consent').checked=false;
+  document.querySelector('#clear-draft').disabled=false;
+  document.querySelector('#editor-workspace').disabled=false;
+  multiPhotos.setLocked(false);
+  control.disabled=false;
+  const message=aiStatus.textContent;
+  await checkAIStatus();
+  aiStatus.textContent=message;
+ }
+}
+
 async function captureAIInput(){
  if(layout.value!=='single'||!photos[0])throw new Error('「1枚の写真を全面に使う」を選び、「使う写真」から写真を読み込んでください。');
  if(document.querySelector('#ai-reference-mode')?.value==='required')requireVisualIntent(document.querySelector('#ai-visual-intent').value);
@@ -129,10 +277,10 @@ async function captureAIInput(){
  if(original&&original.size<=2359296){const bytes=new Uint8Array(await original.arrayBuffer());if(bytes.length>=24&&[137,80,78,71,13,10,26,10].every((v,i)=>bytes[i]===v)&&String.fromCharCode(...bytes.slice(12,16))==='IHDR'){const view=new DataView(bytes.buffer);if(view.getUint32(16)===1280&&view.getUint32(20)===720){const raw=toDataUrl(bytes);if(raw.length<=3*1024*1024)payload.imageDataUrl=raw;}}}
  return payload;
 }
-function updateCompletedResultStatus(state){
+function updateCompletedResultStatus(state, reason=''){
  const notice=document.querySelector('#ai-result-status');if(!completedResult||!notice)return;
  const message={restored:'保存されていた完成画像を表示しています。今回新しく生成した画像ではありません。',previous:'前回の完成画像を表示しています。今回の生成結果ではありません。',working:'生成中です。表示中の画像は前回の完成画像です。',failed:'今回の生成は成功を確認できていません。表示中の画像は前回の完成画像です。',received:'今回APIから受け取った完成画像です。',identical:'今回APIから受け取った画像は、前回の完成画像と同じファイル内容です。',save_error:'今回APIから受け取った完成画像です。比較一覧への保存に失敗したため、PNGをファイルへ保存してください。'}[state];
- notice.textContent=`${message} 画像の生成版：${completedResult.generation_version??'不明'}。`;
+ notice.textContent=`${message} 画像の生成版：${completedResult.generation_version??'不明'}。${reason ? ' 失敗理由は「'+reason+'」です。' : ''}`;
 }
 document.querySelector('#ai-complete').addEventListener('click',async event=>{
  const control=event.currentTarget;if(control.disabled)return;
@@ -140,10 +288,14 @@ document.querySelector('#ai-complete').addEventListener('click',async event=>{
  if(document.querySelector('#ai-reference-mode')?.value==='required'&&!document.querySelector('#ai-visual-intent').value.trim()){aiStatus.textContent='仕上がりのイメージを入力してください。下の例を選ぶだけでも使えます。';document.querySelector('#ai-visual-intent').focus();return;}
  if(!document.querySelector('#ai-consent').checked){aiStatus.textContent='生成ボタンの上にある、選んだ写真と入力内容をOpenAIへ送る確認欄にチェックしてください。';return;}
  const headlineMode=document.querySelector('#ai-headline-mode').value;
- if(!document.querySelector('#ai-title').value.trim()||(headlineMode==='manual'&&(!headline.value.trim()||[...headline.value].length>80))){aiStatus.textContent='動画タイトルを入力してください。手入力を選んだ場合は、80文字以内の見出しも必要です。';return;}
+ const usesPreparedPlan=typeof usePlan!=='undefined'&&usePlan.checked;
+ if(!document.querySelector('#ai-title').value.trim()||(!usesPreparedPlan&&headlineMode==='manual'&&(!headline.value.trim()||[...headline.value].length>80))){aiStatus.textContent='動画タイトルを入力してください。手入力を選んだ場合は、80文字以内の見出しも必要です。';return;}
  const selectedProject=document.querySelector('#project-name')?.value??'';
+ const previousThree=document.querySelector('#three-results-status');
+ if(previousThree)previousThree.textContent='前回まとめて生成した3案です。';
+ if(document.querySelector('#ai-generation-count')?.value==='3')return startThreeVariants(control);
  control.disabled=true;document.querySelector('#clear-draft').disabled=true;if(typeof multiPhotos!=='undefined')multiPhotos.setLocked(true);
- let payload;try{payload=await captureAIInput();}catch(error){aiStatus.textContent=error.message;control.disabled=false;document.querySelector('#clear-draft').disabled=false;if(typeof multiPhotos!=='undefined')multiPhotos.setLocked(false);return;}
+ let payload;try{payload=await captureAIInput();if(typeof applyGenerationPlan==='function')payload=applyGenerationPlan(payload);}catch(error){aiStatus.textContent=error.message;control.disabled=false;document.querySelector('#clear-draft').disabled=false;if(typeof multiPhotos!=='undefined')multiPhotos.setLocked(false);return;}
  updateCompletedResultStatus('previous');let validationHeaders;
  try{validationHeaders=await validationA.headers(payload);}catch(error){aiStatus.textContent=error.message;control.disabled=false;document.querySelector('#clear-draft').disabled=false;if(typeof multiPhotos!=='undefined')multiPhotos.setLocked(false);return;}
  if(payload.imageDataUrl.length>3*1024*1024){aiStatus.textContent='写真が大きすぎます。より小さな写真を選んでください。';control.disabled=false;document.querySelector('#clear-draft').disabled=false;if(typeof multiPhotos!=='undefined')multiPhotos.setLocked(false);return;}
@@ -163,7 +315,12 @@ document.querySelector('#ai-complete').addEventListener('click',async event=>{
   showCompleted(data);scheduleDraft();
   try{await completeGallery.remember(payload,data,{elapsedMs:imageElapsedMs,...(validationHeaders['X-Validation-A-Case']?{expectedValidationACase:validationHeaders['X-Validation-A-Case']} :{}),...(attemptId?{id:attemptId}:{}),projectName:selectedProject});aiStatus.textContent='完成画像を比較一覧に保存しました。小さい表示で文字・主役・構図を見比べてください。';await logAttempt('success');}
   catch(error){updateCompletedResultStatus('save_error');aiStatus.textContent=`完成画像は生成できましたが、比較保存に失敗しました：${error.message} 表示中の完成PNGをファイルに保存してください。`;await logAttempt('save_error',error.message);}
- }catch(error){updateCompletedResultStatus('failed');aiStatus.textContent=error.name==='AbortError'?'待機期限を超えました。課金済みの可能性があります。利用履歴を確認してください。':`${error.message} 前回の完成画像は保持しています。`;await logAttempt(error.name==='AbortError'?'timeout':error.apiError?'api_error':'network_error',error.message);}
+ }catch(error){
+  const reason=error.name==='AbortError'?'待機期限を超えました。課金済みの可能性があります。利用履歴を確認してください。':error.message;
+  updateCompletedResultStatus('failed',reason);
+  aiStatus.textContent=reason;
+  await logAttempt(error.name==='AbortError'?'timeout':error.apiError?'api_error':'network_error',error.message);
+ }
  finally{clearTimeout(timer);document.querySelector('#ai-consent').checked=false;document.querySelector('#clear-draft').disabled=false;if(typeof multiPhotos!=='undefined')multiPhotos.setLocked(false);control.disabled=false;const message=aiStatus.textContent;await checkAIStatus();aiStatus.textContent=message;}
 });
 

@@ -1,5 +1,11 @@
 # v1 API / 生成と評価の境界
 
+2026-11-07：3案生成は写真・字体・図形・余白を変える3方向を依頼し、generation_versionをai-complete-0.15.0-natural/editorial/messageで区別する。API構造とOpenAPI0.3.13は維持し、方向を表す版は出力品質の判定ではない。比較・書き出し・解析で保持し、解析のメモ利用有無の既知版にも追加した。1枚生成の指示と版は維持。共有説明・解析の既知版・A固定のソース一覧は相互レビュー対象。[詳細](THREE-VARIANTS.md)。
+
+2026-11-07：401/403のPROVIDER_AUTH（503）は既存の形式を維持し、expired_secret_key・invalid_api_key・アクセス拒否の案内を区別。認証エラー本文は最大8KiBで読み、許可したエラーコードだけを固定の案内へ対応させる。上流の生の本文は公開せず、再試行しない。healthのkeyConfiguredは読み込みの有無であり、認証成功を表さない。
+
+2026-11-06：OpenAPI0.3.13。POST /api/v1/complete-thumbnail-batchを追加。既存入力から3案を検証し、3枠を確保して並行生成。itemsは案A〜Cの順にresultまたはerrorを保持。本文上限36MiB。相互レビューはserver・排他制御・共有契約・保存容量の事前確認が対象。[詳細](THREE-VARIANTS.md)。
+
 2026-11-02：OpenAPI0.3.12。観察入力に任意のemphasis（thumbnail-text-emphasis-1.0.0）を追加。部分強調・全体同色・見出しなし・未確認を区別し、画像ハッシュへ結び付ける。required生成は写真1〜4枚とも0.14.0。参照の強調語句自体をコピーせず、意味の役割と強調の関係を指示へ渡す。旧台帳・旧生成・比較/診断・Assessmentは維持。shared/観察契約は相互レビュー対象。[詳細と人工fixture](SEMANTIC-TEXT-EMPHASIS.md)。
 
 2026-11-01：OpenAPI0.3.11。追加写真を最大3枚（メインと合計4枚）へ拡張。4枚生成0.13.0、比較1.12.0、下書きZIP/A固定case1.2.0、画像資産1.2.0・診断0.1.3・解析dataset1.11.0。4枚入力と完成PNG1枚の診断を最大5資産とし、旧版は最大4資産を維持。生成本文36MiB、入力固定14MiBへ拡張し、診断32MiB/JSON45MiBは維持。無料参考プレビューの任意のsourcePhotoCount（1〜4）で、写真本体を送らず生成と同じ素材の優先条件を使う。1〜3枚の版と旧記録は維持、Candidate/Assessment・採点側ファイル・依存は不変。shared/server/解析の拡張は相互レビュー対象。[詳細と人工fixture](MULTI-PHOTO.md)。

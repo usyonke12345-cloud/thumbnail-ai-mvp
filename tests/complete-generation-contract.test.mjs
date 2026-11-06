@@ -7,10 +7,21 @@ import {freezeValidationA,checkValidationARequest} from '../backend/validation-a
 import {createEntry,comparisonBundle} from '../frontend/complete-gallery-model.js';
 import {diagnosticRequest} from '../frontend/complete-png-transfer.js';
 import {analyzePngAssets} from '../backend/analysis/complete-png.mjs';
+import {generateCompleteBatch} from '../backend/generation/complete-batch.mjs';
 
 const spec=JSON.parse(await readFile(new URL('../shared/openapi.json',import.meta.url),'utf8'));
 const schema=spec.paths['/api/v1/complete-thumbnail'].post.requestBody.content['application/json'].schema;
 const fixture=JSON.parse(await readFile(new URL('../docs/fixtures/complete-generation-options.json',import.meta.url),'utf8'));
+
+test('three-variant responses and partial failures match OpenAPI while missing, extra or ambiguous outcomes are rejected',async()=>{
+ const f=JSON.parse(await readFile(new URL('../docs/fixtures/four-photos.json',import.meta.url),'utf8')),input={...f.input,consent:true};
+ const endpoint=spec.paths['/api/v1/complete-thumbnail-batch'].post;
+ assert.ok(matches(input,endpoint.requestBody.content['application/json'].schema));
+ const value=await generateCompleteBatch(input,{generateBatch:async()=>[{status:'fulfilled',value:dataUrl(png()),elapsedMs:10},{status:'rejected',reason:new Error('Synthetic'),elapsedMs:11},{status:'fulfilled',value:dataUrl(png()),elapsedMs:12}]});
+ const schema=endpoint.responses['200'].content['application/json'].schema;
+ assert.ok(matches(value,schema));
+ for(const mutate of [v=>v.items.pop(),v=>v.items.push(v.items[0]),v=>v.items[0].error=v.items[1].error,v=>delete v.items[0].result]){const bad=structuredClone(value);mutate(bad);assert.equal(matches(bad,schema),false);}
+});
 
 test('optional text-emphasis observations agree with the shared contract, including uniform and uncertain counterexamples',async()=>{
  const f=JSON.parse(await readFile(new URL('../docs/fixtures/text-emphasis.json',import.meta.url),'utf8')),schema={$ref:'#/components/schemas/ThumbnailTextEmphasis'};
@@ -21,7 +32,7 @@ test('optional text-emphasis observations agree with the shared contract, includ
 
 // Checks only keywords used by this request schema; conditional branches are essential here.
 function matches(value,s){
- if(s.$ref)s=spec.components.schemas[s.$ref.split('/').at(-1)];
+ if(s.$ref)s=s.$ref.slice(2).split('/').reduce((value,key)=>value[key.replaceAll('~1','/').replaceAll('~0','~')],spec);
  if(s.type&&![s.type].flat().some(type=>type==='integer'?Number.isInteger(value):type===(value===null?'null':Array.isArray(value)?'array':typeof value)))return false;
  if(typeof value==='number'&&(s.minimum!==undefined&&value<s.minimum||s.maximum!==undefined&&value>s.maximum))return false;
  if('const'in s&&value!==s.const||s.enum&&!s.enum.includes(value))return false;
