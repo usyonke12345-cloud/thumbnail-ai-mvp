@@ -3,10 +3,11 @@
   "title": "人工データの旅",
   "referenceMode": "off",
   "expectedDirections": [
-    {"design": "photo_focus", "composition": "text_left"},
-    {"design": "editorial", "composition": "text_top"},
-    {"design": "auto", "composition": "text_right"}
+    {"design": "photo_focus", "composition": "auto"},
+    {"design": "editorial", "composition": "auto"},
+    {"design": "impact", "composition": "auto"}
   ],
+  "expectedVersions": ["ai-complete-0.15.0-natural", "ai-complete-0.15.0-editorial", "ai-complete-0.15.0-message"],
   "attemptsReserved": 3,
   "note": "画像はfour-photos.jsonの人工PNGを使う。生成品質・本人の好みを表すものではない。"
 }

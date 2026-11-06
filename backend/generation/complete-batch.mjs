@@ -2,23 +2,18 @@ import {ApiError} from '../../shared/contracts.mjs';
 import {validateComplete,completeResult} from './complete.mjs';
 import {prepareCompleteReferences} from '../references/selection.mjs';
 import {generateBackground} from './openai.mjs';
-
-const directions=[
- {label:'写真を大きく見せる',design:'photo_focus',composition:'text_left'},
- {label:'落ち着いた誌面風',design:'editorial',composition:'text_top'},
- {label:'文字と写真を左右に見せる',design:'auto',composition:'text_right'}
-];
+import {BATCH_ART_DIRECTIONS} from './complete-batch-directions.mjs';
 
 export async function generateCompleteBatch(value,{references,generateBatch=inputs=>generateBackground.batch(inputs)}={}){
  const base=validateComplete(value);
- const variants=directions.map((direction,index)=>({
-  index,label:base.design==='auto'&&base.composition==='auto'?direction.label:`指定を生かした案${index+1}`,
-  settings:{design:base.design==='auto'?direction.design:base.design,composition:base.composition==='auto'?direction.composition:base.composition}
+ const variants=BATCH_ART_DIRECTIONS.map((direction,index)=>({
+  index,label:base.design==='auto'?direction.label:`指定を生かす${direction.label}`,
+  settings:{design:base.design==='auto'?direction.design:base.design,composition:base.composition}
  }));
  // Finish every validation/reference lookup before reserving paid image attempts.
  const inputs=[];
  for(const variant of variants){
-  inputs.push(await prepareCompleteReferences({...base,...variant.settings},references));
+  inputs.push(await prepareCompleteReferences({...base,...variant.settings,_batchDirection:{id:BATCH_ART_DIRECTIONS[variant.index].id,explicitDesign:base.design!=='auto',explicitComposition:base.composition!=='auto'}},references));
  }
  const metadata=inputs.map(input=>completeResult(input,null));
  const results=await generateBatch(inputs);

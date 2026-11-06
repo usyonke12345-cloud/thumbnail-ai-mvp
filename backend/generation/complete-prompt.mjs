@@ -6,6 +6,7 @@ import {completeReferenceInstructions} from '../references/selection.mjs';
 import {multiPhotoPrompt} from './complete-multi-prompt.mjs';
 import {completePhotoFinishInstructions} from './complete-photo-finish.mjs';
 import {completeEmphasisInstructions} from './complete-emphasis.mjs';
+import {batchArtInstructions} from './complete-batch-directions.mjs';
 // This boundary applies to every design, including references and revisions.
 // It is an edit instruction, not a claim that the output has been verified.
 const peopleSourceRule=[
@@ -19,7 +20,7 @@ const photoMaterialRule=[
  'SOURCE OBJECT FIDELITY: keep each existing food or product as the same photographed item, preserving its visible shape, viewing angle, ingredients, packaging and printed labels. A cutout is a two-dimensional crop, scale or translation of visible source material, not a newly rendered product from another angle. Do not add portions, replace ingredients, turn an object to reveal an unseen side, duplicate it or fill occluded parts with imagined details.',
  'COLOR AND LIGHT: restrained exposure, white balance, contrast and local color adjustments may emphasize the existing photograph. Keep skin and food natural and retain the scene\'s original character. Do not convert a lighting adjustment into a different time of day, new sun flare, different weather or another environment. Prefer the original source scenery over a neutral graphic backdrop when a coherent composition is possible.'
 ].join('\n');
-export function completePrompt(input){
+function baseCompletePrompt(input){
  if(input.additionalImageDataUrls?.length)return multiPhotoPrompt(input);
  const feedback=input.feedback?normalizeGenerationFeedback(input.feedback):null;
  const recompose=input.design==='recompose';
@@ -54,4 +55,9 @@ export function completePrompt(input){
   'FINAL PEOPLE CHECK: before finishing, compare every depicted person with image 1. Omit anyone not present there; if image 1 has no people, leave the thumbnail person-free. This source-only constraint overrides all context data and reference suggestions above.',
   'FINAL MATERIAL CHECK: separately compare the scenery and each useful source object with image 1. Restore the source appearance wherever a background, viewpoint, item, ingredient or label was invented or replaced. Same people or no added people is not sufficient evidence of photographic preservation. Do not print this check or claim that fidelity has been measured.'
  ].join('\n');
+}
+
+export function completePrompt(input){
+ const base=baseCompletePrompt(input),direction=batchArtInstructions(input);
+ return direction?base+'\n'+direction:base;
 }

@@ -1,5 +1,7 @@
 # v1 API / 生成と評価の境界
 
+2026-11-07：3案生成は写真・字体・図形・余白を変える3方向を依頼し、generation_versionをai-complete-0.15.0-natural/editorial/messageで区別する。API構造とOpenAPI0.3.13は維持し、方向を表す版は出力品質の判定ではない。比較・書き出し・解析で保持し、解析のメモ利用有無の既知版にも追加した。1枚生成の指示と版は維持。共有説明・解析の既知版・A固定のソース一覧は相互レビュー対象。[詳細](THREE-VARIANTS.md)。
+
 2026-11-07：401/403のPROVIDER_AUTH（503）は既存の形式を維持し、expired_secret_key・invalid_api_key・アクセス拒否の案内を区別。認証エラー本文は最大8KiBで読み、許可したエラーコードだけを固定の案内へ対応させる。上流の生の本文は公開せず、再試行しない。healthのkeyConfiguredは読み込みの有無であり、認証成功を表さない。
 
 2026-11-06：OpenAPI0.3.13。POST /api/v1/complete-thumbnail-batchを追加。既存入力から3案を検証し、3枠を確保して並行生成。itemsは案A〜Cの順にresultまたはerrorを保持。本文上限36MiB。相互レビューはserver・排他制御・共有契約・保存容量の事前確認が対象。[詳細](THREE-VARIANTS.md)。

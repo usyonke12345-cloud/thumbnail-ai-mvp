@@ -1276,7 +1276,7 @@
     "/api/v1/complete-thumbnail-batch": {
       "post": {
         "summary": "Opt-in paid complete thumbnail from one to four photographs",
-        "description": "Create exactly three independent complete PNG variants concurrently. Reserves three manual image attempts atomically and blocks other image requests until all three finish. JSON at most 36MiB. Uses the same photos, title, brief, atmosphere, headline and feedback. Automatic design/composition use three directions; explicit settings take priority. Returns successes and failures individually, with no retry. X-Validation-A-Case is rejected before provider dispatch. Each successful result uses the existing single-image contract.",
+        "description": "Create exactly three independent complete PNG variants concurrently, reserving three manual image attempts atomically. JSON at most 36MiB. The same source photos, title, atmosphere, manual wording and feedback are preserved. Automatic concepts vary photographic crop/arrangement, letterforms, graphic palette, spacing and auto-headline approach: natural, editorial and message-led. Explicit manual design/placement and revision scope take priority. Successful generation_version values ai-complete-0.15.0-natural, ai-complete-0.15.0-editorial and ai-complete-0.15.0-message record the requested concepts, not measured output styles. One-image generation retains its existing version. Returns successes and failures individually with no retry. X-Validation-A-Case is rejected before provider dispatch. Response structure is unchanged.",
         "requestBody": {
           "required": true,
           "content": {

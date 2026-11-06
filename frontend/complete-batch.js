@@ -12,7 +12,7 @@ export async function runThreeVariants({payload,projectName,gallery,history,root
   card.append(element('h3',`案${String.fromCharCode(65+index)}`),element('p','生成を待っています。'));
   return card;
  });
- const notice=element('p','今回まとめて生成した3案です。');
+ const notice=element('p','写真の見せ方・字体・文字の色と図形を変えて依頼した3案です。手動指定は優先します。仕上がりの差は画像で確認してください。');
  notice.id='three-results-status';
  root.replaceChildren(notice,...cards);
  let successes=0,saveErrors=0;

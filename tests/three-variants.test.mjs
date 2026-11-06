@@ -5,9 +5,12 @@ import {runInNewContext} from 'node:vm';
 import {ApiError} from '../shared/contracts.mjs';
 import {createOpenAIBackgroundProvider} from '../backend/generation/openai.mjs';
 import {generateCompleteBatch} from '../backend/generation/complete-batch.mjs';
-import {validateComplete} from '../backend/generation/complete.mjs';
+import {validateComplete,generateComplete} from '../backend/generation/complete.mjs';
+import {completePrompt} from '../backend/generation/complete-prompt.mjs';
 import {makeServer} from '../backend/server.mjs';
 import {createEntry,addToGallery,comparisonBundle,checkGenerationCapacity} from '../frontend/complete-gallery-model.js';
+import {createCompleteReviewAnalysis} from '../backend/analysis/complete-review.mjs';
+import {feedbackUsage} from '../backend/analysis/feedback-audit.mjs';
 import {validateCompleteBundle} from '../frontend/complete-png-transfer.js';
 import {runThreeVariants} from '../frontend/complete-batch.js';
 import {png,dataUrl} from './helpers/complete-png.mjs';
@@ -53,9 +56,13 @@ test('a window with fewer than three slots blocks the entire batch and invalid/m
 test('three directions honor explicit settings and successful outputs share one four-photo comparison group',async()=>{
  const response=await generateCompleteBatch(input(),{generateBatch:async inputs=>inputs.map((_,index)=>({status:'fulfilled',value:image(index),elapsedMs:10+index}))});
  assert.deepEqual(response.items.map(item=>item.settings),directions.expectedDirections);
+ assert.deepEqual(response.items.map(item=>item.result.generation_version),directions.expectedVersions);
  let gallery={groups:[],images:[],reviews:[]};
  for(const item of response.items)gallery=addToGallery(gallery,await createEntry({...input(),...item.settings},item.result));
  assert.equal(gallery.groups.length,1);assert.equal(gallery.images.length,3);await validateCompleteBundle(comparisonBundle(gallery,gallery.groups[0].id));
+ const analyzer=createCompleteReviewAnalysis();await analyzer.consume(comparisonBundle(gallery,gallery.groups[0].id));const analysis=analyzer.finish();
+ assert.deepEqual(new Set(analysis.images.map(item=>item.result.generation_version)),new Set(directions.expectedVersions));
+ assert.ok(analysis.images.every(item=>feedbackUsage(item).feedbackUsageKnown&&!feedbackUsage(item).feedbackUsed));
  const explicit={...input(),design:'editorial',composition:'text_right'};
  await generateCompleteBatch(explicit,{generateBatch:async inputs=>{assert.ok(inputs.every(value=>value.design==='editorial'&&value.composition==='text_right'));return inputs.map((_,index)=>({status:'fulfilled',value:image(index)}));}});
  const full={...gallery,images:Array.from({length:10},(_,index)=>({...gallery.images[0],id:'synthetic-'+index}))};
@@ -79,8 +86,47 @@ test('the browser keeps downloadable successes and records separate API and save
  assert.equal(summary.successes,2);assert.equal(summary.saveErrors,1);assert.equal(saved.length,2);
  assert.deepEqual(finished.map(value=>value.status),['success','api_error','save_error']);
  assert.equal(nodes.filter(node=>node.tag==='a'&&node.href?.startsWith('data:image/png')).length,2);
- assert.equal(saved[0].payload.composition,'text_left');assert.equal(saved[1].payload.composition,'text_right');
+ assert.equal(saved[0].payload.design,'photo_focus');assert.equal(saved[1].payload.design,'impact');
+ assert.equal(saved[0].payload.composition,'auto');assert.equal(saved[1].payload.composition,'auto');
  assert.ok(finished.every(value=>value.elapsedMs>=0));
+});
+
+test('single-photo and four-photo edit requests differ in photographic treatment, letterforms and graphics while keeping model cost settings',async()=>{
+ for(const count of [1,4]){
+  const value=input();if(count===1)delete value.additionalImageDataUrls;
+  const seen=[];
+  const provider=createOpenAIBackgroundProvider({env:{OPENAI_API_KEY:'synthetic',OPENAI_IMAGE_ENABLED:'true',OPENAI_MAX_CALLS:'3'},fetchImpl:async(url,{body})=>{
+   assert.equal(url,'https://api.openai.com/v1/images/edits');assert.equal(body.getAll('image[]').length,count);
+   assert.equal(body.get('n'),'1');assert.equal(body.get('quality'),'medium');assert.equal(body.get('size'),'1536x864');
+   seen.push(body.get('prompt').split('BATCH ART DIRECTION: ')[1]);
+   return Response.json({data:[{b64_json:png(1536,864,[20,40,80,255]).toString('base64')}]});
+  }});
+  await generateCompleteBatch(value,{generateBatch:inputs=>provider.batch(inputs)});
+  assert.equal(seen.length,3);assert.equal(new Set(seen).size,3);
+  assert.match(seen[0],/^natural\./);assert.match(seen[0],/wider photographic view/);assert.match(seen[0],/humanist Gothic/);assert.match(seen[0],/No color banner/);
+  assert.match(seen[1],/^editorial\./);assert.match(seen[1],/intentional whitespace/);assert.match(seen[1],/serif\/Mincho/);assert.match(seen[1],/off-white/);
+  assert.match(seen[2],/^message\./);assert.match(seen[2],/tighter whole-photo crop/);assert.match(seen[2],/bold upright/);assert.match(seen[2],/accent band/);
+  assert.ok(seen.every(prompt=>prompt.includes('minimal-processing request')&&prompt.includes('not permission to add people')));
+  const single=await generateComplete(value,{generate:async()=>image(0)});
+  assert.equal(single.generation_version,count===1?'ai-complete-0.10.2':'ai-complete-0.13.0');
+  assert.doesNotMatch(completePrompt(validateComplete(value)),/BATCH ART DIRECTION/);
+ }
+});
+
+test('three art directions keep required atmosphere provenance, explicit wording/placement and revision scope',async()=>{
+ const now=new Date('2026-11-07T00:00:00Z');
+ const records=Array.from({length:100},(_,i)=>{const videoId='s'+String(i).padStart(10,'0'),sha256=(i+1).toString(16).padStart(64,'0');return {videoId,metadata:{videoId,channelId:'UC'+String(i).padStart(22,'0'),verification:'youtube_data_api',viewCount:'1000001',durationSeconds:400,publishedAt:'2026-10-01T00:00:00Z',checkedAt:now.toISOString()},asset:{sha256},observation:{thumbnailSha256:sha256,genres:['travel'],moods:['calm'],material:'multi_photo',typography:'Synthetic text',layout:'Synthetic layout '+i,when:'Synthetic space',avoid:'No invented people'},imageUse:{generationAllowed:false}};});
+ const value={...input(),referenceMode:'required',visualIntent:'落ち着いた旅。写真は切り取りだけ。',headlineMode:'manual',headline:'旅の記録',design:'editorial',composition:'text_right',revision:{parentImageId:'synthetic-parent',imageDataUrl:image(0),instruction:'文字の余白だけ調整'}};
+ const original=JSON.stringify(value);
+ const response=await generateCompleteBatch(value,{references:{store:{snapshot:async()=>({catalog:{records}})},now},generateBatch:async inputs=>{
+  assert.ok(inputs.every(input=>input.visualIntent===value.visualIntent&&input.headline===value.headline&&input.design==='editorial'&&input.composition==='text_right'));
+  assert.ok(inputs.every(input=>input._references.context.poolSize===100&&input._references.context.candidates.length===5));
+  for(const input of inputs){const prompt=completePrompt(input);assert.match(prompt,/MANUAL DESIGN/);assert.match(prompt,/render the supplied manual headline exactly/);assert.match(prompt,/retain the explicitly requested headline zone/);assert.match(prompt,/REVISION SCOPE/);assert.match(prompt,/NATURAL PHOTO FINISH/);}
+  return inputs.map((_,index)=>({status:'fulfilled',value:image(index)}));
+ }});
+ assert.equal(JSON.stringify(value),original);assert.ok(response.items.every(item=>item.result.referenceContext.poolSize===100));
+ assert.equal(new Set(response.items.map(item=>item.result.referenceContext.visualIntentSha256)).size,1);
+ assert.throws(()=>validateComplete({...value,_batchDirection:{id:'natural'}}),error=>error.code==='INVALID_INPUT');
 });
 
 test('the real paid button dispatches the three-image flow only after consent and retains the one-image path',async()=>{
